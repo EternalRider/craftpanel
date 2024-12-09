@@ -1,0 +1,319 @@
+/* 面板编辑界面 */
+.craft-panel-manager table {
+    margin-left: 0;
+    margin-right: 0;
+}
+.craft-panel-manager table tr td:first-of-type {
+    width: 50%;
+}
+.craft-panel-manager table button {
+    width: auto;
+    padding: 0.5rem;
+}
+.craft-panel-manager table button i {
+    margin: 0;
+}
+/* 基础 */
+.craft .window-content {
+    max-width: 80vw;
+    max-height: 95vh;
+}
+.craft .craft-content {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+.craft .craft-content .craft-panel {
+    gap: 0px;
+    display: flex;
+    flex-direction: column;
+}
+/* 标题 */
+.craft .craft-content .craft-panel-tittle {
+    width: 100%;
+    background-color: rgb(0, 0, 0, 25%);
+}
+.craft .craft-content .craft-panel-tittle > h2 {
+    text-align: center;
+    margin: 5px;
+    border-bottom: none;
+    height: 1.75rem;
+    color: white;
+}
+/* 配方列表 */
+.craft .craft-content .craft-recipes-panel {
+    display: flex;
+    background-color: rgb(0, 0, 0, 10%);
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    width: 300px;
+    overflow-y: auto;
+}
+/* 主面板 */
+.craft .craft-content .craft-main-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 600px;
+}
+/* 材料面板和元素面板 */
+.craft .craft-content .craft-materials-panel,
+.craft .craft-content .craft-elementitems-panel {
+    display: grid;
+    background-color: rgb(0, 0, 0, 10%);
+    overflow-y: auto;
+    justify-content: center;
+    align-content: start;
+}
+/* 元素材料面板-420px-6格 */
+.craft-panel-element .craft-materials-panel,
+.craft-panel-element .craft-elementitems-panel {
+    grid-template-columns: repeat(6, 60px);
+    grid-gap: 5px;
+    padding: 5px;
+    width: 420px;
+    height: 420px;
+}
+/* 调和材料面板-300px-4格 */
+.craft-panel-blend .craft-materials-panel {
+    grid-template-columns: repeat(4, 60px);
+    grid-gap: 8px;
+    padding: 10px;
+    width: 300px;
+    height: 565px;
+}
+/* 配方元素面板-300px-4格 */
+.craft-panel-recipe .craft-elementitems-panel {
+    grid-template-columns: repeat(4, 60px);
+    grid-gap: 8px;
+    padding: 10px;
+    width: 300px;
+    height: 420px;
+}
+/* 主面板-子面板 */
+.craft .craft-content .craft-main-panel .main-child-panel {
+    background-color: rgb(0, 0, 0, 10%);
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    height: 100px;
+}
+/* 图块-调和插槽 */
+.craft .craft-content .craft-main-panel .craft-slot {
+    position: relative;
+    display: flex;
+    pointer-events: all;
+    /* width: 80px;
+    height: 80px; */
+    text-align: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 3px ridge #191005;
+    box-shadow: inset 0 0 10px #191005;
+}
+.craft .craft-content .craft-main-panel .craft-slot.round {
+    border-radius: 50%;
+}
+.craft .craft-content .craft-main-panel .craft-slot.empty {
+    filter: sepia(1) brightness(0.6) hue-rotate(180deg);
+    mix-blend-mode: exclusion;
+    opacity: 0.8;
+}
+.craft .craft-content .craft-main-panel .craft-slot .slot-locked {
+    opacity: 0.8;
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    text-shadow: 0 0 5px #7d7d7d, 0 0 10px #7d7d7d, 0 0 15px #7d7d7d;
+}
+/* 图块-配方结果 */
+.craft-panel-blend .craft-main-panel .craft-results-panel .craft-slot,
+.craft-panel-recipe .craft-main-panel .craft-slot {
+    width: 60px;
+    height: 60px;
+}
+/* 图块-元素 */
+.craft-tooltip .tooltip-element,
+.craft .craft-content .element-slot {
+    pointer-events: all;
+    position: relative;
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 3px ridge #191005;
+    box-shadow: inset 0 0 10px #191005;
+}
+/* 图块-元素-元素颜色 */
+.craft .craft-content .element-color-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    position: relative;
+    top: 35px;
+}
+/* 图块-材料-元素点列容器 */
+.craft .craft-content .craft-slot-elements {
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    align-content: start;
+    overflow: hidden;
+}
+/* 图块-材料-元素点行容器 */
+.craft .craft-content .craft-slot-elements .slot-element-circle-container {
+    width: 60px;
+    height: 10px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+}
+/* 图块-材料-元素点 */
+.craft .craft-content .slot-element-circle-container .slot-element-circle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+/* 提示框-材料 */
+.craft-tooltip figure {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    margin: 0;
+}
+.craft-tooltip figure img {
+    width: var(--font-h1-size);
+    height: var(--font-h1-size);
+    object-fit: cover;
+    margin: 0;
+    position: absolute;
+    border-radius: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    filter: blur(5px);
+}
+.craft-tooltip figure h1 {
+    margin: 0;
+    border: none;
+    width: 100%;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    filter: drop-shadow(0px 0px 3px black);
+    line-height: normal;
+    padding: 1rem 0rem;
+}
+.craft-tooltip .description {
+    text-align: left;
+}
+/* 提示框-材料-元素容器 */
+.craft-tooltip .tooltip-elements {
+    display: flex;
+    padding: 10px;
+    gap: 5px;
+    flex-wrap: wrap;
+    /* grid-template-columns: repeat(2, 60px);
+    grid-gap: 5px; */
+}
+/* 元素数量显示 */
+.craft .craft-content .element-num,
+.craft-tooltip .tooltip-element-num {
+    position: absolute;
+    background-color: darkslategray;
+    opacity: 0.8;
+    border: none;
+    box-shadow: none;
+    pointer-events: none;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: bold;
+    color: white;
+    /* 发光字体 */
+    text-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7, 0 0 15px #00ffe7;
+    width: 100%;
+    bottom: 0;
+    line-height: 18px;
+    border-radius: 10px;
+    font-size: 18px;
+}
+.craft .craft-content .craft-recipes-panel .craft-recipe-ingredient .element-num {
+    line-height: 13px;
+    font-size: 13px;
+}
+/* 配方组件 */
+.craft .craft-content .craft-recipes-panel .craft-recipe {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d7d7d7;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: row;
+    background-color: rgb(0, 0, 0, 25%);
+    gap: 5px;
+}
+.craft-panel-recipe .craft-recipes-panel .craft-recipe.choosed {
+    border-color: aquamarine;
+}
+/* 配方图标 */
+.craft .craft-content .craft-recipes-panel .craft-recipe-img {
+    width: 60px;
+    height: 60px;
+}
+/* 配方右侧框 */
+.craft .craft-content .craft-recipes-panel .craft-recipe-desc {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+/* 配方名称 */
+.craft .craft-content .craft-recipes-panel .craft-recipe-desc > h3 {
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    color: white;
+    border-bottom: none;
+}
+/* 配方材料容器 */
+.craft .craft-content .craft-recipes-panel .craft-recipe-desc .craft-recipe-ingredients {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+/* 配方材料 */
+.craft .craft-content .craft-recipes-panel .craft-recipe-desc .craft-recipe-ingredients .craft-recipe-ingredient {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    text-align: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+/* 材料数量 */
+.craft .craft-content .craft-materials-panel .craft-slot-quantity {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    text-align: right;
+    color: white;
+    pointer-events: none;
+}

@@ -1,0 +1,118 @@
+<div class="standard-form">
+    <div class="craft-content">
+        <div class="craft-panel">
+            <div class="craft-panel-tittle">
+                <h2>{{localize "craftpanel.recipe"}}</h2>
+            </div>
+            <div class="craft-recipes-panel" style="height: 565px;">
+                {{#each recipes as |recipe|}}
+                <div class="craft-recipe" data-uuid="{{recipe.uuid}}" data-index="{{recipe.index}}" data-tooltip-class="craft-tooltip" data-tooltip="{{recipe.tooltip}}">
+                    <div class="craft-recipe-img" style="background-image: url('{{recipe.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+                    <div class="craft-recipe-desc">
+                        <h3 class="craft-recipe-tittle">{{recipe.name}}</h3>
+                        <div class="craft-recipe-ingredients">
+                            {{#each recipe.ingredients as |ingredient|}}
+                            <div class="craft-recipe-ingredient" style="background-image: url('{{ingredient.img}}');">
+                                <div class="element-num" draggable="false">{{ingredient.num}}</div>
+                            </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        <div class="craft-main-panel">
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.craft-panel-blend.slot"}}</h2>
+                </div>
+                <div class="craft-slot-panel main-child-panel" style="height: 300px;position: relative;">
+                    {{#each slots as |slot|}}
+                    <div {{#if slot.draggable}}draggable="true"{{/if}} data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
+                        class="craft-slot {{slot.empty}} {{#if slot.overrideStyle}}{{slot.overrideStyleClass}}{{else}}{{#if ../useCircleStyle}}round{{/if}}{{/if}}" 
+                        data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}"
+                        style="width: {{slot.size}}px;height: {{slot.size}}px; {{#if slot.position.unlock}}position: absolute; top: {{slot.position.y}}px; left: {{slot.position.x}}px;{{/if}} {{#if slot.itemColor}}box-shadow: inset 0 0 10px {{slot.itemColor}}; border-color: {{slot.itemColor}};{{/if}} background-image: url('{{#if slot.item.img}}{{slot.item.img}}{{else}}{{slot.image}}{{/if}}'); {{#if slot.empty}}filter: sepia(1) brightness(0.6) hue-rotate({{slot.hue}}deg);{{/if}}">
+                        <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if slot.empty}}hidden="true" {{/if}} draggable="false">
+                            {{#each slot.elements as |element|}}
+                            <div class="slot-element-circle-container">
+                                {{#each (range 0 element.num)}}
+                                <div class="slot-element-circle" draggable="false" style="background-color: {{element.color}};"></div>
+                                {{/each}}
+                            </div>
+                            {{/each}}
+                        </div>
+                        <i draggable="false" class="fa-solid fa-lock slot-locked" style="line-height: {{slot.size}}px; font-size: {{slot.lockSize}}px;{{#unless slot.isLocked}}display:none;{{/unless}}"></i>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.element"}}</h2>
+                </div>
+                <div class="craft-elements-panel main-child-panel" style="height: 70px;">
+                    {{#each elements as |element|}}
+                    <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
+                        data-uuid="{{element.uuid}}" data-id="{{element.id}}"
+                        style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                        <div class="element-num" draggable="false">{{element.num}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.result"}}</h2>
+                </div>
+                <div class="craft-results-panel main-child-panel" style="height: 100px;">
+                    {{#each results as |slot|}}
+                    <div {{#unless slot.empty}}draggable="true" {{/unless}} data-tooltip="{{slot.name}}"
+                        class="craft-slot {{slot.empty}}" data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}"
+                        style="{{#if slot.itemColor}}box-shadow: inset 0 0 10px {{slot.itemColor}}; border-color: {{slot.itemColor}};{{/if}} {{#if slot.img}}background-image: url('{{slot.img}}');{{/if}} ">
+                        <div class="craft-slot-quantity" {{#unless slot.showQuantity}}hidden="true"{{/unless}} draggable="false">
+                            {{slot.quantity}}
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        <div class="craft-panel">
+            <div class="craft-panel-tittle">
+                <h2>{{localize "craftpanel.material"}}</h2>
+            </div>
+            <div class="craft-materials-panel">
+                {{#each materials as |slot|}}
+                <div draggable="true" data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
+                    class="element-slot materials" data-uuid="{{slot.uuid}}"
+                    style="{{#if slot.itemColor}}box-shadow: inset 0 0 10px {{slot.itemColor}}; border-color: {{slot.itemColor}};{{/if}} {{#if slot.item.img}}background-image: url('{{slot.item.img}}');{{/if}} ">
+                    <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if slot.empty}}hidden="true" {{/if}} draggable="false">
+                        {{#each slot.elements as |element|}}
+                        <div class="slot-element-circle-container">
+                            {{#each (range 0 element.num)}}
+                            <div class="slot-element-circle" draggable="false" style="background-color: {{element.color}};"></div>
+                            {{/each}}
+                        </div>
+                        {{/each}}
+                    </div>
+                    <div class="craft-slot-quantity" {{#unless slot.showQuantity}}hidden="true"{{/unless}} draggable="false">
+                        {{slot.quantity}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+
+    <footer class="form-footer">
+        {{#if isEdit}}
+        <button type="button" name="new-recipe"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-blend.new-recipe"}}</button>
+        <button type="button" name="new-slot"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-blend.new-slot"}}</button>
+        <button type="button" name="configure-panel"><i class="fas fa-cog"></i> {{localize "craftpanel.configure"}}</button>
+        {{else}}
+        <button type="button" name="craft"><i class="fa-regular fa-flask-round-potion"></i>{{localize "craftpanel.craft"}}</button>
+        {{/if}}
+        <button type="button" name="close"><i class="fas fa-times"></i>{{localize "Close"}}</button>
+    </footer>
+</div>

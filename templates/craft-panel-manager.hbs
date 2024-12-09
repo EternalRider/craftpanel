@@ -1,0 +1,31 @@
+<div style="max-height: 70vh;" class="standard-form">
+    <table>
+        <thead>
+            <tr>
+                <th>{{localize "craftpanel.name"}}</th>
+                <th>{{localize "craftpanel.craft"}}</th>
+                <th>{{localize "craftpanel.edit"}}</th>
+                <th>{{localize "craftpanel.permissions"}}</th>
+                <th>{{localize "craftpanel.delete"}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each craftPanels as |craftPanel|}}
+            <tr>
+                <td>{{craftPanel.name}}</td>
+                <td><button type="button" name="craft" data-uuid="{{craftPanel.uuid}}" {{#if craftPanel.flags.craftpanel.noCraft}}style="display: none;"{{/if}}><i class="fa-solid fa-hammer"></i></button></td>
+                <td><button type="button" name="edit" data-uuid="{{craftPanel.uuid}}"><i class="fas fa-edit"></i></button></td>
+                <td><button type="button" name="permissions" data-uuid="{{craftPanel.uuid}}" {{#if craftPanel.flags.craftpanel.noCraft}}style="display: none;"{{/if}}><i class="fas fa-user-lock"></i></button></td>
+                <td><button type="button" name="delete" data-uuid="{{craftPanel.uuid}}"><i class="fas fa-trash"></i></button></td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+
+
+
+    <footer class="form-footer">
+        <button type="button" name="create-new"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-manager.create-new"}}</button>
+        {{!-- <button type="button" name="config-element"><i class="fa-solid fa-sun"></i> {{localize "craftpanel.craft-panel-manager.config-element"}}</button> --}}
+    </footer>
+</div>
