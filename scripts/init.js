@@ -1,6 +1,4 @@
 const MODULE_ID = 'craftpanel';
-
-import * as Utilities from './utils.js';
 import * as api from './api.js';
 import { register_settings } from './settings.js';
 import CraftSocket from './socket.js';
@@ -8,6 +6,7 @@ import CraftSocket from './socket.js';
 Hooks.once('init', function () {
     game.modules.get(MODULE_ID).api = api; // 之后可被如此调用: const craftpanel = game.modules.get('craftpanel')?.api;
     window.craftPanels = [];
+    register_settings();
 
     console.log('Craftpanel | Initializing Craftpanel');
 });
@@ -20,8 +19,6 @@ Hooks.once("socketlib.ready", () => {
 });
 
 Hooks.on('ready', () => {
-    register_settings();
-
     Handlebars.registerHelper('range', function (start, end) {
         let array = [];
         for (let i = start; i < end; i++) {

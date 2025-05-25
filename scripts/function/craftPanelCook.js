@@ -1,5 +1,6 @@
-import { HandlebarsApplication, getItemColor, confirmDialog, chooseImage, MODULE_ID, getFolder, debug, chatMessage, buildActiveEffect, applyChange } from "../utils.js";
+import { HandlebarsApplication, getItemColor, confirmDialog, MODULE_ID, getFolder, debug, chatMessage, buildActiveEffect, applyChange } from "../utils.js";
 import { CraftPanelModifier } from "./craftPanelModifier.js";
+import { chooseImage } from "../api.js";
 
 const DEFAULT_SLOT_DATA = {
     hue: 180,

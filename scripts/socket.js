@@ -1,4 +1,4 @@
-import { debug } from "./utils";
+import { debug } from "./utils.js";
 
 export default class CraftSocket {
 
@@ -12,9 +12,9 @@ export default class CraftSocket {
     this._socket = socketlib.registerModule("craftpanel");
     for (let [key, callback] of Object.entries(this.BINDINGS)) {
       this._socket.register(key, callback);
-      debug(`Registered CraftSocket: ${key}`);
+      console.log(`Registered CraftSocket: ${key}`);
     }
-    debug("Registered all Craftpanel sockets")
+    console.log("Registered all Craftpanel sockets")
   }
 
   static async executeAsGM(handler, ...args) {

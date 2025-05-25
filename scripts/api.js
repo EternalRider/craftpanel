@@ -1,8 +1,12 @@
 import { CraftPanelBlend } from "./function/craftPanelBlend.js";
 import { CraftPanelManager } from "./function/craftPanelManager.js";
 import { MODULE_ID, debug } from "./utils.js";
+import { ChooseImage } from "./function/choose-image.js";
+import { CraftPanelCook } from "./function/craftPanelCook.js";
+import { CraftPanelForge } from "./function/craftPanelForge.js";
+import { CraftPanelEnchant } from "./function/craftPanelEnchant.js";
 
-const craftPanelsTypes = ["blend"];
+const craftPanelsTypes = ["blend", "cook", "forge", "enchant"];
 /**
  * 打开编辑所有制造面板的界面
  */
@@ -54,7 +58,42 @@ export function openCraftPanel(options = {}) {
                 result = new CraftPanelBlend(options.panel, options?.options ?? "craft", options);
                 result.render(true);
             };
-        }
+        } else if (options.panel.getFlag(MODULE_ID, "type") === "cook") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
+            if (openWindow) openWindow.close();
+            else {
+                result = new CraftPanelCook(options.panel, options?.options ?? "craft", options);
+                result.render(true);
+            };
+        } else if (options.panel.getFlag(MODULE_ID, "type") === "forge") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
+            if (openWindow) openWindow.close();
+            else {
+                result = new CraftPanelForge(options.panel, options?.options ?? "craft", options);
+                result.render(true);
+            };
+        } else if (options.panel.getFlag(MODULE_ID, "type") === "enchant") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
+            if (openWindow) openWindow.close();
+            else {
+                result = new CraftPanelEnchant(options.panel, options?.options ?? "craft", options);
+                result.render(true);
+            };
+        };
     }
+    return result;
+}
+
+/**
+ * 选择图片
+ * @param {string[] | {src: string, name: string}[]} images 选择的图片
+ * @param {"edit" | "choose"} mode 模式
+ * @param {Object} options 其他选项
+ * @returns {Promise<string[] | {src: string, name: string}[] | false>}
+ */
+export async function chooseImage(images = [], mode = "choose", options = {}) {
+    let app = new ChooseImage(images, mode, options);
+    let result = await app.drawPreview(true);
+    debug("chooseImage", result, app);
     return result;
 }
