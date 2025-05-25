@@ -1,6 +1,5 @@
-import { HandlebarsApplication, getItemColor, MODULE_ID, debug, chatMessage, getFolder, getActiveGM } from "../utils.js";
-import { CraftPanelRecipe } from "./craftPanelRecipe.js";
-import Socket from "../socket.js";
+import { HandlebarsApplication, getItemColor, confirmDialog, chooseImage, MODULE_ID, getFolder, debug, chatMessage, buildActiveEffect, applyChange } from "../utils.js";
+import { CraftPanelModifier } from "./craftPanelModifier.js";
 
 const DEFAULT_SLOT_DATA = {
     hue: 180,
@@ -11,46 +10,61 @@ const DEFAULT_SLOT_DATA = {
     position: { unlock: false, x: 0, y: 0 },
 }
 
-const DEFAULT_RECIPE_DATA = {
+const DEFAULT_MODIFIER_DATA = {
     isLocked: false,
     ingredients: [],
-    weight: 100,
     unlockCondition: "",
     craftScript: "",
     category: [],
+    asAE: false,
+    cost: 1,
+    auto: false,
 }
 const AsyncFunction = async function () { }.constructor;
 
-export class CraftPanelBlend extends HandlebarsApplication {
+export class CraftPanelCook extends HandlebarsApplication {
     constructor(journalEntry, mode = "edit", options = {}) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
         this.journalEntry = journalEntry;
         this.mode = mode;
         this.actor = options.actor;
+        this.panelOptions = options;
+
         this.elements = [];
         this.slotItems = {};
-        this.results = [];
+        this.slotMaterials = [];
+        this.results = journalEntry.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(journalEntry.getFlag(MODULE_ID, "results"))) : [];
         this.slots = [];
-        this.recipes = [];
+        this.modifiers = [];
         this.materials = [];
         this.needRefresh = true;
         this.panelOptions = options;
-        this.recipe_categories = [];
+        this.modifier_categories = [];
         this.material_categories = [];
+        this.baseCost = journalEntry.getFlag(MODULE_ID, "baseCost") ?? 0;
+        this.cost = {
+            value: this.baseCost,
+            max: this.baseCost,
+            icon: journalEntry.getFlag(MODULE_ID, "costIcon") ?? "",
+            element: journalEntry.getFlag(MODULE_ID, "costElement") ?? "",
+        }
+        /**@type {number[]} */
+        this.choosedModifiers = [];
 
         this.quantityPath = game.settings.get(MODULE_ID, 'quantityPath');
+        this.weightPath = game.settings.get(MODULE_ID, 'weightPath');
         this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
 
         this.scrollPositions = {
             materials: 0,
-            recipes: 0,
+            modifiers: 0,
         };
 
         this.panelSizes = this.journalEntry.getFlag(MODULE_ID, "panelSizes") ?? {
-            recipes: {
+            modifiers: {
                 width: 300,
-                height: 540,
+                height: 470,
             },
             materials: {
                 width: 300,
@@ -58,7 +72,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             },
             slots: {
                 width: 600,
-                height: 300,
+                height: 200,
             },
             elements: {
                 width: 600,
@@ -66,13 +80,13 @@ export class CraftPanelBlend extends HandlebarsApplication {
             },
             results: {
                 width: 600,
-                height: 100,
+                height: 200,
             },
         };
 
         craftPanels ??= [];
         craftPanels.push(this);
-        debug("CraftPanelBlend constructor : this journalEntry mode options craftPanels", this, journalEntry, mode, options, craftPanels);
+        debug("CraftPanelCook constructor : this journalEntry mode options craftPanels", this, journalEntry, mode, options, craftPanels);
     }
 
     static get DEFAULT_OPTIONS() {
@@ -83,7 +97,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 frame: true,
                 positioned: true,
                 title: `${MODULE_ID}.${this.APP_ID}.title`,
-                icon: "fa-regular fa-flask-round-potion",
+                icon: "fa-solid fa-utensils",
                 controls: [],
                 minimizable: true,
                 resizable: false,
@@ -139,9 +153,11 @@ export class CraftPanelBlend extends HandlebarsApplication {
     async _prepareContext(options) {
         if (this.needRefresh) {
             await this.refreshPanel();
+            await this.refreshCost();
         }
+        await this.refreshModifiers();
         const slotsJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "slot");
-        debug("CraftPanelBlend _prepareContext : slotsJE", slotsJE);
+        debug("CraftPanelCook _prepareContext: slotsJE", slotsJE);
         this.slots = await Promise.all(slotsJE.map(async (je, i) => {
             const overrideStyle = (je.getFlag(MODULE_ID, "shape") ?? "default") !== "default";
             const overrideStyleClass = je.getFlag(MODULE_ID, "shape") == "circle" ? "round" : "";
@@ -205,18 +221,44 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             });
         }
-        debug("CraftPanelBlend _prepareContext : this.slots", this.slots);
-
+        debug("CraftPanelCook _prepareContext: this.slots", this.slots);
+        const results = await Promise.all(this.results.map(async (el, i) => {
+            const item = await fromUuid(el.uuid);
+            const itemColor = item ? getItemColor(item) ?? "" : "";
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h1>${el.name ?? item?.name}</h1></figure><div class="description">${el.description ?? foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div>`);
+            const overrideStyle = (el.shape ?? "default") !== "default";
+            const overrideStyleClass = el.shape == "circle" ? "round" : "";
+            return {
+                slotIndex: i,
+                uuid: el.uuid,
+                quantity: el.quantity,
+                name: el.name ?? item?.name,
+                img: el.img ?? item?.img,
+                itemColor: itemColor,
+                tooltip,
+                size: el.size ?? Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
+                overrideStyle,
+                overrideStyleClass,
+            };
+        }));
+        debug("CraftPanelCook _prepareContext: results", results);
+        let modifiers = this.modifiers;
+        let modifier_category = this.modifier_categories.find(c => c.choosed)?.id;
+        if (modifier_category != "all") {
+            modifiers = modifiers.filter(m => m.category.includes(modifier_category));
+        }
+        debug("CraftPanelCook _prepareContext: modifiers", modifiers);
         return {
             isEdit: this.isEdit,
             slots: this.slots,  //中间显示的槽位
-            recipes: this.recipes, //左侧显示的配方
+            modifiers: modifiers, //左侧显示的调整
             materials: this.materials, //右侧显示的材料
             useCircleStyle: true,
             elements: this.elements,
-            results: this.results,
-            recipe_categories: this.recipe_categories,
+            results,
+            modifier_categories: this.modifier_categories,
             material_categories: this.material_categories,
+            cost: this.cost,
             panelSizes: this.panelSizes,
         };
     }
@@ -228,10 +270,10 @@ export class CraftPanelBlend extends HandlebarsApplication {
     _onRender(context, options) {
         super._onRender(context, options);
         const html = this.element;
-        debug("CraftPanelBlend _onRender : context", context);
+        debug("CraftPanelCook _prepareContext: context", context);
         // 恢复滚动条位置
         html.querySelector(".craft-materials-panel").scrollTop = this.scrollPositions.materials;
-        html.querySelector(".craft-recipes-panel").scrollTop = this.scrollPositions.recipes;
+        html.querySelector(".craft-modifiers-panel").scrollTop = this.scrollPositions.modifiers;
 
         // 绑定分类图标的点击事件
         html.querySelectorAll(".craft-category-icon").forEach(icon => {
@@ -256,19 +298,18 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 ]);
                 this.render(true);
             });
-            html.querySelector("button[name='new-recipe']").addEventListener("click", async (event) => {
+            html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
                 event.preventDefault();
                 await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
                     {
-                        name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-recipe`),
-                        src: "icons/sundries/documents/document-torn-diagram-tan.webp",
+                        name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-modifier`),
+                        src: "icons/magic/symbols/rune-sigil-green.webp",
                         "text.content": null,
                         flags: {
                             [MODULE_ID]: {
-                                type: "recipe",
-                                results: [],
-                                "element.craft": [],
-                                ...DEFAULT_RECIPE_DATA,
+                                type: "modifier",
+                                changes: [],
+                                ...DEFAULT_MODIFIER_DATA,
                             },
                         },
                     },
@@ -284,22 +325,24 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 icon.addEventListener("click", this.changePanelSize.bind(this));
             });
 
-            html.querySelector(".craft-recipes-panel").addEventListener("drop", this._onDropResipesPanel.bind(this));
-            html.querySelectorAll(".craft-recipe").forEach((recipe) => {
-                recipe.addEventListener("contextmenu", async (event) => {
-                    // 编辑模式下，右键点击配方可以删除配方
+            html.querySelector(".craft-results-panel").addEventListener("drop", this._onDropResultPanel.bind(this));
+            html.querySelector(".craft-modifiers-panel").addEventListener("drop", this._onDropModifierPanel.bind(this));
+            html.querySelector(".craft-cost-panel").addEventListener("drop", this._onDropCostPanel.bind(this));
+            html.querySelectorAll(".craft-modifier").forEach((modifier) => {
+                modifier.addEventListener("contextmenu", async (event) => {
+                    // 编辑模式下，右键点击调整可以删除调整
                     event.preventDefault();
-                    const pageUuid = recipe.dataset.uuid;
+                    const pageUuid = modifier.dataset.uuid;
                     const page = await fromUuid(pageUuid);
                     await page.deleteDialog();
                     this.needRefresh = true;
                     this.render(true);
                 });
-                recipe.addEventListener("click", async (event) => {
-                    // 编辑模式下，点击配方可以编辑配方
+                modifier.addEventListener("click", async (event) => {
+                    // 编辑模式下，点击调整可以编辑调整
                     event.preventDefault();
-                    const recipeJEUuid = recipe.dataset.uuid;
-                    await this.editRecipe(recipeJEUuid);
+                    const modifierJEUuid = modifier.dataset.uuid;
+                    await this.editModifier(modifierJEUuid);
                     this.render(true);
                 });
             });
@@ -310,6 +353,18 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     const category = event.currentTarget.dataset.category;
                     const type = event.currentTarget.dataset.type;
                     this.editCategory(category, type);
+                });
+            });
+            html.querySelectorAll("input").forEach((input) => {
+                input.addEventListener("change", async (event) => {
+                    const value = event.target.value;
+                    const name = event.target.name;
+                    if (name === "cost") {
+                        this.baseCost = Number(value);
+                        await this.journalEntry.setFlag(MODULE_ID, "baseCost", this.baseCost);
+                        await this.refreshCost();
+                        this.render(true);
+                    }
                 });
             });
         } else {
@@ -341,6 +396,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 });
                 el.addEventListener("contextmenu", async (event) => {
                     event.preventDefault();
+                    // let index = Object.values(this.slotItems).findIndex(data => data?.uuid === el.dataset.uuid);
                     let index = -1;
                     for (let i = this.slots.length - 1; i >= 0; i--) {
                         if (this.slotItems[i]?.uuid === el.dataset.uuid) {
@@ -356,6 +412,15 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     }
                 });
             });
+            html.querySelectorAll(".craft-modifier").forEach((modifier) => {
+                modifier.addEventListener("click", async (event) => {
+                    // 制作模式下，点击调整可以选择调整
+                    event.preventDefault();
+                    const modifierJEUuid = modifier.dataset.uuid;
+                    await this.chooseModifier(modifierJEUuid);
+                    this.render(true);
+                });
+            });
         }
         html.querySelector("button[name='close']").addEventListener("click", async (event) => {
             event.preventDefault();
@@ -363,55 +428,73 @@ export class CraftPanelBlend extends HandlebarsApplication {
         });
         html.querySelectorAll(".craft-slot").forEach((slot) => {
             const isEmpty = slot.classList.contains("empty");
-            if (this.isEdit) {
-                // 编辑模式下，右键点击槽位可以删除槽位
-                slot.addEventListener("contextmenu", async (event) => {
-                    event.preventDefault();
-                    const pageUuid = slot.dataset.uuid;
-                    const page = await fromUuid(pageUuid);
-                    await page.deleteDialog();
-                    this.render(true);
-                });
-                // 编辑模式下，点击槽位可以编辑槽位
-                slot.addEventListener("click", async (event) => {
-                    event.preventDefault();
-                    const slotJEUuid = slot.dataset.uuid;
-                    await this.editSlot(slotJEUuid);
-                    this.render(true);
-                });
-                // 编辑模式下，拖拽槽位可以移动槽位
-                slot.addEventListener("dragstart", (event) => {
-                    event.dataTransfer.setData(
-                        "text/plain",
-                        JSON.stringify({
-                            type: "CraftSlot",
-                            index: slot.dataset.index,
-                        }),
-                    );
-                });
-            } else {
-                slot.addEventListener("drop", this._onDropSlot.bind(this));
-                slot.addEventListener("contextmenu", this._onClickSlot.bind(this));
-                slot.addEventListener("click", this._onClickSlot.bind(this));
-                if (!isEmpty) {
+            const type = slot.dataset.type;
+            if (type === "slot") {
+                if (this.isEdit) {
+                    // 编辑模式下，右键点击槽位可以删除槽位
+                    slot.addEventListener("contextmenu", async (event) => {
+                        event.preventDefault();
+                        const pageUuid = slot.dataset.uuid;
+                        const page = await fromUuid(pageUuid);
+                        await page.deleteDialog();
+                        this.render(true);
+                    });
+                    // 编辑模式下，点击槽位可以编辑槽位
+                    slot.addEventListener("click", async (event) => {
+                        event.preventDefault();
+                        const slotJEUuid = slot.dataset.uuid;
+                        await this.editSlot(slotJEUuid);
+                        this.render(true);
+                    });
+                    // 编辑模式下，拖拽槽位可以移动槽位
                     slot.addEventListener("dragstart", (event) => {
                         event.dataTransfer.setData(
                             "text/plain",
                             JSON.stringify({
-                                type: "Item",
-                                uuid: slot.dataset.uuid,
+                                type: "CraftSlot",
+                                index: slot.dataset.index,
                             }),
                         );
                     });
+                } else {
+                    slot.addEventListener("drop", this._onDropSlot.bind(this));
+                    slot.addEventListener("contextmenu", this._onClickSlot.bind(this));
+                    slot.addEventListener("click", this._onClickSlot.bind(this));
+                    if (!isEmpty) {
+                        slot.addEventListener("dragstart", (event) => {
+                            event.dataTransfer.setData(
+                                "text/plain",
+                                JSON.stringify({
+                                    type: "Item",
+                                    uuid: slot.dataset.uuid,
+                                }),
+                            );
+                        });
+                    }
                 }
-            }
+            } else if (type === "result") {
+                if (this.isEdit) {
+                    // 编辑模式下，右键点击结果可以删除结果
+                    slot.addEventListener("contextmenu", async (event) => {
+                        event.preventDefault();
+                        const index = slot.dataset.index;
 
+                        let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
+                        if (confirm) {
+                            this.results.splice(index, 1);
+                            this.journalEntry.setFlag(MODULE_ID, "results", this.results);
+                            this.render();
+                        }
+                    });
+                }
+                slot.addEventListener("click", this._onClickResult.bind(this));
+            }
         });
         html.querySelector(".craft-slot-panel").addEventListener("drop", this._onDropSlotPanel.bind(this));
         //滚动事件，记录滚动位置
         html.querySelector(".craft-materials-panel").addEventListener("scrollend", (event) => { this.scrollPositions.materials = event.target.scrollTop; });
-        html.querySelector(".craft-recipes-panel").addEventListener("scrollend", (event) => { this.scrollPositions.recipes = event.target.scrollTop; });
-        debug("CraftPanelBlend _onRender : html", html);
+        html.querySelector(".craft-modifiers-panel").addEventListener("scrollend", (event) => { this.scrollPositions.modifiers = event.target.scrollTop; });
+        debug("CraftPanelCook _onRender: html", html);
     }
 
     /**
@@ -423,13 +506,15 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .title(game.i18n.localize(`${MODULE_ID}.configure`) + ": " + this.journalEntry.name)
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
-            .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelBlend.SHAPE_STYLE } })
+            .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelCook.SHAPE_STYLE } })
             .file({ name: `flags.${MODULE_ID}.background`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.background-image`) })
-            .checkbox({ name: `flags.${MODULE_ID}.unlockRecipe`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-recipe`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-recipe-hint`) })
-            .checkbox({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name-hint`) })
-            .select({ name: `flags.${MODULE_ID}.showResult`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result`), options: { "none": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.not-show`), "show": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show`), "question mark": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.question-mark`) }, hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result-hint`) })
+            .tab({ id: "cost", icon: "fa-solid fa-coins", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-cost-tab`) })
+            .number({ name: `flags.${MODULE_ID}.baseCost`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost-hint`) })
+            .file({ name: `flags.${MODULE_ID}.costIcon`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-icon`) })
+            .text({ name: `flags.${MODULE_ID}.costElement`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-element`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-element-hint`) })
+            .textArea({ name: `flags.${MODULE_ID}.costScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-script-hint`) })
             .tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-requirements-tab`) })
-            .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-hint`), options: { ...CraftPanelBlend.REQUIREMENTS_TYPE_OPTIONS } })
+            .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-hint`), options: { ...CraftPanelCook.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-name-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
             .textArea({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-script-hint`) })
@@ -438,10 +523,12 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .textArea({ name: `flags.${MODULE_ID}.craft-post-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script-hint`) })
 
         const data = await fb.render();
-        debug("CraftPanelBlend configure : data", data);
+        debug("CraftPanelCook configure: data", data);
         if (!data) return;
         await this.journalEntry.update(data);
-        this.needRefresh = true;
+        this.baseCost = this.journalEntry.getFlag(MODULE_ID, "baseCost") ?? 0;
+        this.cost.icon = this.journalEntry.getFlag(MODULE_ID, "costIcon") ?? "";
+        this.cost.element = this.journalEntry.getFlag(MODULE_ID, "costElement") ?? "";
         this.render(true);
     }
 
@@ -478,11 +565,11 @@ export class CraftPanelBlend extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelBlend _onDrop : data", data);
+        debug("CraftPanelCook _onDropSlot: data", data);
         if (data.type !== "Item") return;
         const index = parseInt(event.currentTarget.dataset.index);
         const item = await fromUuid(data.uuid);
-        debug("CraftPanelBlend _onDrop : index item", index, item);
+        debug("CraftPanelCook _onDropSlot: index item", index, item);
         if (item) {
             await this.addIngredient(index, item);
         }
@@ -499,30 +586,65 @@ export class CraftPanelBlend extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelBlend _onDropSlotPanel : data", data);
+        debug("CraftPanelCook _onDropSlotPanel: data", data);
         if (data.type == "CraftSlot") {
             const position = { unlock: true, x: event.offsetX, y: event.offsetY };
             const slotUuid = this.slots[data.index].uuid;
             const slot = await fromUuid(slotUuid);
-            debug("CraftPanelBlend _onDropSlotPanel : slot", slot);
+            debug("CraftPanelCook _onDropSlotPanel: slot", slot);
             const size = slot.getFlag(MODULE_ID, "size");
             position.x -= size / 2;
             position.y -= size / 2;
             await slot.setFlag(MODULE_ID, "position", position);
-            debug("CraftPanelBlend _onDropSlotPanel : position size event.offsetXY", position, size, { x: event.offsetX, y: event.offsetY });
+            debug("CraftPanelCook _onDropSlotPanel: position", position);
             this.render(true);
         } else if (data.type == "Item") {
             for (let i = 0; i < this.slots.length; i++) {
                 if (!this.slots[i].isLocked && (this.slotItems[i] === null || this.slotItems[i] === undefined)) {
-                    debug("CraftPanelBlend _onDropSlotPanel : i this.slots[i] this.slotItems[i]", i, this.slots[i], this.slotItems[i]);
+                    debug("CraftPanelCook _onDropSlotPanel : i this.slots[i] this.slotItems[i]", i, this.slots[i], this.slotItems[i]);
                     const item = await fromUuid(data.uuid);
-                    debug("CraftPanelBlend _onClickSlot : item", item);
+                    debug("CraftPanelCook _onDropSlotPanel : item", item);
                     await this.addIngredient(i, item);
                 }
             }
         }
     }
-    async _onDropResipesPanel(event) {
+    async _onDropResultPanel(event) {
+        event.stopPropagation();
+        let data;
+        try {
+            data = JSON.parse(event.dataTransfer.getData("text/plain"));
+        } catch (e) {
+            return;
+        }
+        debug("CraftPanelCook _onDropResultPanel: data", data);
+        const type = data.type;
+        const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
+        debug("CraftPanelCook _onDropResultPanel: type item", type, item);
+        if (type !== "Item" && type !== "RollTable") return;
+        if (item) {
+            let r = this.results.find((r) => r.uuid == item.uuid);
+            if (r) {
+                r.quantity++;
+            } else {
+                this.results.push({
+                    uuid: item.uuid,
+                    quantity: 1,
+                    img: item.img,
+                    images: [{ name: item.img, src: item.img }],
+                    name: item.name,
+                    type: type,
+                    description: foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? "",
+                    size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
+                    shape: "default",
+                });
+            }
+            debug("CraftPanelCook _onDropResultPanel: this.results", this.results);
+            this.journalEntry.setFlag(MODULE_ID, "results", this.results);
+            this.render(true);
+        }
+    }
+    async _onDropModifierPanel(event) {
         event.preventDefault();
         let data;
         try {
@@ -530,10 +652,19 @@ export class CraftPanelBlend extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelBlend _onDropResipesPanel : data", data);
-        if (data.type !== "Item" && data.type !== "RollTable") return;
+        debug("CraftPanelCook _onDropModifierPanel: data", data);
+        if (data.type !== "Item" && data.type !== "ActiveEffect") return;
         const item = await fromUuid(data.uuid);
-        debug("CraftPanelBlend _onDropResipesPanel : item", item);
+        debug("CraftPanelCook _onDropModifierPanel: item", item);
+        let changes = [];
+        if (data.type === "ActiveEffect") {
+            changes = JSON.parse(JSON.stringify(item.changes));
+        } else if (data.type === "Item") {
+            item.effects.forEach(effect => {
+                changes.push(...effect.changes);
+            });
+        }
+        debug("CraftPanelCook _onDropModifierPanel: changes", changes);
         await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
             {
                 name: item.name,
@@ -541,14 +672,104 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 "text.content": foundry.utils.getProperty(item, this.descriptionPath) ?? item.system?.description ?? item.description ?? "",
                 flags: {
                     [MODULE_ID]: {
-                        type: "recipe",
-                        results: [{ uuid: item.uuid, quantity: 1, img: item.img, name: item.name, type: data.type }],
-                        ...DEFAULT_RECIPE_DATA,
+                        type: "modifier",
+                        changes: changes,
+                        ...DEFAULT_MODIFIER_DATA,
                     },
                 },
             },
         ]);
         this.needRefresh = true;
+        this.render(true);
+    }
+    async _onDropCostPanel(event) {
+        event.preventDefault();
+        let data;
+        try {
+            data = JSON.parse(event.dataTransfer.getData("text/plain"));
+        } catch (e) {
+            return;
+        }
+        debug("CraftPanelCook _onDropCostPanel: data", data);
+        if (data.type !== "Item" && data.type !== "CraftElement") return;
+        const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
+        debug("CraftPanelCook _onDropCostPanel: item", item);
+        let element = data?.element;
+        debug("CraftPanelCook _onDropCostPanel: element", element);
+        if (data.type == "Item") {
+            if (item == undefined) return;
+            if (item.getFlag(MODULE_ID, "isElement") === true) {
+                element = item.getFlag(MODULE_ID, "elementConfig");
+                this.cost.element = element.id;
+                this.cost.icon = element.img;
+                await this.journalEntry.setFlag(MODULE_ID, "costElement", element.id);
+                await this.journalEntry.setFlag(MODULE_ID, "costIcon", element.img);
+            } else {
+                this.cost.icon = item.img;
+                await this.journalEntry.setFlag(MODULE_ID, "costIcon", item.img);
+            }
+        } else if (data.type == "CraftElement") {
+            if (item != undefined && element == undefined) {
+                element = item.getFlag(MODULE_ID, "elementConfig");
+            }
+            if (element == undefined) return;
+            this.cost.element = element.id;
+            this.cost.icon = element.img;
+            await this.journalEntry.setFlag(MODULE_ID, "costElement", element.id);
+            await this.journalEntry.setFlag(MODULE_ID, "costIcon", element.img);
+        }
+        debug("CraftPanelCook _onDropCostPanel: this.cost", this.cost);
+        this.render(true);
+    }
+    async _onClickResult(event) {
+        event.preventDefault();
+        const index = event.currentTarget.dataset.index;
+        let result = this.results[index];
+        const fb = new Portal.FormBuilder()
+            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-result`))
+            .object(result)
+            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
+            .editor({ name: "description", label: game.i18n.localize(`${MODULE_ID}.description`) })
+            .button({
+                label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-image`),
+                callback: async () => {
+                    if (this.isEdit) {
+                        //编辑模式下，左键点击结果可以编辑结果
+                        let images = await chooseImage(result.images, this.mode);
+                        if (images) {
+                            result.images = images;
+                            result.img = images[0].src;
+                        }
+                    } else {
+                        //游戏模式下，左键点击结果可以选择图片
+                        let images = await chooseImage(result.images, this.mode, { choosed: result.img, max: 1 });
+                        if (images) {
+                            result.img = images[0].src;
+                        }
+                    }
+                },
+                icon: "fas fa-edit",
+            })
+        if (this.isEdit) {
+            fb.number({ name: "quantity", label: game.i18n.localize(`${MODULE_ID}.quantity`) });
+            fb.checkbox({ name: "autoQuantity", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.auto-quantity`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.auto-quantity-hint`) });
+            fb.number({ name: "size", label: game.i18n.localize(`${MODULE_ID}.size`), value: result.size ?? Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75 });
+            fb.select({ name: `shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelCook.SHAPE_STYLE } });
+        }
+        
+        const data = await fb.render();
+        debug("CraftPanelCook _onClickResult: data", data);
+        if (!data) return;
+        result.name = data.name;
+        result.description = data.description;
+        if (this.isEdit) {
+            result.quantity = data.quantity;
+            result.autoQuantity = data.autoQuantity;
+            result.size = data.size;
+            result.shape = data.shape;
+            this.journalEntry.setFlag(MODULE_ID, "results", this.results);
+        }
+        debug("CraftPanelCook _onClickResult: this.results", this.results);
         this.render(true);
     }
     /**
@@ -559,7 +780,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         event.preventDefault();
         const index = parseInt(event.currentTarget.dataset.index);
         const isEmpty = event.currentTarget.classList.contains("empty");
-        debug("CraftPanelBlend _onClickSlot : index isEmpty", index, isEmpty);
+        debug("CraftPanelCook _onClickSlot: index isEmpty", index, isEmpty);
         if (isEmpty) {
             return;
         } else {
@@ -569,7 +790,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
     async _onClickCategory(event) {
         const category = event.currentTarget.dataset.category;
         const type = event.currentTarget.dataset.type;
-        debug("CraftPanelBlend _onClickCategory : category type", category, type);
+        debug("CraftPanelCook _onClickCategory: category type", category, type);
         if (this.isEdit && category === "add") {
             await this.addCategory(type);
         } else {
@@ -578,18 +799,18 @@ export class CraftPanelBlend extends HandlebarsApplication {
     }
     //移除槽位中的物品
     async removeIngredient(index) {
-        debug("CraftPanelBlend removeIngredient : index this.slotItems[index]", index, this.slotItems[index]);
         let material = this.materials.find(m => m.uuid == this.slotItems[index]?.uuid);
         if (material) {
             material.quantity++;
         }
-        debug("CraftPanelBlend removeIngredient : material", material);
         this.slotItems[index] = null;
+        debug("CraftPanelCook removeIngredient: this.slotItems this.materials", this.slotItems, this.materials);
+        //将材料整理成类似元素的格式
+        this.refreshSlotMaterials();
         await this.refreshElements();
     }
     //添加物品到槽位中
     async addIngredient(index, item) {
-        debug("CraftPanelBlend addIngredient : index item this.slotItems[index]", index, item, this.slotItems[index]);
         if (await this.checkAdd(index, item)) {
             const data = {
                 uuid: item.uuid,
@@ -599,21 +820,37 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 itemColor: item ? getItemColor(item) ?? "" : "",
             }
             this.slotItems[index] = data;
-            debug("CraftPanelBlend addIngredient : data this.slotItems", data, this.slotItems);
             let material = this.materials.find(m => m.uuid == item.uuid);
             if (material) {
                 material.quantity--;
             }
-            debug("CraftPanelBlend addIngredient : material", material);
+            debug("CraftPanelCook addIngredient: this.slotItems this.materials", this.slotItems, this.materials);
+            //将材料整理成类似元素的格式
+            this.refreshSlotMaterials();
             await this.refreshElements();
         }
+    }
+    //将材料整理成类似元素的格式
+    refreshSlotMaterials() {
+        Object.values(this.slotItems).forEach(data => {
+            if (data) {
+                if (this.slotMaterials.some(el => el.name == data.name)) {
+                    this.slotMaterials.find(el => el.name == data.name).num++;
+                } else {
+                    this.slotMaterials.push({
+                        num: 1,
+                        id: data.name,
+                    });
+                }
+            }
+        });
+        debug("CraftPanelCook refreshSlotMaterials: this.slotMaterials", this.slotMaterials);
     }
     /**
      * 刷新元素和结果
      */
     async refreshElements() {
         this.elements = [];
-        this.results = [];
         Object.entries(this.slotItems).forEach(([index, data]) => {
             if (data) {
                 let elements = data.elements;
@@ -629,70 +866,24 @@ export class CraftPanelBlend extends HandlebarsApplication {
         });
         //按元素数量排序
         this.elements.sort((a, b) => b.num - a.num);
-        debug("CraftPanelBlend refreshElements : this.elements", this.elements);
-        const showResult = this.journalEntry.getFlag(MODULE_ID, "showResult");
-        debug("CraftPanelBlend refreshElements : showResult", showResult);
-        if ((showResult === "show" || showResult === "question mark") && this.checkSlot()) {
-            let recipes = await this.matchRecipe();
-            debug("CraftPanelBlend refreshElements : recipes", recipes);
-            if (recipes.length > 0) {
-                if ((recipes.length > 1) || (showResult === "question mark")) {
-                    this.results.push({
-                        name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unknown-result`),
-                        img: "icons/magic/symbols/question-stone-yellow.webp",
-                        empty: "empty",
-                        slotIndex: 0
-                    });
-                } else {
-                    (recipes[0].getFlag(MODULE_ID, "results") ?? []).forEach(async (re, i) => {
-                        const item = await fromUuid(re.uuid);
-                        const itemColor = re.type == "Item" ? getItemColor(item) ?? "" : "";
-                        this.results.push({
-                            name: item?.name ?? re.name,
-                            img: item?.img ?? re.img,
-                            quantity: re.quantity,
-                            uuid: re.uuid,
-                            empty: "",
-                            itemColor,
-                            slotIndex: i
-                        });
-                    });
-                }
-                debug("CraftPanelBlend refreshElements : this.results", this.results);
-            }
-        }
+        debug("CraftPanelCook refreshElements: this.elements", this.elements);
+        await this.refreshCost();
         this.render(true);
     }
     //刷新材料面板
     async refreshPanel() {
         //记录之前选中的分类
-        let recipe_category = this.recipe_categories.find(c => c.choosed)?.id;
         let material_category = this.material_categories.find(c => c.choosed)?.id;
-        debug("CraftPanelBlend refreshPanel : recipe_category material_category", recipe_category, material_category);
         //刷新分类
-        this.recipe_categories = JSON.parse(JSON.stringify(this.journalEntry.getFlag(MODULE_ID, "recipe-categories") ?? []));
         this.material_categories = JSON.parse(JSON.stringify(this.journalEntry.getFlag(MODULE_ID, "material-categories") ?? []));
-        this.recipe_categories.unshift({
-            id: "all",
-            name: MODULE_ID + ".all",
-            icon: "modules/craftpanel/img/svgs/stack.svg",
-            choosed: true,
-        });
         this.material_categories.unshift({
             id: "all",
             name: `${game.i18n.localize(MODULE_ID + ".all")}`,
             icon: "modules/craftpanel/img/svgs/stack.svg",
             choosed: true,
         });
-        debug("CraftPanelBlend refreshPanel : this.recipe_categories this.material_categories", this.recipe_categories, this.material_categories);
         if (this.isEdit) {
             //在编辑模式下，将新增按钮添加到最后
-            this.recipe_categories.push({
-                id: "add",
-                name: `${MODULE_ID}.${this.APP_ID}.new-category`,
-                icon: "modules/craftpanel/img/svgs/health-normal.svg",
-                choosed: false,
-            });
             this.material_categories.push({
                 id: "add",
                 name: `${game.i18n.localize(MODULE_ID + "." + this.APP_ID + ".new-category")}`,
@@ -700,95 +891,15 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 choosed: false,
             });
         }
+        debug("CraftPanelCook refreshPanel: this.material_categories", this.material_categories);
         //恢复之前选中的分类
-        if (recipe_category && this.recipe_categories.find(c => c.id == recipe_category)) {
-            this.recipe_categories.map(c => c.choosed = false);
-            this.recipe_categories.find(c => c.id == recipe_category).choosed = true;
-        }
         if (material_category && this.material_categories.find(c => c.id == material_category)) {
             this.material_categories.map(c => c.choosed = false);
             this.material_categories.find(c => c.id == material_category).choosed = true;
         }
-        debug("CraftPanelBlend refreshPanel : this.recipe_categories this.material_categories", this.recipe_categories, this.material_categories);
         //记录当前选中的分类
-        recipe_category = this.recipe_categories.find(c => c.choosed)?.id;
         material_category = this.material_categories.find(c => c.choosed)?.id;
-        debug("CraftPanelBlend refreshPanel : recipe_category material_category", recipe_category, material_category);
-        //刷新配方
-        let recipesJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "recipe").sort((a, b) => (a.sort - b.sort));
-        if (!this.isEdit && !game.user.isGM) {
-            //真实可以匹配到的配方-不需要考虑顺序
-            this.recipesJE = [];
-            //显示的配方-需要考虑顺序
-            recipesJE = await Promise.all(recipesJE.map(async r => {
-                let canShow = false; //是否可以显示
-                let canUse = true; //是否可以匹配
-                if (r.ownership[game.user.id] == 0) {
-                    canUse = false;
-                } else if (r.ownership[game.user.id] >= 2) {
-                    canShow = true;
-                }
-                if (r.getFlag(MODULE_ID, "isLocked")) {
-                    canShow = false;
-                    canUse = false;
-                }
-                const unlockCondition = r.getFlag(MODULE_ID, "unlockCondition");
-                if (unlockCondition && unlockCondition.trim() != "") {
-                    const fn = new AsyncFunction("actor", "game", "recipe", "panel", unlockCondition);
-                    let result = undefined;
-                    try {
-                        result = await fn(this.actor ?? game?.user?.character, game, r, this.journalEntry);
-                    } catch (e) {
-                        ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
-                        console.error(e);
-                    }
-                    if (result === false || result == 'false') {
-                        canShow = canUse = false;
-                    } else if (result === true || result == 'true' || result == 'show') {
-                        canShow = canUse = true;
-                    } else if (result == 'unlock') {
-                        canUse = true;
-                    }
-                }
-                if (canUse) {
-                    this.recipesJE.push(r);
-                }
-                return canShow ? r : null;
-            }));
-            recipesJE = recipesJE.filter(r => r !== null);
-        } else {
-            this.recipesJE = recipesJE;
-        }
-        debug("CraftPanelBlend refreshPanel : recipesJE", recipesJE);
-        if (recipe_category != "all") {
-            // recipesJE = recipesJE.filter(r => r.getFlag(MODULE_ID, "category") == recipe_category);
-            recipesJE = recipesJE.filter(r => (r.getFlag(MODULE_ID, "category") ?? []).includes(recipe_category));
-        }
-        this.recipes = await Promise.all(recipesJE.map(async (je, i) => {
-            const ingredients = (je.getFlag(MODULE_ID, "ingredients") ?? []).map((el) => {
-                let num = el.min;
-                if (el.useMin && el.useMax) {
-                    num = `${el.min}/${el.max}`;
-                } else if (el.useMax) {
-                    num = `≤${el.max}`;
-                }
-                return {
-                    num: num,
-                    ...el,
-                };
-            });
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h1>${je.name}</h1></figure><div class="description">${je.text.content ?? ""}</div>`);
-            return {
-                id: je.id,
-                name: je.name,
-                image: je.src,
-                index: i,
-                uuid: je.uuid,
-                ingredients: ingredients,
-                tooltip,
-            };
-        }));
-        debug("CraftPanelBlend refreshPanel : this.recipes", this.recipes);
+        debug("CraftPanelCook refreshPanel: material_category", material_category);
         //刷新材料
         let materials_items = [];
         const requirements = {};
@@ -803,7 +914,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 requirements[key] = this.journalEntry.getFlag(MODULE_ID, `requirements-${key}`);
             }
         });
-        debug("CraftPanelBlend refreshPanel : requirements", requirements);
+        debug("CraftPanelCook refreshPanel: requirements", requirements);
         const categoryRequirements = {};
         if (material_category != "all") {
             this.material_categories.find(c => c.id == material_category)?.requirements?.forEach(key => {
@@ -818,7 +929,6 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             });
         }
-        debug("CraftPanelBlend refreshPanel : categoryRequirements", categoryRequirements);
         if (this.actor) {
             // materials = await Promise.all(this.actor.items.filter(async i => { return await checkItemRequirements(i, requirements) }));
             materials_items = this.actor.items.contents;
@@ -826,6 +936,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             // materials = await Promise.all(game.items.filter(async i => { return await checkItemRequirements(i, requirements) }));
             materials_items = game.items.contents;
         }
+        debug("CraftPanelCook refreshPanel: materials_items", materials_items);
         this.materials = [];
         for (let i = 0; i < materials_items.length; i++) {
             const item = materials_items[i];
@@ -855,19 +966,161 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 });
             }
         }
-        this.materials.sort((a, b) => b.totalElements - a.totalElements);
-        debug("CraftPanelBlend refreshPanel : this.materials", this.materials);
+        this.materials.sort((a, b) => { return b.totalElements - a.totalElements });
+        debug("CraftPanelCook refreshPanel: this.materials", this.materials);
+        //仅在特定情况下刷新调整
+        this.modifiersJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "modifier").sort((a, b) => (a.sort - b.sort));
         this.needRefresh = false;
+    }
+    //刷新调整面板
+    async refreshModifiers() {
+        //记录之前选中的分类
+        let modifier_category = this.modifier_categories.find(c => c.choosed)?.id;
+        //刷新分类
+        this.modifier_categories = JSON.parse(JSON.stringify(this.journalEntry.getFlag(MODULE_ID, "modifier-categories") ?? []));
+        this.modifier_categories.unshift({
+            id: "all",
+            name: MODULE_ID + ".all",
+            icon: "modules/craftpanel/img/svgs/stack.svg",
+            choosed: true,
+        });
+        if (this.isEdit) {
+            //在编辑模式下，将新增按钮添加到最后
+            this.modifier_categories.push({
+                id: "add",
+                name: `${MODULE_ID}.${this.APP_ID}.new-category`,
+                icon: "modules/craftpanel/img/svgs/health-normal.svg",
+                choosed: false,
+            });
+        }
+        debug("CraftPanelCook refreshModifiers: this.modifier_categories", this.modifier_categories);
+        //恢复之前选中的分类
+        if (modifier_category && this.modifier_categories.find(c => c.id == modifier_category)) {
+            this.modifier_categories.map(c => c.choosed = false);
+            this.modifier_categories.find(c => c.id == modifier_category).choosed = true;
+        }
+        //记录当前选中的分类
+        modifier_category = this.modifier_categories.find(c => c.choosed)?.id;
+        debug("CraftPanelCook refreshModifiers: modifier_category", modifier_category);
+        //刷新调整
+        this.cost.value = this.cost.max;
+        this.modifiers = await Promise.all(this.modifiersJE.map(async (je, i) => {
+            const ingredients = (je.getFlag(MODULE_ID, "ingredients") ?? []).map((el) => {
+                let num = el.min;
+                if (el.useMin && el.useMax) {
+                    num = `${el.min}/${el.max}`;
+                } else if (el.useMax) {
+                    num = `≤${el.max}`;
+                }
+                return {
+                    num: num,
+                    ...el,
+                };
+            });
+            let skipCheck = false;
+            let locked = je.getFlag(MODULE_ID, "isLocked") ? "locked" : "";
+            let auto = je.getFlag(MODULE_ID, "auto") ?? false;
+            const unlockCondition = je.getFlag(MODULE_ID, "unlockCondition");
+            if (unlockCondition && unlockCondition.trim() != "") {
+                const fn = new AsyncFunction("actor", "game", "modifier", "panel", unlockCondition);
+                let result = undefined;
+                try {
+                    result = await fn(this.actor ?? game?.user?.character, game, je, this.journalEntry);
+                } catch (e) {
+                    ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                    console.error(e);
+                }
+                if (result === false || result == 'false') {
+                    locked = "locked";
+                } else if (result === true || result == 'true') {
+                    locked = "";
+                    skipCheck = true;
+                } else if (result == 'unlock') {
+                    locked = "";
+                }
+            }
+            //检查是否满足条件，不满足则锁定
+            if (!(skipCheck || locked)) {
+                let elements = ingredients.filter(el => el.type == "element");
+                let materials = ingredients.filter(el => el.type == "material");
+                if (!checkCraftElements(this.slotMaterials, materials) || !checkCraftElements(this.elements, elements)) {
+                    locked = "locked";
+                }
+            }
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h1>${je.name}</h1></figure><div class="description">${je.text.content ?? ""}</div>`);
+            let choosed = "";
+            let cost = je.getFlag(MODULE_ID, "cost") ?? 0;
+            if ((auto || this.choosedModifiers.includes(je.uuid)) && !locked) {
+                choosed = "choosed";
+                this.cost.value -= cost;
+            }
+            return {
+                id: je.id,
+                name: je.name,
+                image: je.src,
+                index: i,
+                uuid: je.uuid,
+                ingredients: ingredients,
+                tooltip,
+                locked,
+                auto,
+                category: je.getFlag(MODULE_ID, "category") ?? [],
+                choosed,
+                cost,
+            };
+        }));
+        debug("CraftPanelCook refreshModifiers: this.modifiers", this.modifiers);
+        this.choosedModifiers = this.modifiers.filter(m => m.choosed).map(m => m.uuid);
+        debug("CraftPanelCook refreshModifiers: this.choosedModifiers", this.choosedModifiers);
+        if (this.cost.value < 0) {
+            this.modifiers.filter(m => m.choosed && !m.auto).forEach(m => {
+                m.choosed = "";
+                this.cost.value += m.cost;
+            });
+            this.choosedModifiers = this.modifiers.filter(m => m.choosed).map(m => m.uuid);
+        }
+        debug("CraftPanelCook refreshModifiers: this.cost this.choosedModifiers", this.cost, this.choosedModifiers);
+    }
+    //刷新可用点数
+    async refreshCost() {
+        let cost = Number(this.baseCost ?? 0);
+        let elementCost = 0;
+        debug("CraftPanelCook refreshCost: cost elementCost this.cost", cost, elementCost, this.cost);
+        if (this.cost.element) {
+            let element = this.elements.find(e => e.id == this.cost.element);
+            if (element) {
+                elementCost = Number(element.num ?? 0);
+            }
+        }
+        cost += elementCost;
+        debug("CraftPanelCook refreshCost: cost", cost);
+        const script = this.journalEntry.getFlag(MODULE_ID, "costScript");
+        if (script && script.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "modifiers", "elements", "materials", "baseCost", "elementCost", "cost", script);
+            let result = false;
+            try {
+                result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.modifiers, this.elements, this.materials, this.baseCost, elementCost, this.cost);
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
+            }
+            if (typeof result === "number") {
+                cost = result;
+            }
+        }
+
+        this.cost.max = cost;
+        debug("CraftPanelCook refreshCost: this.cost", this.cost);
     }
     //检查能否添加该物品到槽位中
     async checkAdd(index, item) {
-        debug("CraftPanelBlend checkAdd : index item this.slots[index] this.actor", index, item, this.slots[index], this.actor);
+        debug("CraftPanelCook checkAdd : index item this.slots[index] this.actor", index, item, this.slots[index], this.actor);
         if (!item) return false;
         if (this.slots[index].isLocked) return false;
         if (this.actor) {
             //检查数量
             let quantity = this.countQuantity(item);
-            debug("CraftPanelBlend checkAdd : quantity", quantity);
+            debug("CraftPanelCook checkAdd : quantity", quantity);
             if (quantity === undefined) {
                 if (Object.values(this.slotItems).some(data => data.uuid === item.uuid)) {
                     return false;
@@ -878,9 +1131,9 @@ export class CraftPanelBlend extends HandlebarsApplication {
         }
         //检查槽位要求
         const slotJE = this.journalEntry.pages.find(p => p.id == this.slots[index].id);
-        debug("CraftPanelBlend checkAdd : slotJE", slotJE);
+        debug("CraftPanelCook checkAdd : slotJE", slotJE);
         const config = slotJE.getFlag(MODULE_ID, "requirements") ?? [];
-        debug("CraftPanelBlend checkAdd : config", config);
+        debug("CraftPanelCook checkAdd : config", config);
         if (config.length > 0) {
             const requirements = {};
             config.forEach(key => {
@@ -894,7 +1147,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     requirements[key] = slotJE.getFlag(MODULE_ID, `requirements-${key}`);
                 }
             });
-            debug("CraftPanelBlend checkAdd : requirements", requirements);
+            debug("CraftPanelCook checkAdd : requirements", requirements);
             return await checkItemRequirements(item, requirements);
         }
         return true;
@@ -902,12 +1155,12 @@ export class CraftPanelBlend extends HandlebarsApplication {
     //检查必需槽位是否已填满
     checkSlot() {
         let slots = this.slots.filter(slot => slot.isNecessary);
-        debug("CraftPanelBlend checkSlot : slots", slots);
+        debug("CraftPanelCook checkSlot : slots", slots);
         return slots.every(slot => this.slotItems[slot.slotIndex] !== null && this.slotItems[slot.slotIndex] !== undefined);
     }
     countQuantity(item) {
         let quantity = foundry.utils.getProperty(item, this.quantityPath);
-        debug("CraftPanelBlend countQuantity : item quantity", item, quantity);
+        debug("CraftPanelCook countQuantity : item quantity", item, quantity);
         if (quantity === undefined) {
             return undefined;
         }
@@ -921,7 +1174,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             }
         });
-        debug("CraftPanelBlend countQuantity : quantity", quantity);
+        debug("CraftPanelCook countQuantity : quantity", quantity);
         return quantity;
     }
 
@@ -930,7 +1183,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
      */
     async editSlot(slotJEUuid) {
         const slotJE = await fromUuid(slotJEUuid);
-        debug("CraftPanelBlend editSlot : slotJE", slotJE);
+        debug("CraftPanelCook editSlot : slotJE", slotJE);
         const fb = new Portal.FormBuilder()
             .object(slotJE)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot`) + ": " + slotJE.name)
@@ -938,7 +1191,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
             .file({ name: `src`, type: "image", label: game.i18n.localize(`${MODULE_ID}.image`) })
             .number({ name: `flags.${MODULE_ID}.size`, label: game.i18n.localize(`${MODULE_ID}.size`), min: 40, max: 160, step: 5 })
-            .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelBlend.SHAPE_STYLE } })
+            .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelCook.SHAPE_STYLE } })
             .number({ name: `flags.${MODULE_ID}.hue`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.hue`), min: 0, max: 360, step: 1 })
             .tab({ id: "behavior", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-behavior-tab`) })
             .checkbox({ name: `flags.${MODULE_ID}.isNecessary`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary-hint`) })
@@ -946,7 +1199,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
             .textArea({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
             .tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-requirements-tab`) })
-            .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-hint`), options: { ...CraftPanelBlend.REQUIREMENTS_TYPE_OPTIONS } })
+            .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-hint`), options: { ...CraftPanelCook.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-name-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
             .textArea({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-script-hint`) })
@@ -971,30 +1224,67 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 icon: "fas fa-trash",
             });
         const data = await fb.render();
-        debug("CraftPanelBlend editSlot : data", data);
         if (!data) return;
+        debug("CraftPanelCook editSlot : data", data);
         await slotJE.update(data);
         this.render(true);
     }
     /**
      * 编辑配方
      */
-    async editRecipe(recipeJEUuid) {
-        const recipeJE = await fromUuid(recipeJEUuid);
-        debug("CraftPanelBlend editRecipe : recipeJE", recipeJE);
-        const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelRecipe));
+    async editModifier(modifierJEUuid) {
+        const modifierJE = await fromUuid(modifierJEUuid);
+        debug("CraftPanelCook editModifier : modifierJE", modifierJE);
+        const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelModifier));
         if (openWindow) openWindow.close();
         else {
-            let newWindow = new CraftPanelRecipe(this.journalEntry, recipeJE);
+            let newWindow = new CraftPanelModifier(this.journalEntry, modifierJE);
             newWindow.parentPanel = this;
             newWindow.render(true);
         };
     }
     /**
+     * 选择调整
+     */
+    async chooseModifier(modifierJEUuid) {
+        const modifierJE = await fromUuid(modifierJEUuid);
+        const modifier = this.modifiers.find(m => m.uuid === modifierJE.uuid);
+        debug("CraftPanelCook chooseModifier : modifierJE modifier", modifierJE, modifier);
+        if (modifier.auto) return;
+        const cost = modifier.cost ?? modifierJE.getFlag(MODULE_ID, "cost") ?? 0;
+        debug("CraftPanelCook chooseModifier : cost this.cost", cost, this.cost);
+        if (this.choosedModifiers.includes(modifierJE.uuid)) {
+            this.choosedModifiers = this.choosedModifiers.filter(m => m !== modifierJE.uuid);
+        } else {
+            //检查能否选择
+            if (modifier.locked || this.cost.value < cost) {
+                return;
+            }
+            let categories = modifierJE.getFlag(MODULE_ID, "category") ?? [];
+            debug("CraftPanelCook chooseModifier : categories", categories);
+            //检查类别限制
+            if (categories.length > 0) {
+                for (let category of categories) {
+                    let limit = this.modifier_categories.find(c => c.id == category)?.limit ?? 0;
+                    if (limit > 0) {
+                        let choosed = this.choosedModifiers.filter(m => this.modifiers.find(mo => mo.uuid == m).category.includes(category)).length;
+                        if (choosed >= limit) {
+                            return;
+                        }
+                    }
+                }
+            }
+            //选择
+            this.choosedModifiers.push(modifierJE.uuid);
+        }
+        debug("CraftPanelCook chooseModifier : this.choosedModifiers", this.choosedModifiers);
+        this.render(true);
+    }
+    /**
      * 新增类别配置
      */
     async addCategory(type) {
-        debug("CraftPanelBlend addCategory : type", type);
+        debug("CraftPanelCook addCategory : type", type);
         const defaultData = {
             id: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-category`),
             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-category`),
@@ -1009,42 +1299,44 @@ export class CraftPanelBlend extends HandlebarsApplication {
 
         if (type == "material") {
             fb.tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-requirements-tab`) })
-                .multiSelect({ name: `requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-hint`), options: { ...CraftPanelBlend.REQUIREMENTS_TYPE_OPTIONS } })
+                .multiSelect({ name: `requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-hint`), options: { ...CraftPanelCook.REQUIREMENTS_TYPE_OPTIONS } })
                 .text({ name: `requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-name-hint`) })
                 .multiSelect({ name: `requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
                 .textArea({ name: `requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-script-hint`) })
+        } else if (type == "modifier") {
+            fb.number({ name: "limit", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num-hint`), min: 0 });
         }
         const data = await fb.render();
-        debug("CraftPanelBlend addCategory : data", data);
+        debug("CraftPanelCook addCategory : data", data);
         if (!data) return;
         data.id = data.name;
         let categories = this.journalEntry.getFlag(MODULE_ID, type + "-categories") ?? [];
         categories.push(data);
-        debug("CraftPanelBlend addCategory : categories", categories);
+        debug("CraftPanelCook addCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
         this.render(true);
     }
     async changeCategory(category, type) {
-        debug("CraftPanelBlend changeCategory : category type", category, type);
+        debug("CraftPanelCook changeCategory : category type", category, type);
         if (type == "material") {
             let index = this.material_categories.findIndex(el => el.id == category);
             if (index >= 0) {
                 if (!this.material_categories[index].choosed) {
                     this.material_categories.forEach(el => el.choosed = false);
                     this.material_categories[index].choosed = true;
-                    debug("CraftPanelBlend changeCategory : this.material_categories", this.material_categories);
+                    debug("CraftPanelCook changeCategory : this.material_categories", this.material_categories);
                     this.needRefresh = true;
                     this.render(true);
                 }
             }
-        } else if (type == "recipe") {
-            let index = this.recipe_categories.findIndex(el => el.id == category);
+        } else if (type == "modifier") {
+            let index = this.modifier_categories.findIndex(el => el.id == category);
             if (index >= 0) {
-                if (!this.recipe_categories[index].choosed) {
-                    this.recipe_categories.forEach(el => el.choosed = false);
-                    this.recipe_categories[index].choosed = true;
-                    debug("CraftPanelBlend changeCategory : this.recipe_categories", this.recipe_categories);
+                if (!this.modifier_categories[index].choosed) {
+                    this.modifier_categories.forEach(el => el.choosed = false);
+                    this.modifier_categories[index].choosed = true;
+                    debug("CraftPanelCook changeCategory : this.recipe_categories", this.recipe_categories);
                     this.needRefresh = true;
                     this.render(true);
                 }
@@ -1052,10 +1344,10 @@ export class CraftPanelBlend extends HandlebarsApplication {
         }
     }
     async editCategory(category, type) {
-        debug("CraftPanelBlend editCategory : category type", category, type);
+        debug("CraftPanelCook editCategory : category type", category, type);
         let categories = this.journalEntry.getFlag(MODULE_ID, type + "-categories") ?? [];
         let index = categories.findIndex(el => el.id == category);
-        debug("CraftPanelBlend editCategory : index categories", index, categories);
+        debug("CraftPanelCook editCategory : index categories", index, categories);
         if (!categories[index]) {
             ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.objectNotFound`) + " : " + category);
             return;
@@ -1077,13 +1369,15 @@ export class CraftPanelBlend extends HandlebarsApplication {
             });
         if (type == "material") {
             fb.tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-requirements-tab`) })
-                .multiSelect({ name: `requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-hint`), options: { ...CraftPanelBlend.REQUIREMENTS_TYPE_OPTIONS } })
+                .multiSelect({ name: `requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-hint`), options: { ...CraftPanelCook.REQUIREMENTS_TYPE_OPTIONS } })
                 .text({ name: `requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-name-hint`) })
                 .multiSelect({ name: `requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
                 .textArea({ name: `requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-script-hint`) })
+        } else if (type == "modifier") {
+            fb.number({ name: "limit", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num-hint`), min: 0 });
         }
         const data = await fb.render();
-        debug("CraftPanelBlend editCategory : data needDelete", data, needDelete);
+        debug("CraftPanelCook editCategory : data needDelete", data, needDelete);
         if (needDelete) {
             categories.splice(index, 1);
             await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
@@ -1095,67 +1389,12 @@ export class CraftPanelBlend extends HandlebarsApplication {
         data.id = data.name;
 
         categories[index] = data;
-        debug("CraftPanelBlend editCategory : categories", categories);
+        debug("CraftPanelCook editCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
         this.render(true);
     }
 
-    //匹配配方
-    async matchRecipe() {
-        let recipes = [];
-        this.recipesJE.forEach(recipe => {
-            let ingredients = recipe.getFlag(MODULE_ID, "ingredients") ?? [];
-            let elements = ingredients.filter(el => el.type == "element");
-            let materials = ingredients.filter(el => el.type == "material");
-            debug("CraftPanelBlend matchRecipe : recipe ingredients elements materials", recipe, ingredients, elements, materials);
-            let slotMaterials = [];
-            //将材料整理成类似元素的格式
-            Object.values(this.slotItems).forEach(data => {
-                if (data) {
-                    if (slotMaterials.some(el => el.name == data.name)) {
-                        slotMaterials.find(el => el.name == data.name).num++;
-                    } else {
-                        slotMaterials.push({
-                            num: 1,
-                            id: data.name,
-                        });
-                    }
-                }
-            });
-            debug("CraftPanelBlend matchRecipe : slotMaterials", slotMaterials);
-            //只有元素和材料需求都匹配时才能匹配到配方
-            if (checkCraftElements(this.elements, elements) && checkCraftElements(slotMaterials, materials)) {
-                //计算匹配度
-                let match = 0;
-                if (elements.length > 0) {
-                    match = checkCraftElementsMatch(this.elements, elements) * 10;
-                    //取元素成分最大的元素为主元素，增加额外的匹配度
-                    let mainElement = this.elements.filter(el => el.num == this.elements[0].num);
-                    match += checkCraftElementsMatch(mainElement, elements);
-                }
-                //材料的匹配度效力更大
-                if (materials.length > 0) {
-                    match += checkCraftElementsMatch(slotMaterials, materials) * 100;
-                }
-                //没有任何指定材料和元素时，匹配度为最小值
-                if (elements.length == 0 && materials.length == 0) {
-                    match = Number.MIN_SAFE_INTEGER;
-                }
-                recipes.push({
-                    recipe: recipe,
-                    match: match
-                });
-            }
-        });
-        debug("CraftPanelBlend matchRecipe : recipes", recipes);
-        //按匹配度排序，取最高匹配度的配方
-        recipes.sort((a, b) => b.match - a.match);
-        recipes = recipes.filter(el => el.match == recipes[0].match);
-        recipes = recipes.map(el => el.recipe);
-        debug("CraftPanelBlend matchRecipe : recipes", recipes);
-        return recipes;
-    }
     /**
      * 合成物品
      */
@@ -1166,10 +1405,9 @@ export class CraftPanelBlend extends HandlebarsApplication {
         };
         let preScript = this.journalEntry.getFlag(MODULE_ID, "craft-pre-script");
         let postScript = this.journalEntry.getFlag(MODULE_ID, "craft-post-script");
-        debug("CraftPanelBlend craft : preScript postScript", preScript, postScript);
+        debug("CraftPanelCook craft : preScript postScript", preScript, postScript);
         let materials = [];
         let results = [];
-        let selectedRecipe = undefined;
         this.canceled = false;
         //整理所有的材料
         for (let slot of this.slots) {
@@ -1193,155 +1431,193 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             }
         }
-        debug("CraftPanelBlend craft : materials", materials);
+        debug("CraftPanelCook craft : materials", materials);
         //执行预处理脚本
         if (preScript && preScript.trim() != "") {
-            const fn = new AsyncFunction("data", "panel", "actor", "recipes", "elements", "materials", "canceled", preScript);
+            const fn = new AsyncFunction("data", "panel", "actor", "modifiers", "elements", "materials", "canceled", preScript);
             try {
-                await fn(this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, this.canceled);
+                await fn(this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, this.canceled);
             } catch (e) {
                 ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
                 console.error(e);
             }
         }
-        debug("Hooks.call craftPanelBlendPre", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, this.canceled);
-        await Hooks.call("craftPanelBlendPre", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, this.canceled);
-        //匹配配方
-        let recipes = await this.matchRecipe();
-        debug("CraftPanelBlend craft : recipes", recipes);
-        if (recipes.length > 0) {
-            if (recipes.length == 1) {
-                selectedRecipe = recipes[0];
-            } else {
-                //根据权重随机选择一个配方
-                let weights = recipes.map(recipe => recipe.getFlag(MODULE_ID, "weight") ?? 100);
-                let totalWeight = weights.reduce((a, b) => a + b, 0);
-                let randomWeight = Math.random() * totalWeight;
-                let cumulativeWeight = 0;
-                debug("CraftPanelBlend craft : totalWeight randomWeight", totalWeight, randomWeight);
-                for (let i = 0; i < recipes.length; i++) {
-                    cumulativeWeight += weights[i];
-                    if (randomWeight < cumulativeWeight) {
-                        selectedRecipe = recipes[i];
-                        break;
-                    }
-                }
-            }
-            debug("CraftPanelBlend craft : selectedRecipe", selectedRecipe);
-            //获取配方结果
-            let jeResults = selectedRecipe.getFlag(MODULE_ID, "results") ?? [];
-            debug("CraftPanelBlend craft : jeResults", jeResults);
-            for (let re of jeResults) {
-                const item = await fromUuid(re.uuid);
-                debug("CraftPanelBlend craft : item re", item, re);
-                if (item) {
-                    if (re.type == "Item") {
-                        results.push({
-                            item: item.toObject(),
-                            quantity: re.quantity,
-                            uuid: re.uuid
-                        })
-                    } else if (re.type == "RollTable") {
-                        //处理随机表类型的结果
-                        for (let j = 0; j < re.quantity; j++) {
-                            const object = await item.roll();
-                            debug("CraftPanelBlend craft : object", object);
-                            for (const r of object.results) {
-                                let uuid = r.documentCollection + "." + r.documentId;
-                                debug("CraftPanelBlend craft : r uuid", r, uuid);
-                                if (r.documentCollection !== "Item") {
-                                    const parts = r.documentCollection.split(".");
-                                    if (parts.length < 2) {
-                                        ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.tableNotValid`) + r.name);
-                                        this.canceled = true;
-                                        return false;
-                                    }
-                                    uuid = "Compendium." + uuid;
-                                }
-                                const resultItem = await fromUuid(uuid);
-                                debug("CraftPanelBlend craft : resultItem", resultItem);
-                                if (!resultItem) {
-                                    // @ts-ignore
-                                    ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.tableItemNotFound`) + r.name);
+        debug("Hooks.call craftPanelCookPre", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, this.canceled);
+        await Hooks.call("craftPanelCookPre", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, this.canceled);
+        //获取当前选择的所有调整
+        let selectedModifiers = this.modifiersJE.filter(m => this.choosedModifiers.includes(m.uuid));
+        debug("CraftPanelCook craft : selectedModifiers", selectedModifiers);
+        //获取合成结果
+        for (let re of this.results) {
+            const item = await fromUuid(re.uuid);
+            debug("CraftPanelCook craft : item", item);
+            if (item) {
+                if (re.type == "Item") {
+                    results.push({
+                        item: item.toObject(),
+                        quantity: re.quantity,
+                        uuid: re.uuid,
+                        name: re.name,
+                        img: re.img,
+                        description: re.description,
+                        autoQuantity: re.autoQuantity ?? false,
+                    })
+                } else if (re.type == "RollTable") {
+                    //处理随机表类型的结果
+                    for (let j = 0; j < re.quantity; j++) {
+                        const object = await item.roll();
+                        debug("CraftPanelCook craft : object", object);
+                        for (const r of object.results) {
+                            let uuid = r.documentCollection + "." + r.documentId;
+                            debug("CraftPanelCook craft : r uuid", r, uuid);
+                            if (r.documentCollection !== "Item") {
+                                const parts = r.documentCollection.split(".");
+                                if (parts.length < 2) {
+                                    ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.tableNotValid`) + r.name);
                                     this.canceled = true;
                                     return false;
                                 }
-                                let result = results.find(r => r.uuid == uuid);
-                                debug("CraftPanelBlend craft : result", result);
-                                if (result) {
-                                    result.quantity++;
-                                } else {
-                                    results.push({
-                                        item: resultItem.toObject(),
-                                        quantity: 1,
-                                        uuid: uuid
-                                    });
-                                }
+                                uuid = "Compendium." + uuid;
+                            }
+                            const resultItem = await fromUuid(uuid);
+                            debug("CraftPanelCook craft : resultItem", resultItem);
+                            if (!resultItem) {
+                                // @ts-ignore
+                                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.tableItemNotFound`) + r.name);
+                                this.canceled = true;
+                                return false;
+                            }
+                            let result = results.find(r => r.uuid == uuid);
+                            debug("CraftPanelCook craft : result", result);
+                            if (result) {
+                                result.quantity++;
+                            } else {
+                                results.push({
+                                    item: resultItem.toObject(),
+                                    quantity: 1,
+                                    uuid: uuid,
+                                    name: re.name,
+                                    img: re.img,
+                                    description: re.description
+                                });
                             }
                         }
                     }
-                } else {
-                    ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.itemNotFound`) + re.name + " " + re.uuid);
-                    this.canceled = true;
                 }
+            } else {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.itemNotFound`) + re.name + " " + re.uuid);
+                this.canceled = true;
             }
-            debug("CraftPanelBlend craft : results", results);
-            //执行配方的脚本
-            let craftScript = selectedRecipe.getFlag(MODULE_ID, "craftScript");
-            if (craftScript && craftScript.trim() != "") {
-                const fn = new AsyncFunction("data", "panel", "actor", "recipes", "elements", "materials", "recipe", "results", "canceled", craftScript);
-                try {
-                    await fn(this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
-                } catch (e) {
-                    ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
-                    console.error(e);
-                }
-            }
-            debug("Hooks.call craftPanelBlendRecipe", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
-            await Hooks.call("craftPanelBlendRecipe", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
         }
+        //消耗的材料的总重量
+        let totalWeight = 0;
+        for (let m of materials) {
+            if (foundry.utils.getProperty(m.item, this.weightPath) && m.isConsumed) {
+                totalWeight += Number(m.item[this.weightPath]) * Number(m.quantity);
+            }
+        }
+        debug("CraftPanelCook craft : totalWeight", totalWeight);
+        results = results.map(r => {
+            debug("CraftPanelCook craft : r", r);
+            if (foundry.utils.getProperty(r.item, this.quantityPath)) {
+                r.item[this.quantityPath] = r.quantity;
+                if (r.autoQuantity) {
+                    r.item[this.quantityPath] = Math.floor(totalWeight / r.quantity);
+                    if (r.item[this.quantityPath] < 1) {
+                        r.item[this.quantityPath] = 1;
+                    }
+                }
+            }
+            r.item.name = r.name;
+            r.item.img = r.img;
+
+            //添加描述
+            if (foundry.utils.getProperty(r.item, this.descriptionPath)) {
+                r.item[this.descriptionPath] = r.description;
+                r.item[this.descriptionPath] += `<h2>${game.i18n.localize(MODULE_ID + ".element")}</h2><p>`;
+                for (let el of this.elements) {
+                    r.item[this.descriptionPath] += `${el.name} ${el.num}; </div>`;
+                }
+                r.item[this.descriptionPath] += `</p>`;
+                for (let je of selectedModifiers) {
+                    r.item[this.descriptionPath] += `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`;
+                }
+            }
+            //保存调整信息
+            r.item.flags ??= {};
+            r.item.flags[MODULE_ID] ??= {};
+            r.item.flags[MODULE_ID].modifiers = selectedModifiers.map(m => {
+                return {
+                    uuid: m.uuid,
+                    name: m.name,
+                    img: m.src
+                }
+            });
+            return r;
+        });
+        debug("CraftPanelCook craft : results", results);
+        //应用调整
+        if (selectedModifiers.length > 0) {
+            for (let modifier of selectedModifiers) {
+                //执行调整的脚本
+                let craftScript = modifier.getFlag(MODULE_ID, "craftScript");
+                if (craftScript && craftScript.trim() != "") {
+                    const fn = new AsyncFunction("data", "panel", "actor", "modifiers", "elements", "materials", "modifier", "results", "canceled", craftScript);
+                    try {
+                        await fn(this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                    } catch (e) {
+                        ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                        console.error(e);
+                    }
+                }
+                debug("Hooks.call craftPanelCookRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                await Hooks.call("craftPanelCookRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                //应用调整的效果
+                let changes = modifier.getFlag(MODULE_ID, "changes") ?? [];
+                let asAE = modifier.getFlag(MODULE_ID, "asAE") ?? false;
+                debug("CraftPanelCook craft : changes asAE", changes, asAE);
+                if (asAE) {
+                    if (asAE == "merge") {
+                        for (let re of results) {
+                            let ae = re.item?.effects?.find(e => e.name == re.name);
+                            if (ae) {
+                                ae.changes = ae.changes.concat(changes);
+                            } else {
+                                ae = buildActiveEffect(re.name, re.img, changes, 0);
+                                re.item.effects ??= [];
+                                re.item.effects.push(ae);
+                            }
+                        }
+                    } else {
+                        let aeName = modifier.getFlag(MODULE_ID, "aeName");
+                        if (!aeName) {
+                            aeName = modifier.name;
+                        }
+                        let ae = buildActiveEffect(aeName, modifier.src, changes, 0, 3, undefined, modifier.text.content);
+                        for (let re of results) {
+                            re.item.effects ??= [];
+                            re.item.effects.push(ae);
+                        }
+                    }
+                } else {
+                    for (let re of results) {
+                        for (let change of changes) {
+                            if (change.key && /^[a-zA-Z0-9.]+$/.test(change.key)) {
+                                applyChange(re.item, change);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        debug("CraftPanelCook craft : results", results);
         //结算结果
         if (this.actor) {
             const updates = {};
             const toDelete = {};
-            const products = [];
-            let mergeByName = this.journalEntry.getFlag(MODULE_ID, "mergeByName") ?? false;
-            if (selectedRecipe && selectedRecipe.getFlag(MODULE_ID, "mergeByName") != undefined) {
-                if (selectedRecipe.getFlag(MODULE_ID, "mergeByName") == "yes") {
-                    mergeByName = true;
-                } else if (selectedRecipe.getFlag(MODULE_ID, "mergeByName") == "no") {
-                    mergeByName = false;
-                }
-            }
-            debug("CraftPanelBlend craft : mergeByName", mergeByName);
-            if (mergeByName) {
-                results.forEach(r => {
-                    let item = this.actor.items.find(i => i.name == r.item.name);
-                    if (item) {
-                        if (foundry.utils.getProperty(item, this.quantityPath)) {
-                            updates[this.actor.id] ??= { parent: this.actor, items: [] };
-                            updates[this.actor.id].items.push({
-                                _id: item.id,
-                                [this.quantityPath]: foundry.utils.getProperty(item, this.quantityPath) + r.quantity
-                            });
-                        }
-                    } else {
-                        if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
-                            foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
-                        }
-                        products.push(r.item);
-                    }
-                });
-            } else {
-                results.forEach(r => {
-                    if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
-                        foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
-                    }
-                    products.push(r.item);
-                });
-            }
-            debug("CraftPanelBlend craft : updates products", updates, products);
+            const products = results.map(r => r.item);
 
+            debug("CraftPanelCook craft : this.actor products", this.actor, products);
             materials.forEach(m => {
                 let item = m.item;
                 let quantity = m.quantity;
@@ -1360,13 +1636,6 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     } else {
                         let newQuantity = parseFloat(foundry.utils.getProperty(item, this.quantityPath)) - quantity;
                         let findItem = false;
-                        //处理当合成结果既是材料又是产品，同时还开启了合并名称时的特殊情况
-                        if (mergeByName && updates[this.actor.id] && (parent.id == this.actor.id)) {
-                            findItem = updates[this.actor.id].items.find(i => i._id == item.id);
-                            if (findItem) {
-                                newQuantity = parseFloat(findItem[this.quantityPath]) - quantity;
-                            }
-                        }
                         if (newQuantity < 0) {
                             ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.notEnoughMaterial`) + item.name);
                             this.canceled = true;
@@ -1389,10 +1658,11 @@ export class CraftPanelBlend extends HandlebarsApplication {
                             }
                         }
                     }
+
                 }
             });
 
-            debug("CraftPanelBlend craft : updates toDelete products canceled", updates, toDelete, products, canceled);
+            debug("CraftPanelCook craft : updates toDelete products", updates, toDelete, products);
             if (!this.canceled) {
                 // await this.actor.updateEmbeddedDocuments("Item", updates);
                 await this.actor.createEmbeddedDocuments("Item", products);
@@ -1429,49 +1699,26 @@ export class CraftPanelBlend extends HandlebarsApplication {
             }
         } else if (!this.canceled) {
             const folder = await getFolder(this.journalEntry.name, 'Item');
-            debug("CraftPanelBlend craft : results folder", results, folder);
             await Item.createDocuments(results.map(r => {
                 r.item.folder = folder;
                 return r.item;
             }));
         }
-        //解锁配方
-        debug("CraftPanelBlend craft : selectedRecipe canceled game.user.isGM this.journalEntry.getFlag(MODULE_ID, unlockRecipe)", selectedRecipe, canceled, game.user.isGM, this.journalEntry.getFlag(MODULE_ID, "unlockRecipe"));
-        if (selectedRecipe && !canceled && !game.user.isGM && this.journalEntry.getFlag(MODULE_ID, "unlockRecipe")) {
-            if ((selectedRecipe.ownership?.[game.user.id] ?? selectedRecipe.ownership?.default ?? -1) <= 0) {
-                if (getActiveGM()) {
-                    await Socket.executeAsGM("updateDocument", selectedRecipe.uuid, { "ownership": { [game.user.id]: 2 } });
-                } else {
-                    ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.noGM`));
-                }
-            }
-        }
         //执行后处理脚本
         if (postScript && postScript.trim() != "") {
-            const fn = new AsyncFunction("data", "panel", "actor", "recipes", "elements", "materials", "recipe", "results", "canceled", postScript);
+            const fn = new AsyncFunction("data", "panel", "actor", "modifiers", "elements", "materials", "results", "canceled", postScript);
             try {
-                await fn(this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
+                await fn(this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, results, this.canceled);
             } catch (e) {
                 ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
                 console.error(e);
             }
         }
-        debug("Hooks.call craftPanelBlendPost", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
-        await Hooks.call("craftPanelBlendPost", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
+        debug("Hooks.call craftPanelCookPost", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, results, this.canceled);
+        await Hooks.call("craftPanelCookPost", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, results, this.canceled);
         this.slotItems = {};
         this.elements = [];
-        this.results = results.length <= 0 ? [] : results.map((re, i) => {
-            const itemColor = getItemColor(re?.item) ?? "";
-            return {
-                name: re?.item?.name ?? this.recipesJE.name,
-                img: re?.item?.img ?? this.recipesJE.src,
-                quantity: re?.quantity ?? 1,
-                uuid: re.uuid,
-                empty: "",
-                itemColor,
-                slotIndex: i
-            }
-        });
+        this.choosedModifiers = [];
         this.needRefresh = true;
         this.render(true);
         return results;
@@ -1522,20 +1769,6 @@ async function checkItemRequirements(item, requirements) {
 }
 
 /**
- * @typedef {Object} CraftElement
- * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。
- * @property {string} name - 元素的名称，为对应物品的名称。仅用于显示。
- * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
- * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
- * @property {string} class - 元素的类型，仅用于脚本检测。
- * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
- * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
- * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。
- * @property {number} min - 仅需求元素使用，为元素的最小数量。用于显示合成时最少需要的元素数量。
- * @property {boolean} useMax - 仅需求元素使用，为是否使用最大数量。
- * @property {number} max - 仅需求元素使用，为元素的最大数量。用于显示合成时最多需要的元素数量。
- */
-/**
  * 检查当前元素是否满足配方的元素需求
  * @param {CraftElement[]} elements 当前元素
  * @param {CraftElement[]} craftElements 配方元素需求
@@ -1545,26 +1778,6 @@ function checkCraftElements(elements, craftElements) {
     return !(craftElements.some((el) => {
         let el2 = elements.find((el3) => el3.id === el.id);
         // return !el2 || el2.num < el.min || el2.num > el.max;
-        return !el2 || (el.useMin && el2.num < el.min) || (el.useMax && el2.num > el.max);
+        return (el.useMin && (el2?.num ?? 0) < el.min) || (el.useMax && (el2?.num ?? 0) > el.max);
     }));
-}
-/**
- * 检查当前元素与需求元素的匹配程度
- * 实际为检查当前元素中相比于需求元素多出来的元素种类和数量
- * 当前元素中每比需求元素多一种元素，匹配程度-1
- * 对于有最小值要求的元素，匹配度为最小值乘以100
- * 对于仅有最大值要求的元素，每有一个，匹配程度-1
- * @param {CraftElement[]} elements 当前元素
- * @param {CraftElement[]} craftElements 需求元素
- * @returns {number} 冗余程度，越小越匹配
- */
-function checkCraftElementsMatch(elements, craftElements) {
-    let match = 0;
-    for (let el of elements) {
-        let el2 = craftElements.find((el3) => el3.id === el.id);
-        if (!el2) match -= 1;
-        if (el2?.useMin) match += el2.min * 10;
-        if (el2?.useMax && !el.useMin) match -= el.num;
-    }
-    return match;
 }

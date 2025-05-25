@@ -4,7 +4,7 @@
             <div class="craft-panel-tittle">
                 <h2>{{localize "craftpanel.element"}}</h2>
             </div>
-            <div class="craft-elementitems-panel">
+            <div class="craft-elementitems-panel" style="width:{{exist panelSizes.elementitems.width 420}}px;height:{{exist panelSizes.elementitems.height 420}}px;">
                 {{#each elementItems as |element|}}
                 <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                     data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
@@ -19,9 +19,9 @@
                 <div class="craft-panel-tittle">
                     <h2>{{localize "craftpanel.material"}}</h2>
                 </div>
-                <div class="craft-slot-panel main-child-panel" style="height: 200px;">
+                <div class="craft-slot-panel main-child-panel" style="width:{{exist panelSizes.slots.width 300}}px;height:{{exist panelSizes.slots.height 200}}px;">
                     {{#each slots as |slot|}}
-                    <div draggable="true" data-tooltip-class="craft-material-tooltip" data-tooltip="{{slot.tooltip}}"
+                    <div draggable="true" data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
                         class="element-slot materials" data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}" data-inslot="true"
                         style="{{#if slot.itemColor}}box-shadow: inset 0 0 10px {{slot.itemColor}}; border-color: {{slot.itemColor}};{{/if}} {{#if slot.item.img}}background-image: url('{{slot.item.img}}');{{/if}} ">
                         <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if
@@ -42,7 +42,7 @@
                 <div class="craft-panel-tittle">
                     <h2>{{localize "craftpanel.element"}}</h2>
                 </div>
-                <div class="craft-elements-panel main-child-panel" style="height: 170px;">
+                <div class="craft-elements-panel main-child-panel" style="width:{{exist panelSizes.elements.width 300}}px;height:{{exist panelSizes.elements.height 170}}px;">
                     {{#each elements as |element|}}
                     <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                         data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"
@@ -57,7 +57,7 @@
             <div class="craft-panel-tittle">
                 <h2>{{localize "craftpanel.material"}}</h2>
             </div>
-            <div class="craft-materials-panel">
+            <div class="craft-materials-panel" style="width:{{exist panelSizes.materials.width 420}}px;height:{{exist panelSizes.materials.height 420}}px;">
                 {{#each materials as |slot|}}
                 <div draggable="true" data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
                     class="element-slot materials" data-uuid="{{slot.uuid}}" data-inslot="false"

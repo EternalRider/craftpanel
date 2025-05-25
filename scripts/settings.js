@@ -16,6 +16,22 @@ export function register_settings() {
         scope: 'world',
         config: true,
     });
+    game.settings.register(MODULE_ID, 'weightPath', {
+        name: game.i18n.localize(`${MODULE_ID}.settings.weightPath`),
+        hint: game.i18n.localize(`${MODULE_ID}.settings.weightPath-hint`),
+        type: String,
+        default: "system.weight",
+        scope: 'world',
+        config: true,
+    });
+    game.settings.register(MODULE_ID, 'descriptionPath', {
+        name: game.i18n.localize(`${MODULE_ID}.settings.descriptionPath`),
+        hint: game.i18n.localize(`${MODULE_ID}.settings.descriptionPath-hint`),
+        type: String,
+        default: "system.description",
+        scope: 'world',
+        config: true,
+    });
 
     game.settings.register(MODULE_ID, 'debug', {
         name: game.i18n.localize(`${MODULE_ID}.settings.debug`),

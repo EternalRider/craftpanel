@@ -1,26 +1,27 @@
-import { HandlebarsApplication, getItemColor, debug, MODULE_ID } from "../utils.js";
+import { HandlebarsApplication, getItemColor, MODULE_ID, debug } from "../utils.js";
 
-export class CraftPanelRecipe extends HandlebarsApplication {
+export class CraftPanelModifier extends HandlebarsApplication {
     constructor(journalEntry, journalEntryPage) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
         if (typeof journalEntryPage === "string") journalEntryPage = fromUuidSync(journalEntryPage);
         // this.ingredients = [];
-        // this.results = [];
+        // this.changes = [];
+        this.elementItems = [];
         this.journalEntry = journalEntry;
         this.journalEntryPage = journalEntryPage;
         // this.ingredients = journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
-        // this.results = journalEntryPage.getFlag(MODULE_ID, "results") ?? [];
+        // this.changes = journalEntryPage.getFlag(MODULE_ID, "changes") ?? [];
         this.ingredients = journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
-        this.results = journalEntryPage.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "results"))) : [];
+        this.changes = journalEntryPage.getFlag(MODULE_ID, "changes") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "changes"))) : [];
 
         this.needRefresh = true;
         this.scrollPositions = {
             elementItems: 0,
-            recipes: 0,
+            modifiers: 0,
         };
         this.panelSizes = {
-            recipes: {
+            modifiers: {
                 width: 300,
                 height: 420,
             },
@@ -32,7 +33,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 width: 300,
                 height: 200,
             },
-            results: {
+            changes: {
                 width: 300,
                 height: 170,
             },
@@ -40,7 +41,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
 
         craftPanels ??= [];
         craftPanels.push(this);
-        debug("CraftPanelRecipe constructor : this journalEntry journalEntryPage this.ingredients this.results craftPanels", this, journalEntry, journalEntryPage, this.ingredients, this.results, craftPanels);
+        debug("CraftPanelModifier constructor : this journalEntry, journalEntryPage", this, journalEntry, journalEntryPage);
     }
 
     static get DEFAULT_OPTIONS() {
@@ -114,9 +115,9 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         if (this.needRefresh) {
             await this.refreshPanel();
         }
-        const recipesJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "recipe").sort((a, b) => (a.sort - b.sort));
-        debug("CraftPanelRecipe _prepareContext : recipesJE", recipesJE);
-        const recipes = recipesJE.map((je, i) => {
+        const modifiersJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "modifier").sort((a, b) => (a.sort - b.sort));
+        debug("CraftPanelModifier _prepareContext : modifiersJE", modifiersJE);
+        const modifiers = modifiersJE.map((je, i) => {
             const ingredients = (je.getFlag(MODULE_ID, "ingredients") ?? []).map((el) => {
                 let num = el.min;
                 if (el.useMin && el.useMax) {
@@ -139,7 +140,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 choosed: je.id == this.journalEntryPage.id ? "choosed" : ""
             };
         });
-        debug("CraftPanelRecipe _prepareContext : recipes", recipes);
+        debug("CraftPanelModifier _prepareContext : modifiers", modifiers);
         this.ingredients.sort((a, b) => {
             if (a.type == "element" && b.type == "material") return 1;
             if (a.type == "material" && b.type == "element") return -1;
@@ -163,25 +164,26 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 ...el,
             };
         });
-        debug("CraftPanelRecipe _prepareContext : ingredients", ingredients);
-        const results = await Promise.all(this.results.map(async (el, i) => {
-            const item = await fromUuid(el.uuid);
-            const itemColor = item ? getItemColor(item) ?? "" : "";
-            return {
-                slotIndex: i,
-                uuid: el.uuid,
-                quantity: el.quantity,
-                name: item?.name ?? el.name,
-                img: item?.img ?? el.img,
-                itemColor: itemColor,
-            };
-        }));
-        debug("CraftPanelRecipe _prepareContext : results", results);
+        debug("CraftPanelModifier _prepareContext : ingredients", ingredients);
+        // const changes = await Promise.all(this.changes.map(async (el, i) => {
+            // const item = await fromUuid(el.uuid);
+            // const itemColor = item ? getItemColor(item) ?? "" : "";
+            // return {
+            //     slotIndex: i,
+            //     uuid: el.uuid,
+            //     quantity: el.quantity,
+            //     name: item?.name ?? el.name,
+            //     img: item?.img ?? el.img,
+            //     itemColor: itemColor,
+            // };
+        // }));
+
+
         return {
             elementItems: this.elementItems,
-            recipes,
+            modifiers,
             ingredients: ingredients,
-            results: results,
+            changes: this.changes,
             panelSizes: this.panelSizes,
         }
     }
@@ -192,15 +194,14 @@ export class CraftPanelRecipe extends HandlebarsApplication {
     _onRender(context, options) {
         super._onRender(context, options);
         const html = this.element;
-        debug("CraftPanelRecipe _onRender : context", context);
-
+        debug("CraftPanelModifier _onRender : context", context);
         // 恢复滚动条位置
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
-        html.querySelector(".craft-recipes-panel").scrollTop = this.scrollPositions.recipes;
+        html.querySelector(".craft-modifiers-panel").scrollTop = this.scrollPositions.modifiers;
 
         html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
             event.preventDefault();
-            this.editRecipe();
+            this.editModifier();
         });
         html.querySelector("button[name='permissions']").addEventListener("click", async (event) => {
             event.preventDefault();
@@ -213,6 +214,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         html.querySelector("button[name='close']").addEventListener("click", async (event) => {
             event.preventDefault();
             this.close();
+        });
+        html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
+            event.preventDefault();
+            this.addChange();
         });
         html.querySelectorAll(".element-slot.elements").forEach((el) => {
             el.addEventListener("dragstart", async (event) => {
@@ -256,26 +261,26 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 this.removeResult(el.dataset.index);
             });
         });
-        html.querySelectorAll(".craft-recipe").forEach((recipe) => {
-            recipe.addEventListener("dragstart", async (event) => {
+        html.querySelectorAll(".craft-modifier").forEach((modifier) => {
+            modifier.addEventListener("dragstart", async (event) => {
                 event.dataTransfer.setData(
                     "text/plain",
                     JSON.stringify({
-                        type: "CraftRecipe",
-                        uuid: recipe.dataset.uuid,
-                        index: recipe.dataset.index,
+                        type: "CraftModifier",
+                        uuid: modifier.dataset.uuid,
+                        index: modifier.dataset.index,
                         parent: this.journalEntry.uuid,
                     }),
                 );
             });
-            recipe.addEventListener("contextmenu", async (event) => {
+            modifier.addEventListener("contextmenu", async (event) => {
                 // 右键点击配方可以删除配方
                 event.preventDefault();
-                const pageUuid = recipe.dataset.uuid;
-                const pageIndex = recipe.dataset.index;
+                const pageUuid = modifier.dataset.uuid;
+                const pageIndex = modifier.dataset.index;
                 const page = await fromUuid(pageUuid);
                 await page.deleteDialog();
-                const JE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "recipe")[pageIndex];
+                const JE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "modifier")[pageIndex];
                 if (JE.id == this.journalEntryPage.id) return;
                 if (JE) {
                     this.journalEntryPage = JE;
@@ -283,51 +288,58 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                     this.journalEntryPage = this.journalEntry.pages.content[0];
                 }
                 this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
-                this.results = this.journalEntryPage.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "results"))) : [];
+                this.changes = this.journalEntryPage.getFlag(MODULE_ID, "changes") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "changes"))) : [];
                 this.render(true);
             });
-            recipe.addEventListener("click", async (event) => {
+            modifier.addEventListener("click", async (event) => {
                 // 点击配方可以切换配方
                 event.preventDefault();
-                const pageUuid = recipe.dataset.uuid;
+                const pageUuid = modifier.dataset.uuid;
                 if (this.journalEntryPage.uuid == pageUuid) return;
                 this.journalEntryPage = this.journalEntry.pages.find(p => p.uuid == pageUuid);
                 this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
-                this.results = this.journalEntryPage.getFlag(MODULE_ID, "results") ?? [];
+                this.changes = this.journalEntryPage.getFlag(MODULE_ID, "changes") ?? [];
                 this.render(true);
             });
-            recipe.addEventListener("drop", this._onDropRecipesPanel.bind(this));
+            modifier.addEventListener("drop", this._onDropModifiersPanel.bind(this));
+        });
+        html.querySelectorAll(".effect-change").forEach((el) => {
+            el.addEventListener("click", (event) => {
+                event.preventDefault();
+                this.editChange(el.dataset.index);
+            });
         });
         html.querySelector(".craft-ingredients-panel").addEventListener("drop", this._onDropSlotPanel.bind(this));
-        html.querySelector(".craft-results-panel").addEventListener("drop", this._onDropResultPanel.bind(this));
-        html.querySelector(".craft-recipes-panel").addEventListener("drop", this._onDropRecipesPanel.bind(this));
+        html.querySelector(".craft-changes-panel").addEventListener("drop", this._onDropChangePanel.bind(this));
+        html.querySelector(".craft-modifiers-panel").addEventListener("drop", this._onDropModifiersPanel.bind(this));
         //滚动事件，记录滚动位置
         html.querySelector(".craft-elementitems-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elementItems = event.target.scrollTop; });
-        html.querySelector(".craft-recipes-panel").addEventListener("scrollend", (event) => { this.scrollPositions.recipes = event.target.scrollTop; });
-        debug("CraftPanelRecipe _onRender : html", html);
+        html.querySelector(".craft-modifiers-panel").addEventListener("scrollend", (event) => { this.scrollPositions.modifiers = event.target.scrollTop; });
+        debug("CraftPanelModifier _onRender : html", html);
     }
 
     async configure() {
-        const recipe_categories = this.journalEntry.getFlag(MODULE_ID, "recipe-categories") ?? [];
+        const modifier_categories = this.journalEntry.getFlag(MODULE_ID, "modifier-categories") ?? [];
         const categoryOptions = {};
-        for (const category of recipe_categories) {
+        for (const category of modifier_categories) {
             categoryOptions[category.id] = category.name;
         }
-        debug("CraftPanelRecipe configure : recipe_categories categoryOptions", recipe_categories, categoryOptions);
         const fb = new Portal.FormBuilder()
             .object(this.journalEntryPage)
-            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-recipe`) + ": " + this.journalEntryPage.name)
+            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-modifier`) + ": " + this.journalEntryPage.name)
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
             .file({ name: `src`, type: "image", label: game.i18n.localize(`${MODULE_ID}.image`) })
-            .number({ name: `sort`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-sort`) })
-            .multiSelect({ name: `flags.${MODULE_ID}.category`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-category`), options: categoryOptions })
-            .number({ name: `flags.${MODULE_ID}.weight`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-weight`), min: 0 })
-            .select({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), "yes": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.yes`), "no": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.no`) } })
+            .number({ name: `sort`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-sort`) })
+            .number({ name: `flags.${MODULE_ID}.cost`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-cost`) })
+            .multiSelect({ name: `flags.${MODULE_ID}.category`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-category`), options: categoryOptions })
+            .checkbox({ name: `flags.${MODULE_ID}.auto`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.auto-apply`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.auto-apply-hint`) })
+            .select({ name: `flags.${MODULE_ID}.asAE`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-hint`), options: { "false": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-not`), "merge": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-merge`), "separate": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-separate`) } })
+            .text({ name: `flags.${MODULE_ID}.aeName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-name-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
             .textArea({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
             .textArea({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .button({
-                label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-recipe-tooltip-button`),
+                label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-modifier-tooltip-button`),
                 callback: async () => {
                     this.journalEntryPage.sheet?.render(true);
                 },
@@ -343,8 +355,11 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 icon: "fas fa-trash",
             });
         const data = await fb.render();
-        debug("CraftPanelRecipe configure : data", data);
+        debug("CraftPanelModifier configure : data", data);
         if (!data) return;
+        if (data.flags[MODULE_ID].asAE == "false") {
+            data.flags[MODULE_ID].asAE = false;
+        }
         await this.journalEntryPage.update(data);
         this.needRefresh = true;
         this.render(true);
@@ -361,38 +376,37 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             .info(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num-info`));
 
         const data = await fb.render();
-        debug("CraftPanelRecipe editNum : data", data);
+        debug("CraftPanelModifier editNum : data", data);
         if (!data) return;
         this.ingredients[index].min = data.min;
         this.ingredients[index].useMin = data.useMin;
         this.ingredients[index].max = data.max;
         this.ingredients[index].useMax = data.useMax;
-        debug("CraftPanelRecipe editNum : this.ingredients", this.ingredients);
         await this.render(true);
     }
     async editResultNum(index) {
-        const result = this.results[index];
+        const result = this.changes[index];
         const fb = new Portal.FormBuilder()
             .object(result)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "quantity", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
 
         const data = await fb.render();
-        debug("CraftPanelRecipe editResultNum : data", data);
+        debug("CraftPanelModifier editResultNum : data", data);
         if (!data) return;
-        this.results[index].quantity = data.quantity;
+        this.changes[index].quantity = data.quantity;
         await this.render(true);
     }
-    async editRecipe() {
+    async editModifier() {
         const update = {
             flags: {
                 [MODULE_ID]: {
                     ingredients: this.ingredients,
-                    results: this.results,
+                    changes: this.changes,
                 },
             },
         }
-        debug("CraftPanelRecipe editRecipe : update", update);
+        debug("CraftPanelModifier editModifier : update", update);
         await this.journalEntryPage.update(update);
         this.needRefresh = true;
         this.render(true);
@@ -406,11 +420,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelRecipe _onDropSlotPanel : data", data);
+        debug("CraftPanelModifier _onDropSlotPanel : data", data);
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         let element = data?.element;
-        debug("CraftPanelRecipe _onDropSlotPanel : type item element", type, item, element);
         if (type == "Item") {
             if (item == undefined) return;
             if (item.getFlag(MODULE_ID, "isElement") === true) {
@@ -427,7 +440,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             this.addElement(element, data.uuid);
         }
     }
-    async _onDropResultPanel(event) {
+    async _onDropChangePanel(event) {
         event.stopPropagation();
         let data;
         try {
@@ -435,22 +448,15 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelRecipe _onDropResultPanel : data", data);
+        debug("CraftPanelModifier _onDropChangePanel : data", data);
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
-        debug("CraftPanelRecipe _onDropResultPanel : type item", type, item);
-        if (type !== "Item" && type !== "RollTable") return;
+        if (type !== "Item" && type !== "ActiveEffect") return;
         if (item) {
-            let r = this.results.find((r) => r.uuid == item.uuid);
-            if (r) {
-                r.quantity++;
-            } else {
-                this.results.push({ uuid: item.uuid, quantity: 1, img: item.img, name: item.name, type: type });
-            }
-            this.render(true);
+
         }
     }
-    async _onDropRecipesPanel(event) {
+    async _onDropModifiersPanel(event) {
         event.stopPropagation();
         let data;
         try {
@@ -458,8 +464,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelRecipe _onDropRecipesPanel : data", data);
-        if (data.type !== "CraftRecipe") return;
+        debug("CraftPanelModifier _onDropModifiersPanel : data", data);
+        if (data.type !== "CraftModifier") return;
         if (data.parent !== this.journalEntry.uuid) return;
         let targetUuid = event.currentTarget.dataset.uuid;
         let page = await fromUuid(data.uuid);
@@ -468,7 +474,6 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         if (targetUuid) {
             sortTarget = await fromUuid(targetUuid);
         }
-        debug("CraftPanelRecipe _onDropRecipesPanel : page targetUuid sortTarget", page, targetUuid, sortTarget);
         await page.sortRelative({
             sortKey: "sort",
             target: sortTarget,
@@ -478,13 +483,12 @@ export class CraftPanelRecipe extends HandlebarsApplication {
     }
 
     async addElement(element, uuid) {
-        debug("CraftPanelRecipe addElement : element uuid", element, uuid);
+        debug("CraftPanelModifier addElement : element uuid", element, uuid);
         if (element == undefined) {
             let item = await fromUuid(uuid);
             element = item.getFlag(MODULE_ID, "elementConfig");
         }
         let el = this.ingredients.find((el) => (el.type == "element") && (el.id == element.id));
-        debug("CraftPanelRecipe addElement : element el", element, el);
         if (el) {
             if (el.useMin) {
                 el.min++;
@@ -506,9 +510,11 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             };
             this.ingredients.push(el);
         }
+        debug("CraftPanelModifier addElement : this.ingredients", this.ingredients);
         this.render(true);
     }
     async removeElement(element, uuid) {
+        debug("CraftPanelModifier removeElement : element uuid", element, uuid);
         if (element == undefined) {
             let item = await fromUuid(uuid);
             element = item.getFlag(MODULE_ID, "elementConfig");
@@ -524,14 +530,13 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 el.max--;
             }
         }
+        debug("CraftPanelModifier removeElement : this.ingredients", this.ingredients);
         this.render(true);
     }
-
     async addMaterial(item) {
-        debug("CraftPanelRecipe addMaterial : item", item);
+        debug("CraftPanelModifier addMaterial : item", item);
         if (!item) return;
         let el = this.ingredients.find((el) => (el.type == "material") && (el.name == item.name));
-        debug("CraftPanelRecipe addMaterial : el", el);
         if (el) {
             if (el.useMin) {
                 el.min++;
@@ -553,15 +558,18 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             };
             this.ingredients.push(el);
         }
+        debug("CraftPanelModifier addMaterial : this.ingredients", this.ingredients);
         this.render(true);
     }
 
     async removeIngredient(index) {
+        debug("CraftPanelModifier removeIngredient : index this.ingredients", index, this.ingredients);
         this.ingredients.splice(index, 1);
         this.render(true);
     }
     async removeResult(index) {
-        this.results.splice(index, 1);
+        debug("CraftPanelModifier removeResult : index this.changes", index, this.changes);
+        this.changes.splice(index, 1);
         this.render(true);
     }
 
@@ -572,7 +580,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 elementItems_items.push(item);
             }
         }
-        debug("CraftPanelRecipe refreshPanel : elementItems_items", elementItems_items);
+        debug("CraftPanelModifier refreshPanel : elementItems_items", elementItems_items);
         this.elementItems = elementItems_items.map((item, i) => {
             const element = item.getFlag(MODULE_ID, "elementConfig");
             return {
@@ -586,11 +594,48 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             };
         });
         this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });
-        debug("CraftPanelRecipe refreshPanel : this.elementItems", this.elementItems);
+        debug("CraftPanelModifier refreshPanel : this.elementItems", this.elementItems);
         this.needRefresh = false;
+    }
+
+    async addChange() {
+        const fb = new Portal.FormBuilder()
+            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.add-change`) + ": " + this.journalEntryPage.name)
+            .text({ name: "key", label: game.i18n.localize("EFFECT.ChangeKey") })
+            .select({ name: "mode", label: game.i18n.localize("EFFECT.ChangeMode"), options: EFFECTCHANGEMOD, value: 2 })
+            .text({ name: "value", label: game.i18n.localize("EFFECT.ChangeValue") })
+        
+        const data = await fb.render();
+        debug("CraftPanelModifier addChange : data", data);
+        if (!data) return;
+        this.changes.push(data);
+        this.render(true);
+    }
+    async editChange(index) {
+        const change = this.changes[index];
+        const fb = new Portal.FormBuilder()
+            .object(change)
+            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-change`))
+            .text({ name: "key", label: game.i18n.localize("EFFECT.ChangeKey") })
+            .select({ name: "mode", label: game.i18n.localize("EFFECT.ChangeMode"), options: EFFECTCHANGEMOD })
+            .text({ name: "value", label: game.i18n.localize("EFFECT.ChangeValue") })
+        
+        const data = await fb.render();
+        debug("CraftPanelModifier editChange : data", data);
+        if (!data) return;
+        this.changes[index] = data;
+        this.render(true);
     }
 }
 
+const EFFECTCHANGEMOD = {
+    0: "EFFECT.MODE_CUSTOM",
+    1: "EFFECT.MODE_MULTIPLY",
+    2 : "EFFECT.MODE_ADD",
+    3 : "EFFECT.MODE_DOWNGRADE",
+    4 : "EFFECT.MODE_UPGRADE",
+    5 : "EFFECT.MODE_OVERRIDE",
+}
 /**
  * @typedef {Object} CraftElement
  * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。

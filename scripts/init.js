@@ -3,6 +3,7 @@ const MODULE_ID = 'craftpanel';
 import * as Utilities from './utils.js';
 import * as api from './api.js';
 import { register_settings } from './settings.js';
+import CraftSocket from './socket.js';
 
 Hooks.once('init', function () {
     game.modules.get(MODULE_ID).api = api; // 之后可被如此调用: const craftpanel = game.modules.get('craftpanel')?.api;
@@ -14,6 +15,9 @@ Hooks.once('init', function () {
 // Hooks.once("socketlib.ready", () => {
 //     SpellBookSocket.initialize();
 // });
+Hooks.once("socketlib.ready", () => {
+    CraftSocket.initialize();
+});
 
 Hooks.on('ready', () => {
     register_settings();
@@ -24,6 +28,12 @@ Hooks.on('ready', () => {
             array.push(i);
         }
         return array;
+    });
+    Handlebars.registerHelper('equal', function (a, b) {
+        return a == b;
+    });
+    Handlebars.registerHelper('exist', function (a, b) {
+        return a ?? b;
     });
 
     console.log('Craftpanel | Ready');

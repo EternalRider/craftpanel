@@ -7,6 +7,34 @@ export class CraftPanelElement extends HandlebarsApplication {
         this.journalEntry = journalEntry;
         this.slots = [];
         this.elements = [];
+        this.materials = [];
+        this.elementItems = [];
+        this.needRefresh = true;
+
+        this.scrollPositions = {
+            elementItems: 0,
+            materials: 0,
+            elements: 0,
+        };
+        this.panelSizes = {
+            elementitems: {
+                width: 420,
+                height: 420,
+            },
+            materials: {
+                width: 420,
+                height: 420,
+            },
+            slots: {
+                width: 300,
+                height: 200,
+            },
+            elements: {
+                width: 300,
+                height: 170,
+            },
+        };
+
         craftPanels ??= [];
         craftPanels.push(this);
         debug("CraftPanelElement constructor : journalEntry", journalEntry);
@@ -77,72 +105,16 @@ export class CraftPanelElement extends HandlebarsApplication {
      */
     async _prepareContext(options) {
         // const elementConfig = game.settings.get(MODULE_ID, 'elementConfig');
-        const requirements = {};
-        this.journalEntry.getFlag(MODULE_ID, "requirements").forEach(key => {
-            if (key == "folder") {
-                requirements.folder = this.journalEntry.getFlag(MODULE_ID, "requirements-folder").replaceAll(/，/g, ",").split(/[,;]/).map((folder) => folder.trim());
-            } else if (key == "script") {
-                const AsyncFunction = async function () { }.constructor;
-                const fn = new AsyncFunction("item", this.journalEntry.getFlag(MODULE_ID, "requirements-script"));
-                requirements.script = fn;
-            } else {
-                requirements[key] = this.journalEntry.getFlag(MODULE_ID, `requirements-${key}`);
-            }
-        });
-        debug("CraftPanelElement _prepareContext : requirements", requirements);
-        const elementItems_items = [];
-        const materials_items = [];
-        let showClasses = this.journalEntry.getFlag(MODULE_ID, "showClass") ?? "";
-        showClasses = showClasses.split(/[,;，]/).map((className) => className.trim());
-        debug("CraftPanelElement _prepareContext : showClasses", showClasses);
-        for (const item of game.items.contents) {
-            if (item.getFlag(MODULE_ID, "isElement") === true) {
-                elementItems_items.push(item);
-            } else if (await checkItemRequirements(item, requirements)) {
-                materials_items.push(item);
-            }
+        if (this.needRefresh) {
+            await this.refreshPanel();
         }
-        debug("CraftPanelElement _prepareContext : elementItems_items materials_items", elementItems_items, materials_items);
-        let elementItems = elementItems_items.map((item, i) => {
-            const element = item.getFlag(MODULE_ID, "elementConfig");
-            return {
-                slotIndex: i,
-                uuid: item.uuid,
-                id: element.id,
-                name: element.name,
-                img: element.img,
-                color: element.color,
-                class: element.class,
-            };
-        });
-        if (showClasses[0] != "") {
-            elementItems = elementItems.filter((el) => showClasses.includes(el.class));
-        }
-        debug("CraftPanelElement _prepareContext : elementItems", elementItems);
-        const materials = await Promise.all(materials_items.map(async (item, i) => {
-            const elements = item.getFlag(MODULE_ID, "element");
-            const itemColor = item ? getItemColor(item) ?? "" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h1>${item.name}</h1></figure><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
-            let totalElements = elements.reduce((a, b) => a + b.num, 0);
-            return {
-                // slotIndex: i,
-                item: item,
-                uuid: item.uuid,
-                elements: elements.filter(e => e.color != ""),
-                itemColor: itemColor,
-                tooltip,
-                totalElements,
-                showElements: Array.isArray(elements) && elements.filter(el => el.color != "").length > 0,
-            };
-        }));
-        materials.sort((a, b) => b.totalElements - a.totalElements);
-        debug("CraftPanelElement _prepareContext : materials", materials);
-        debug("CraftPanelElement _prepareContext : this.slots this.elements", this.slots, this.elements);
+
         return {
-            elementItems,
-            materials,
+            elementItems: this.elementItems,
+            materials: this.materials,
             slots: this.slots.map((el, i) => { el.slotIndex = i; return el; }),
             elements: this.elements.map((el, i) => { el.slotIndex = i; return el; }),
+            panelSizes: this.panelSizes,
         }
     }
     /**
@@ -153,6 +125,12 @@ export class CraftPanelElement extends HandlebarsApplication {
         super._onRender(context, options);
         const html = this.element;
         debug("CraftPanelElement _onRender : context", context);
+
+        // 恢复滚动条位置
+        html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
+        html.querySelector(".craft-materials-panel").scrollTop = this.scrollPositions.materials;
+        html.querySelector(".craft-elements-panel").scrollTop = this.scrollPositions.elements;
+
         html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
             event.preventDefault();
             this.editMaterialsElement();
@@ -236,6 +214,10 @@ export class CraftPanelElement extends HandlebarsApplication {
         html.querySelector(".craft-elementitems-panel").addEventListener("drop", this._onDropElementPanel.bind(this));
         html.querySelector(".craft-slot-panel").addEventListener("drop", this._onDropSlotPanel.bind(this));
         html.querySelector(".craft-elements-panel").addEventListener("drop", this._onDropSlotPanel.bind(this));
+        //滚动事件，记录滚动位置
+        html.querySelector(".craft-materials-panel").addEventListener("scrollend", (event) => { this.scrollPositions.materials = event.target.scrollTop; });
+        html.querySelector(".craft-elements-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elements = event.target.scrollTop; });
+        html.querySelector(".craft-elementitems-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elementItems = event.target.scrollTop; });
         debug("CraftPanelElement _onRender : html", html);
     }
 
@@ -258,6 +240,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         if (!data) return;
         // await game.settings.set(MODULE_ID, 'elementConfig', data);
         await this.journalEntry.update(data);
+        this.needRefresh = true;
         this.render(true);
     }
     async editElement(uuid) {
@@ -274,6 +257,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             .file({ name: "img", label: game.i18n.localize(`${MODULE_ID}.image`) })
             .text({ name: "class", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.class`) })
             .color({ name: "color", label: game.i18n.localize(`${MODULE_ID}.color`) })
+            .number({ name: "weight", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.weight`) })
             .button({
                 label: game.i18n.localize(`Delete`),
                 callback: async () => {
@@ -305,6 +289,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         debug("CraftPanelElement editNum : data", data);
         if (!data) return;
         this.elements[index].num = data.num;
+        this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         await this.render(true);
     }
 
@@ -330,10 +315,12 @@ export class CraftPanelElement extends HandlebarsApplication {
                 img: item.img,
                 color: "",
                 class: this.journalEntry.getFlag(MODULE_ID, "defaultClass") ?? "",
+                weight: 10,
             }
             update[`flags.${MODULE_ID}.elementConfig`] = element;
             debug("CraftPanelElement _onDropElementPanel : update", update);
             await item.update(update);
+            this.needRefresh = true;
             this.render(true);
         };
     }
@@ -386,7 +373,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             };
             this.elements.push(el);
         }
-        this.elements.sort((a, b) => b.num - a.num);
+        this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         debug("CraftPanelElement addElement : this.elements", this.elements);
         this.render(true);
     }
@@ -435,12 +422,81 @@ export class CraftPanelElement extends HandlebarsApplication {
         }));
         debug("CraftPanelElement refreshMaterials : this.slots", this.slots);
     }
+    async refreshPanel() {
+        const requirements = {};
+        this.journalEntry.getFlag(MODULE_ID, "requirements").forEach(key => {
+            if (key == "folder") {
+                requirements.folder = this.journalEntry.getFlag(MODULE_ID, "requirements-folder").replaceAll(/，/g, ",").split(/[,;]/).map((folder) => folder.trim());
+            } else if (key == "script") {
+                const AsyncFunction = async function () { }.constructor;
+                const fn = new AsyncFunction("item", this.journalEntry.getFlag(MODULE_ID, "requirements-script"));
+                requirements.script = fn;
+            } else {
+                requirements[key] = this.journalEntry.getFlag(MODULE_ID, `requirements-${key}`);
+            }
+        });
+        debug("CraftPanelElement _prepareContext : requirements", requirements);
+        const elementItems_items = [];
+        const materials_items = [];
+        let showClasses = this.journalEntry.getFlag(MODULE_ID, "showClass") ?? "";
+        showClasses = showClasses.split(/[,;，]/).map((className) => className.trim());
+        debug("CraftPanelElement _prepareContext : showClasses", showClasses);
+        for (const item of game.items.contents) {
+            if (item.getFlag(MODULE_ID, "isElement") === true) {
+                elementItems_items.push(item);
+            } else if (await checkItemRequirements(item, requirements)) {
+                materials_items.push(item);
+            }
+        }
+        debug("CraftPanelElement _prepareContext : elementItems_items materials_items", elementItems_items, materials_items);
+        this.elementItems = elementItems_items.map((item, i) => {
+            const element = item.getFlag(MODULE_ID, "elementConfig");
+            return {
+                slotIndex: i,
+                uuid: item.uuid,
+                id: element.id,
+                name: element.name,
+                img: element.img,
+                color: element.color,
+                class: element.class,
+            };
+        });
+        if (showClasses[0] != "") {
+            this.elementItems = this.elementItems.filter((el) => showClasses.includes(el.class));
+        }
+        this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });
+        debug("CraftPanelElement _prepareContext : this.elementItems", this.elementItems);
+        this.materials = await Promise.all(materials_items.map(async (item, i) => {
+            const elements = item.getFlag(MODULE_ID, "element") ?? [];
+            const itemColor = item ? getItemColor(item) ?? "" : "";
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h1>${item.name}</h1></figure><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+            let totalElements = 0;
+            if (showClasses[0] != "") {
+                totalElements = elements.filter(el => showClasses.includes(el.class)).reduce((a, b) => a + b.num, 0);
+            } else {
+                totalElements = elements.reduce((a, b) => a + b.num, 0);
+            }
+            return {
+                // slotIndex: i,
+                item: item,
+                uuid: item.uuid,
+                elements: elements.filter(e => e.color != ""),
+                itemColor: itemColor,
+                tooltip,
+                totalElements,
+                showElements: Array.isArray(elements) && elements.filter(el => el.color != "").length > 0,
+            };
+        }));
+        this.materials.sort((a, b) => { return b.totalElements - a.totalElements });
+        debug("CraftPanelElement _prepareContext : this.materials", this.materials);
+        this.needRefresh = false;
+    }
 
-    async removeElement(index) {
+    removeElement(index) {
         this.elements.splice(index, 1);
         this.render(true);
     }
-    async removeMaterial(index) {
+    removeMaterial(index) {
         this.slots.splice(index, 1);
         if (this.slots.length == 0) {
             this.elements = [];
@@ -457,6 +513,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                 class: el.class,
                 color: el.color,
                 num: el.num,
+                weight: el.weight,
             }
         });
         debug("CraftPanelElement editMaterialsElement : element", element);
@@ -468,6 +525,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             await item.setFlag(MODULE_ID, "element", element);
         }));
         await this.refreshMaterials();
+        this.needRefresh = true;
         this.render(true);
     }
 
@@ -516,6 +574,7 @@ async function checkItemRequirements(item, requirements) {
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
  * @property {string} class - 元素的类型，仅用于脚本检测。
  * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
+ * @property {number} weight - 元素的权重，用于计算匹配度。
  * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
  * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。
  * @property {number} min - 仅需求元素使用，为元素的最小数量。用于显示合成时最少需要的元素数量。

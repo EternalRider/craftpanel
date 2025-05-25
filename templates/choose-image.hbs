@@ -1,0 +1,17 @@
+<div class="standard-form">
+    <div class="choose-image-content">
+        <div class="choose-image-panel" style="grid-template-columns: repeat({{cols}}, 60px);">
+            {{#each images as |slot|}}
+            <div {{#if ../isEdit}}draggable="true"{{/if}} class="choose-image-slot {{slot.choosed}}"
+                data-tooltip="{{#if slot.name}}{{slot.name}}{{else}}{{slot.src}}{{/if}}"
+                data-index="{{slot.index}}" data-src="{{slot.src}}"
+                style="{{#if slot.src}}background-image: url('{{slot.src}}');{{/if}} ">
+            </div>
+            {{/each}}
+        </div>
+    </div>
+    <footer class="form-footer">
+        <button type="button" name="confirm"><i class="fa-solid fa-check"></i>{{localize "Confirm"}}</button>
+        <button type="button" name="cancel"><i class="fas fa-times"></i>{{localize "Cancel"}}</button>
+    </footer>
+</div>

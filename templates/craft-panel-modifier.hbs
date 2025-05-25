@@ -1,0 +1,98 @@
+<div class="standard-form">
+    <div class="craft-content">
+        <div class="craft-panel">
+            <div class="craft-panel-tittle">
+                <h2>{{localize "craftpanel.modifier"}}</h2>
+            </div>
+            <div class="craft-modifiers-panel" style="width:{{exist panelSizes.modifiers.width 300}}px;height:{{exist panelSizes.modifiers.height 420}}px;">
+                {{#each modifiers as |modifier|}}
+                <div draggable="true" class="craft-modifier {{modifier.choosed}}" data-uuid="{{modifier.uuid}}" data-index="{{modifier.index}}">
+                    <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+                    <div class="craft-modifier-desc">
+                        <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
+                        <div class="craft-modifier-ingredients">
+                            {{#each modifier.ingredients as |ingredient|}}
+                            <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');">
+                                <div class="element-num" draggable="false">{{ingredient.num}}</div>
+                            </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        <div class="craft-main-panel" style="width: 300px;">
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.ingredient"}}</h2>
+                </div>
+                <div class="craft-ingredients-panel main-child-panel" style="width:{{exist panelSizes.ingredients.width 300}}px;height:{{exist panelSizes.ingredients.height 200}}px;">
+                    {{#each ingredients as |element|}}
+                    <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
+                        data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"
+                        style="{{#if element.itemColor}}--item-color: {{slot.itemColor}};{{/if}} {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                        <div class="element-num" draggable="false">{{element.num}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.modifier"}}</h2>
+                </div>
+                <div class="craft-changes-panel main-child-panel" style="width:{{exist panelSizes.changes.width 300}}px;height:{{exist panelSizes.changes.height 170}}px;">
+                    {{!-- <header class="effect-change effects-header flexrow" style="">
+                        <div class="key">{{localize "EFFECT.ChangeKey"}}</div>
+                        <div class="mode">{{localize "EFFECT.ChangeMode"}}</div>
+                        <div class="value">{{localize "EFFECT.ChangeValue"}}</div>
+                    </header> --}}
+                    <ol class="changes-list" style="margin: 1px; padding: 0px;">
+                        {{#each changes as |change|}}
+                        <li class="effect-change flexrow" data-index="{{@index}}">
+                            <div class="key" data-tooltip="{{localize "EFFECT.ChangeKey"}}">
+                                <input type="text" name="changes.{{@index}}.key" value="{{change.key}}" style="pointer-events: none;">
+                            </div>
+                            <div class="mode" data-tooltip="{{localize "EFFECT.ChangeMode"}}">
+                                <select name="changes.{{@index}}.mode" data-dtype="Number" style="pointer-events: none;">
+                                    <option value="0" {{#if (equal 0 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_CUSTOM"}}</option>
+                                    <option value="1" {{#if (equal 1 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_MULTIPLY"}}</option>
+                                    <option value="2" {{#if (equal 2 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_ADD"}}</option>
+                                    <option value="3" {{#if (equal 3 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_DOWNGRADE"}}</option>
+                                    <option value="4" {{#if (equal 4 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_UPGRADE"}}</option>
+                                    <option value="5" {{#if (equal 5 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_OVERRIDE"}}</option>
+                                </select>
+                            </div>
+                            <div class="value" data-tooltip="{{localize "EFFECT.ChangeValue"}}">
+                                <input type="text" name="changes.{{@index}}.value" value="{{change.value}}" style="pointer-events: none;">
+                            </div>
+                        </li>
+                        {{/each}}
+                    </ol>
+                    <button type="button" name="new-modifier"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="craft-panel">
+            <div class="craft-panel-tittle">
+                <h2>{{localize "craftpanel.element"}}</h2>
+            </div>
+            <div class="craft-elementitems-panel" style="width:{{exist panelSizes.elementitems.width 300}}px;height:{{exist panelSizes.elementitems.height 420}}px;">
+                {{#each elementItems as |element|}}
+                <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
+                    data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
+                    style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                    <div class="element-color-circle" draggable="false" style="background-color: {{element.color}};"></div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+
+    <footer class="form-footer">
+        <button type="button" name="edit"><i class="fas fa-edit"></i>{{localize "craftpanel.edit"}}</button>
+        <button type="button" name="permissions"><i class="fas fa-user-lock"></i> {{localize "craftpanel.permissions"}}</button>
+        <button type="button" name="configure"><i class="fas fa-cog"></i> {{localize "craftpanel.configure"}}</button>
+        <button type="button" name="close"><i class="fas fa-times"></i>{{localize "Close"}}</button>
+    </footer>
+</div>
