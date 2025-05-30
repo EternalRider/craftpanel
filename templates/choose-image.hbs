@@ -1,6 +1,6 @@
 <div class="standard-form">
     <div class="choose-image-content">
-        <div class="choose-image-panel" style="grid-template-columns: repeat({{cols}}, 60px);">
+        <div class="choose-image-panel" style="grid-template-columns: repeat({{cols}}, 60px);height: {{height}}px;">
             {{#each images as |slot|}}
             <div {{#if ../isEdit}}draggable="true"{{/if}} class="choose-image-slot {{slot.choosed}}"
                 data-tooltip="{{#if slot.name}}{{slot.name}}{{else}}{{slot.src}}{{/if}}"

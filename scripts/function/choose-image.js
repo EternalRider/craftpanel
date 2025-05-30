@@ -14,7 +14,17 @@ export class ChooseImage extends HandlebarsApplication {
          */
         this.choosedImages = [];
 
-        this.cols = options.cols ?? 6;
+        let defaultCols = 6;
+        if (images.length > 200) {
+            defaultCols = 12;
+        } else if (images.length > 150) {
+            defaultCols = 10;
+        } else if (images.length > 100) {
+            defaultCols = 8;
+        }
+
+        this.cols = options.cols ?? defaultCols;
+        this.height = options.height ?? (this.cols - 1) * 65;
         this.maxChoose = options.max ?? 1;
         this.cancelled = true;
 
@@ -159,6 +169,7 @@ export class ChooseImage extends HandlebarsApplication {
         return {
             images,
             cols: this.cols,
+            height: this.height,
             isEdit: this.isEdit,
         };
     }
@@ -238,13 +249,29 @@ export class ChooseImage extends HandlebarsApplication {
         }
     }
     async _onRightClick(event) {
+        event.preventDefault();
         const slot = event.currentTarget;
         const index = parseInt(slot.dataset.index);
         debug("ChooseImage _onRightClick: index slot", index, slot);
-        let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
-        if (confirm) {
-            this.showImages.splice(index, 1);
-            this.render();
+        if (index == this.showImages.length - 1) {
+            //右键添加图片则改为批量添加
+            const filePicker = new dragFilePicker({
+                type: "image",
+                callback: (files) => {
+                    if (!files || files.length === 0) return;
+                    for (let file of files) {
+                        this.addImage({ name: "", src: file });
+                    }
+                    this.render();
+                },
+            });
+            filePicker.render(true);
+        } else {
+            let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
+            if (confirm) {
+                this.showImages.splice(index, 1);
+                this.render();
+            }
         }
     }
     async _onDrop(event) {
@@ -257,6 +284,10 @@ export class ChooseImage extends HandlebarsApplication {
         }
         debug("ChooseImage _onDrop: data", data);
         if (data.type !== "ChooseImage") return;
+        if (data.fromFilePicker) {
+            // 如果是从文件选择器拖拽过来的，则直接添加到图片列表中
+            return this.addImage({ name: "", src: data.src });
+        }
         if (this.showImages.length <= 2) return;
         let targetData = event.currentTarget?.dataset ?? {};
         const dragIndex = data.index;
@@ -296,17 +327,20 @@ export class ChooseImage extends HandlebarsApplication {
         }
     }
 
-    async addImage() {
-        const fb = new Portal.FormBuilder()
-            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.add-image`))
-            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
-            .file({ name: "src", type: "image", label: game.i18n.localize(`${MODULE_ID}.image`) })
+    async addImage(image) {
+        if (!image) {
+            const fb = new Portal.FormBuilder()
+                .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.add-image`))
+                .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
+                .file({ name: "src", type: "image", label: game.i18n.localize(`${MODULE_ID}.image`) })
 
-        const data = await fb.render();
-        if (!data) return;
+            const data = await fb.render();
+            if (!data) return;
+            image = data;
+        }
         let add = this.showImages.pop();
-        data.index = this.showImages.length;
-        this.showImages.push(data);
+        image.index = this.showImages.length;
+        this.showImages.push(image);
         add.index = this.showImages.length;
         this.showImages.push(add);
         this.render();
@@ -355,5 +389,63 @@ export class ChooseImage extends HandlebarsApplication {
             });
         }
         return result;
+    }
+}
+
+class dragFilePicker extends FilePicker {
+    constructor(options = {}) {
+        super(options);
+        this.picked = [];
+    }
+
+    /** @inheritDoc */
+    activateListeners(html) {
+        super.activateListeners(html);
+        html.find(".directory").off("click", "li");
+        html.find(".directory").on("click", "li", this.#onPick.bind(this));
+    }
+
+    /** @override */
+    _canDragStart(selector) {
+        return true;
+    }
+
+    /** @override */
+    _onDragStart(event) {
+        const li = event.currentTarget;
+
+        // Set drag data
+        const dragData = {
+            type: "ChooseImage",
+            src: li.dataset.path,
+            fromFilePicker: true,
+        };
+        event.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+    }
+
+    #onPick(event) {
+        const li = event.currentTarget;
+        const form = li.closest("form");
+        if (li.classList.contains("dir")) return this.browse(li.dataset.path);
+        // for ( let l of li.parentElement.children ) {
+        //   l.classList.toggle("picked", l === li);
+        // }
+        if (li.classList.contains("picked")) {
+            li.classList.remove("picked");
+            this.picked.splice(this.picked.indexOf(li.dataset.path), 1);
+        } else {
+            li.classList.add("picked");
+            this.picked.push(li.dataset.path);
+        }
+        if (form.file) form.file.value = li.dataset.path;
+    }
+
+    _onSubmit(ev) {
+        ev.preventDefault();
+        if (this.picked.length == 0) return ui.notifications.error("You must select a file to proceed.");
+
+        // Trigger a callback and close
+        if (this.callback) this.callback(this.picked, this);
+        return this.close();
     }
 }
