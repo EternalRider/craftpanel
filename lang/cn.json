@@ -58,6 +58,9 @@
             "unlock-script": "解锁脚本",
             "unlock-script-hint": "脚本必须返回一个Boolean值或字符串，false表示即使材料符合要求也无法合成，unlock表示仅解锁但不显示，show表示不仅解锁而且显示。可以在其中引用actor,recipe,panel变量。"
         },
+        "craft-panel-user-recipe": {
+            "title": "配置用户解锁的配方"
+        },
         "craft-panel-blend": {
             "title": "调和面板",
             "new-recipe": "新配方",
@@ -415,6 +418,7 @@
         "craft-panel": "制造面板",
         "name": "名称",
         "edit": "编辑",
+        "edit-mode": "编辑模式",
         "configure": "配置",
         "permissions": "权限",
         "craft": "制作",

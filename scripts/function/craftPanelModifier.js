@@ -20,6 +20,15 @@ export class CraftPanelModifier extends HandlebarsApplication {
             elementItems: 0,
             modifiers: 0,
         };
+
+        this.options.actions.edit = this.editModifier.bind(this);
+        this.options.actions.configure = this.configure.bind(this);
+        this.options.actions.permissions = async (event) => {
+            event.preventDefault();
+            new DocumentOwnershipConfig(this.journalEntryPage).render(true);
+        };
+        this.options.actions['new-modifier'] = this.addChange.bind(this);
+
         this.panelSizes = {
             modifiers: {
                 width: 300,
@@ -199,26 +208,26 @@ export class CraftPanelModifier extends HandlebarsApplication {
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
         html.querySelector(".craft-modifiers-panel").scrollTop = this.scrollPositions.modifiers;
 
-        html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.editModifier();
-        });
-        html.querySelector("button[name='permissions']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            new DocumentOwnershipConfig(this.journalEntryPage).render(true);
-        });
-        html.querySelector("button[name='configure']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            await this.configure();
-        });
-        html.querySelector("button[name='close']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.close();
-        });
-        html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.addChange();
-        });
+        // html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.editModifier();
+        // });
+        // html.querySelector("button[name='permissions']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     new DocumentOwnershipConfig(this.journalEntryPage).render(true);
+        // });
+        // html.querySelector("button[name='configure']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     await this.configure();
+        // });
+        // html.querySelector("button[name='close']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.close();
+        // });
+        // html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.addChange();
+        // });
         html.querySelectorAll(".element-slot.elements").forEach((el) => {
             el.addEventListener("dragstart", async (event) => {
                 if (el.dataset.inslot != "true") {

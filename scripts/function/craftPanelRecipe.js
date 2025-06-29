@@ -19,6 +19,14 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             elementItems: 0,
             recipes: 0,
         };
+        
+        this.options.actions.edit = this.editRecipe.bind(this);
+        this.options.actions.configure = this.configure.bind(this);
+        this.options.actions.permissions = async (event) => {
+            event.preventDefault();
+            new DocumentOwnershipConfig(this.journalEntryPage).render(true);
+        };
+
         this.panelSizes = {
             recipes: {
                 width: 300,
@@ -198,22 +206,22 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
         html.querySelector(".craft-recipes-panel").scrollTop = this.scrollPositions.recipes;
 
-        html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.editRecipe();
-        });
-        html.querySelector("button[name='permissions']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            new DocumentOwnershipConfig(this.journalEntryPage).render(true);
-        });
-        html.querySelector("button[name='configure']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            await this.configure();
-        });
-        html.querySelector("button[name='close']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.close();
-        });
+        // html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.editRecipe();
+        // });
+        // html.querySelector("button[name='permissions']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     new DocumentOwnershipConfig(this.journalEntryPage).render(true);
+        // });
+        // html.querySelector("button[name='configure']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     await this.configure();
+        // });
+        // html.querySelector("button[name='close']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.close();
+        // });
         html.querySelectorAll(".element-slot.elements").forEach((el) => {
             el.addEventListener("dragstart", async (event) => {
                 if (el.dataset.inslot != "true") {

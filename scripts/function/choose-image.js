@@ -50,6 +50,7 @@ export class ChooseImage extends HandlebarsApplication {
             }
         }
 
+        this.options.actions.confirm = this.confirm.bind(this);
         this.scrollPositions = 0;
 
         craftPanels ??= [];
@@ -185,14 +186,14 @@ export class ChooseImage extends HandlebarsApplication {
         // 恢复滚动条位置
         html.querySelector(".choose-image-panel").scrollTop = this.scrollPositions;
 
-        html.querySelector("button[name='cancel']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.close();
-        });
-        html.querySelector("button[name='confirm']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.confirm();
-        });
+        // html.querySelector("button[name='cancel']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.close();
+        // });
+        // html.querySelector("button[name='confirm']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.confirm();
+        // });
 
         html.querySelectorAll(".choose-image-slot").forEach(image => {
             image.addEventListener("click", (event) => {
@@ -270,6 +271,9 @@ export class ChooseImage extends HandlebarsApplication {
             let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
             if (confirm) {
                 this.showImages.splice(index, 1);
+                this.showImages.forEach((image, i) => {
+                    image.index = i;
+                });
                 this.render();
             }
         }

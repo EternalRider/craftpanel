@@ -2,7 +2,7 @@
   "name": "craftpanel",
   "title": "合成面板",
   "description": "使用元素成分而非具体材料进行合成的系统。",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": "EternalRider",
   "languages": [
     {
@@ -16,11 +16,6 @@
       "type": "module",
       "name": "portal-lib",
       "manifest": "https://github.com/theripper93/portal-lib/releases/latest/download/module.json"
-    },
-    {
-      "type": "module",
-      "name": "socketlib",
-      "manifest": "https://raw.githubusercontent.com/manuelVo/foundryvtt-socketlib/master/module.json"
     }
   ],
   "socket": true,
@@ -35,6 +30,6 @@
         "minimum": "12",
         "verified": "12"
     },
-  "manifest": "https://github.com/EternalRider/craftpanel/releases/download/1.0.2/module.json",
-  "download": "https://github.com/EternalRider/craftpanel/releases/download/1.0.2/craftpanel.zip"
+  "manifest": "https://github.com/EternalRider/craftpanel/releases/download/1.1.0/module.json",
+  "download": "https://github.com/EternalRider/craftpanel/releases/download/1.1.0/craftpanel.zip"
 }

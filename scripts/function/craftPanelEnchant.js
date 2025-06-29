@@ -69,6 +69,70 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             modifiers: 0,
         };
 
+        if (game.user.isGM) {
+            this.options.actions.edit = this.toggleEdit.bind(this);
+        } else {
+            this.options.window.controls = [];
+        }
+        this.options.actions.craft = this.craft.bind(this);
+        this.options.actions["configure-panel"] = this.configure.bind(this);
+        this.options.actions["new-modifier"] = async (event) => {
+            event.preventDefault();
+            await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
+                {
+                    name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-modifier`),
+                    src: "icons/magic/symbols/rune-sigil-green.webp",
+                    "text.content": null,
+                    flags: {
+                        [MODULE_ID]: {
+                            type: "modifier",
+                            changes: [],
+                            ...DEFAULT_MODIFIER_DATA,
+                        },
+                    },
+                },
+            ]);
+            this.needRefresh = true;
+            this.render(true);
+        };
+        this.options.actions["new-slot"] = async (event) => {
+            event.preventDefault();
+            await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
+                {
+                    name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-slot`),
+                    src: "icons/commodities/materials/bowl-powder-pink.webp",
+                    "text.content": null,
+                    flags: {
+                        [MODULE_ID]: {
+                            type: "slot",
+                            ...DEFAULT_SLOT_DATA,
+                        },
+                    },
+                },
+            ]);
+            this.render(true);
+        };
+        this.options.actions["new-result"] = async (event) => {
+            event.preventDefault();
+            await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
+                {
+                    name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-result`),
+                    src: "icons/magic/symbols/runes-etched-steel-blade.webp",
+                    "text.content": null,
+                    flags: {
+                        [MODULE_ID]: {
+                            type: "result",
+                            images: [{ name: "icons/magic/symbols/runes-etched-steel-blade.webp", src: "icons/magic/symbols/runes-etched-steel-blade.webp" }],
+                            size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
+                            ...DEFAULT_RESULT_DATA,
+                        },
+                    },
+                },
+            ]);
+            this.needRefresh = true;
+            this.render(true);
+        };
+
         this.panelSizes = this.journalEntry.getFlag(MODULE_ID, "panelSizes") ?? {
             modifiers: {
                 width: 300,
@@ -106,7 +170,11 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 positioned: true,
                 title: `${MODULE_ID}.${this.APP_ID}.title`,
                 icon: "fa-solid fa-utensils",
-                controls: [],
+                controls: [{
+                    icon: "fas fa-edit",
+                    action: "edit",
+                    label: `${MODULE_ID}.edit-mode`,
+                }],
                 minimizable: true,
                 resizable: false,
                 contentTag: "section",
@@ -147,7 +215,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
     }
 
     get title() {
-        return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`) + ": " + this.journalEntry.name;
+        return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`) + ": " + this.journalEntry.name + (this.isEdit ? " - " + game.i18n.localize(`${MODULE_ID}.edit-mode`) : "");
     }
 
     get isEdit() {
@@ -295,66 +363,66 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         });
 
         if (this.isEdit) {
-            html.querySelector("button[name='new-slot']").addEventListener("click", async (event) => {
-                event.preventDefault();
-                await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
-                    {
-                        name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-slot`),
-                        src: "icons/commodities/materials/bowl-powder-pink.webp",
-                        "text.content": null,
-                        flags: {
-                            [MODULE_ID]: {
-                                type: "slot",
-                                ...DEFAULT_SLOT_DATA,
-                            },
-                        },
-                    },
-                ]);
-                this.render(true);
-            });
-            html.querySelector("button[name='new-result']").addEventListener("click", async (event) => {
-                event.preventDefault();
-                await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
-                    {
-                        name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-result`),
-                        src: "icons/magic/symbols/runes-etched-steel-blade.webp",
-                        "text.content": null,
-                        flags: {
-                            [MODULE_ID]: {
-                                type: "result",
-                                images: [{ name: "icons/magic/symbols/runes-etched-steel-blade.webp", src: "icons/magic/symbols/runes-etched-steel-blade.webp" }],
-                                size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
-                                ...DEFAULT_RESULT_DATA,
-                            },
-                        },
-                    },
-                ]);
-                this.needRefresh = true;
-                this.render(true);
-            });
-            html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
-                event.preventDefault();
-                await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
-                    {
-                        name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-modifier`),
-                        src: "icons/magic/symbols/rune-sigil-green.webp",
-                        "text.content": null,
-                        flags: {
-                            [MODULE_ID]: {
-                                type: "modifier",
-                                changes: [],
-                                ...DEFAULT_MODIFIER_DATA,
-                            },
-                        },
-                    },
-                ]);
-                this.needRefresh = true;
-                this.render(true);
-            });
-            html.querySelector("button[name='configure-panel']").addEventListener("click", async (event) => {
-                event.preventDefault();
-                await this.configure();
-            });
+            // html.querySelector("button[name='new-slot']").addEventListener("click", async (event) => {
+            //     event.preventDefault();
+            //     await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
+            //         {
+            //             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-slot`),
+            //             src: "icons/commodities/materials/bowl-powder-pink.webp",
+            //             "text.content": null,
+            //             flags: {
+            //                 [MODULE_ID]: {
+            //                     type: "slot",
+            //                     ...DEFAULT_SLOT_DATA,
+            //                 },
+            //             },
+            //         },
+            //     ]);
+            //     this.render(true);
+            // });
+            // html.querySelector("button[name='new-result']").addEventListener("click", async (event) => {
+            //     event.preventDefault();
+            //     await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
+            //         {
+            //             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-result`),
+            //             src: "icons/magic/symbols/runes-etched-steel-blade.webp",
+            //             "text.content": null,
+            //             flags: {
+            //                 [MODULE_ID]: {
+            //                     type: "result",
+            //                     images: [{ name: "icons/magic/symbols/runes-etched-steel-blade.webp", src: "icons/magic/symbols/runes-etched-steel-blade.webp" }],
+            //                     size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
+            //                     ...DEFAULT_RESULT_DATA,
+            //                 },
+            //             },
+            //         },
+            //     ]);
+            //     this.needRefresh = true;
+            //     this.render(true);
+            // });
+            // html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
+            //     event.preventDefault();
+            //     await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
+            //         {
+            //             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-modifier`),
+            //             src: "icons/magic/symbols/rune-sigil-green.webp",
+            //             "text.content": null,
+            //             flags: {
+            //                 [MODULE_ID]: {
+            //                     type: "modifier",
+            //                     changes: [],
+            //                     ...DEFAULT_MODIFIER_DATA,
+            //                 },
+            //             },
+            //         },
+            //     ]);
+            //     this.needRefresh = true;
+            //     this.render(true);
+            // });
+            // html.querySelector("button[name='configure-panel']").addEventListener("click", async (event) => {
+            //     event.preventDefault();
+            //     await this.configure();
+            // });
             html.querySelectorAll(".craft-panel-tittle > i").forEach((icon) => {
                 icon.addEventListener("click", this.changePanelSize.bind(this));
             });
@@ -402,10 +470,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 });
             });
         } else {
-            html.querySelector("button[name='craft']").addEventListener("click", async (event) => {
-                event.preventDefault();
-                await this.craft();
-            });
+            // html.querySelector("button[name='craft']").addEventListener("click", async (event) => {
+            //     event.preventDefault();
+            //     await this.craft();
+            // });
             html.querySelectorAll(".element-slot.materials").forEach((el) => {
                 el.addEventListener("dragstart", (event) => {
                     event.dataTransfer.setData(
@@ -415,6 +483,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                             uuid: el.dataset.uuid,
                         }),
                     );
+                    game.tooltip.deactivate();
                 });
                 el.addEventListener("click", async (event) => {
                     event.preventDefault();
@@ -456,10 +525,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 });
             });
         }
-        html.querySelector("button[name='close']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.close();
-        });
+        // html.querySelector("button[name='close']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.close();
+        // });
         html.querySelectorAll(".craft-slot").forEach((slot) => {
             const isEmpty = slot.classList.contains("empty");
             const type = slot.dataset.type;
@@ -489,6 +558,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                                 index: slot.dataset.index,
                             }),
                         );
+                        game.tooltip.deactivate();
                     });
                 } else {
                     slot.addEventListener("drop", this._onDropSlot.bind(this));
@@ -503,6 +573,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                                     uuid: slot.dataset.uuid,
                                 }),
                             );
+                            game.tooltip.deactivate();
                         });
                     }
                 }
@@ -896,6 +967,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         }
         debug("CraftPanelEnchant removeResultItem: this.resultItems this.materials", this.resultItems, this.materials);
         this.resultItems[index] = null;
+        await this.refreshCost();
         this.render(true);
     }
     //添加物品到结果槽位中
@@ -916,6 +988,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 material.quantity--;
             }
             debug("CraftPanelEnchant addResultItem: this.resultItems this.materials", this.resultItems, this.materials);
+            await this.refreshCost();
             this.render(true);
         }
     }
@@ -1935,6 +2008,16 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.needRefresh = true;
         this.render(true);
         return results;
+    }
+
+    async toggleEdit(event) {
+        event.preventDefault();
+        //切换编辑模式
+        if (!game.user.isGM) return;
+        this.mode = this.isEdit ? "use" : "edit";
+        this.window.title.textContent = this.title;
+        this.needRefresh  = true;
+        this.render(true);
     }
 
     static get SHAPE_STYLE() {

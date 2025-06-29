@@ -1,7 +1,7 @@
 const MODULE_ID = 'craftpanel';
 import * as api from './api.js';
 import { register_settings } from './settings.js';
-import CraftSocket from './socket.js';
+// import CraftSocket from './socket.js';
 
 Hooks.once('init', function () {
     game.modules.get(MODULE_ID).api = api; // 之后可被如此调用: const craftpanel = game.modules.get('craftpanel')?.api;
@@ -14,9 +14,9 @@ Hooks.once('init', function () {
 // Hooks.once("socketlib.ready", () => {
 //     SpellBookSocket.initialize();
 // });
-Hooks.once("socketlib.ready", () => {
-    CraftSocket.initialize();
-});
+// Hooks.once("socketlib.ready", () => {
+//     CraftSocket.initialize();
+// });
 
 Hooks.on('ready', () => {
     Handlebars.registerHelper('range', function (start, end) {

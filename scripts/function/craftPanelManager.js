@@ -10,6 +10,12 @@ export class CraftPanelManager extends HandlebarsApplication {
         super();
         craftPanels ??= [];
         craftPanels.push(this);
+
+        this.options.actions.craft = this.craftButton.bind(this);
+        this.options.actions.edit = this.editButton.bind(this);
+        this.options.actions.permissions = this.permissionsButton.bind(this);
+        this.options.actions.delete = this.deleteButton.bind(this);
+        this.options.actions["create-new"] = this.createNewButton.bind(this);
     }
 
     static get DEFAULT_OPTIONS() {
@@ -34,7 +40,7 @@ export class CraftPanelManager extends HandlebarsApplication {
                 closeOnSubmit: false,
             },
             position: {
-                width: 560,
+                width: 600,
                 height: "auto",
             },
             actions: {},
@@ -71,142 +77,132 @@ export class CraftPanelManager extends HandlebarsApplication {
         super._onRender(context, options);
         debug("CraftPanelManager _onRender : context", context);
         const html = this.element;
-        const createNewButton = html.querySelector("button[name='create-new']");
-        createNewButton.addEventListener("click", async () => {
-            const data = await new Portal.FormBuilder()
-                .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-craft-panel`))
-                .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
-                .select({ name: "panelType", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.select-type`), options: CraftPanelManager.PANEL_TYPE_OPTIONS })
-                .render();
-            debug("CraftPanelManager create-new : data", data);
-            if (!data) return;
-            let defaultData = {};
-            if (data.panelType === "blend") {
-                defaultData = CraftPanelManager.DEFAULT_BLEND_DATA;
-            } else if (data.panelType === "element") {
-                defaultData = CraftPanelManager.DEFAULT_ELEMENT_DATA;
-                defaultData.defaultClass = data.name.trim();
-                defaultData.showClass = data.name.trim();
-                defaultData["requirements-script"] = `let element = item.getFlag('craftpanel', 'element'); return Array.isArray(element) && element.length > 0 && element.some(e => ['${data.name.trim()}'].includes(e.class));`;
-            } else if (data.panelType === "cook") {
-                defaultData = CraftPanelManager.DEFAULT_COOK_DATA;
-            } else if (data.panelType === "forge") {
-                defaultData = CraftPanelManager.DEFAULT_FORGE_DATA;
-            } else if (data.panelType === "enchant") {
-                defaultData = CraftPanelManager.DEFAULT_ENCHANT_DATA;
-            }
-            const flagdata = { [MODULE_ID]: { isCraftPanel: true, type: data.panelType, ...defaultData } };
-            debug("CraftPanelManager create-new : flagdata", flagdata);
-            await JournalEntry.implementation.create({
-                name: data.name,
-                flags: flagdata
-            })
-            this.render(true);
-        });
-        // html.querySelector("button[name='config-element']").addEventListener("click", async () => {
-        //     new CraftPanelElement().render(true);
-        // });
-        html.querySelectorAll("button[name='craft']").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                event.preventDefault();
-                const uuid = event.currentTarget.dataset.uuid;
-                const craftPanel = await fromUuid(uuid);
-                let options = {
-                    actor: canvas.tokens.controlled[0]?.actor ?? game.user.character,
-                }
-                debug("CraftPanelManager craft : uuid craftPanel", uuid, craftPanel);
-                if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelBlend(craftPanel, "craft", options).render(true);
-                    }
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelCook(craftPanel, "craft", options).render(true);
-                        this.close();
-                    }
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelForge(craftPanel, "craft", options).render(true);
-                        this.close();
-                    }
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelEnchant(craftPanel, "craft", options).render(true);
-                        this.close();
-                    }
-                }
-                // this.close();
-            });
-        });
-        html.querySelectorAll("button[name='edit']").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                event.preventDefault();
-                const uuid = event.currentTarget.dataset.uuid;
-                const craftPanel = await fromUuid(uuid);
-                debug("CraftPanelManager edit : uuid craftPanel", uuid, craftPanel);
-                if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
-                    if (openWindow) openWindow.close();
-                    else new CraftPanelBlend(craftPanel, "edit").render(true);
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "element") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelElement));
-                    if (openWindow) openWindow.close();
-                    else new CraftPanelElement(craftPanel).render(true);
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelCook(craftPanel, "edit").render(true);
-                        this.close();
-                    }
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelForge(craftPanel, "edit").render(true);
-                        this.close();
-                    }
-                } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
-                    const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
-                    if (openWindow) openWindow.close();
-                    else {
-                        new CraftPanelEnchant(craftPanel, "edit").render(true);
-                        this.close();
-                    }
-                }
-                // this.close();
-            });
-        });
-
-        html.querySelectorAll("button[name='permissions']").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                event.preventDefault();
-                const uuid = event.currentTarget.dataset.uuid;
-                const craftPanel = await fromUuid(uuid);
-                debug("CraftPanelManager permissions : uuid craftPanel", uuid, craftPanel);
-                new DocumentOwnershipConfig(craftPanel).render(true);
-            });
-        });
-
-        html.querySelectorAll("button[name='delete']").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                event.preventDefault();
-                const uuid = event.currentTarget.dataset.uuid;
-                const craftPanel = await fromUuid(uuid);
-                debug("CraftPanelManager delete : uuid craftPanel", uuid, craftPanel);
-                await craftPanel.deleteDialog();
-                this.render(true);
-            });
-        });
         debug("CraftPanelManager _onRender : html", html);
+    }
+
+    async createNewButton(event) {
+        event.preventDefault();
+        const data = await new Portal.FormBuilder()
+            .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-craft-panel`))
+            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
+            .select({ name: "panelType", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.select-type`), options: CraftPanelManager.PANEL_TYPE_OPTIONS })
+            .render();
+        debug("CraftPanelManager create-new : data", data);
+        if (!data) return;
+        let defaultData = {};
+        if (data.panelType === "blend") {
+            defaultData = CraftPanelManager.DEFAULT_BLEND_DATA;
+        } else if (data.panelType === "element") {
+            defaultData = CraftPanelManager.DEFAULT_ELEMENT_DATA;
+            defaultData.defaultClass = data.name.trim();
+            defaultData.showClass = data.name.trim();
+            defaultData["requirements-script"] = `let element = item.getFlag('craftpanel', 'element'); return Array.isArray(element) && element.length > 0 && element.some(e => ['${data.name.trim()}'].includes(e.class));`;
+        } else if (data.panelType === "cook") {
+            defaultData = CraftPanelManager.DEFAULT_COOK_DATA;
+        } else if (data.panelType === "forge") {
+            defaultData = CraftPanelManager.DEFAULT_FORGE_DATA;
+        } else if (data.panelType === "enchant") {
+            defaultData = CraftPanelManager.DEFAULT_ENCHANT_DATA;
+        }
+        const flagdata = { [MODULE_ID]: { isCraftPanel: true, type: data.panelType, ...defaultData } };
+        debug("CraftPanelManager create-new : flagdata", flagdata);
+        await JournalEntry.implementation.create({
+            name: data.name,
+            flags: flagdata
+        })
+        this.render(true);
+    }
+
+    async craftButton(event) {
+        event.preventDefault();
+        const uuid = event.srcElement.dataset.uuid;
+        const craftPanel = await fromUuid(uuid);
+        let options = {
+            actor: canvas.tokens.controlled[0]?.actor ?? game.user.character,
+        }
+        debug("CraftPanelManager craft : uuid craftPanel", uuid, craftPanel);
+        if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelBlend(craftPanel, "craft", options).render(true);
+            }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelCook(craftPanel, "craft", options).render(true);
+                this.close();
+            }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelForge(craftPanel, "craft", options).render(true);
+                this.close();
+            }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelEnchant(craftPanel, "craft", options).render(true);
+                this.close();
+            }
+        }
+    }
+
+    async editButton(event) {
+        event.preventDefault();
+        const uuid = event.srcElement.dataset.uuid;
+        const craftPanel = await fromUuid(uuid);
+        debug("CraftPanelManager edit : uuid craftPanel", uuid, craftPanel);
+        if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
+            if (openWindow) openWindow.close();
+            else new CraftPanelBlend(craftPanel, "edit").render(true);
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "element") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelElement));
+            if (openWindow) openWindow.close();
+            else new CraftPanelElement(craftPanel).render(true);
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelCook(craftPanel, "edit").render(true);
+                this.close();
+            }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelForge(craftPanel, "edit").render(true);
+                this.close();
+            }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelEnchant(craftPanel, "edit").render(true);
+                this.close();
+            }
+        }
+    }
+
+    async permissionsButton(event) {
+        event.preventDefault();
+        const uuid = event.srcElement.dataset.uuid;
+        const craftPanel = await fromUuid(uuid);
+        debug("CraftPanelManager permissions : uuid craftPanel", uuid, craftPanel);
+        new DocumentOwnershipConfig(craftPanel).render(true);
+    }
+
+    async deleteButton(event) {
+        event.preventDefault();
+        const uuid = event.srcElement.dataset.uuid;
+        const craftPanel = await fromUuid(uuid);
+        debug("CraftPanelManager delete : uuid craftPanel", uuid, craftPanel);
+        await craftPanel.deleteDialog();
+        this.render(true);
     }
 
     _onClose(options) {

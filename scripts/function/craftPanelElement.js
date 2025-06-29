@@ -16,6 +16,10 @@ export class CraftPanelElement extends HandlebarsApplication {
             materials: 0,
             elements: 0,
         };
+
+        this.options.actions.edit = this.editMaterialsElement.bind(this);
+        this.options.actions.configure = this.configure.bind(this);
+        
         this.panelSizes = {
             elementitems: {
                 width: 420,
@@ -131,18 +135,18 @@ export class CraftPanelElement extends HandlebarsApplication {
         html.querySelector(".craft-materials-panel").scrollTop = this.scrollPositions.materials;
         html.querySelector(".craft-elements-panel").scrollTop = this.scrollPositions.elements;
 
-        html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.editMaterialsElement();
-        });
-        html.querySelector("button[name='configure']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            await this.configure();
-        });
-        html.querySelector("button[name='close']").addEventListener("click", async (event) => {
-            event.preventDefault();
-            this.close();
-        });
+        // html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.editMaterialsElement();
+        // });
+        // html.querySelector("button[name='configure']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     await this.configure();
+        // });
+        // html.querySelector("button[name='close']").addEventListener("click", async (event) => {
+        //     event.preventDefault();
+        //     this.close();
+        // });
         html.querySelectorAll(".element-slot.materials").forEach((el) => {
             el.addEventListener("dragstart", (event) => {
                 event.dataTransfer.setData(

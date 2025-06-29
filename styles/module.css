@@ -55,12 +55,13 @@
     text-shadow: 0 0 5px var(--color-shadow-primary), 0 0 10px var(--color-shadow-primary), 0 0 15px var(--color-shadow-primary);
 }
 /* 配方列表 */
+.craft .craft-content .craft-players-panel,
 .craft .craft-content .craft-recipes-panel {
     display: flex;
     background-color: rgb(0, 0, 0, 10%);
     flex-direction: column;
-    gap: 1px;
-    padding: 0px 10px 5px;
+    gap: 3px;
+    padding: 3px 10px 5px;
     width: 300px;
     overflow-y: auto;
 }
@@ -326,6 +327,19 @@
     gap: 5px;
     transition: transform 0.2s, box-shadow 0.2s;
 }
+.swpt-craft .craft-content .craft-players-panel .craft-player {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid var(--player-color, white);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: row;
+    background-color: rgb(0, 0, 0, 25%);
+    gap: 5px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.swpt-craft .craft-content .craft-players-panel .craft-player,
+.craft .craft-content .craft-recipes-panel .craft-recipe,
 .craft .craft-content .craft-modifiers-panel .craft-modifier:not([locked]) {
     cursor: pointer;
 }
@@ -336,6 +350,10 @@
 .craft .craft-content .craft-modifiers-panel .craft-modifier.choosed,
 .craft-panel-recipe .craft-recipes-panel .craft-recipe.choosed {
     border-color: aquamarine;
+    transform: scale(1.05);
+}
+.swpt-craft .craft-content .craft-players-panel .craft-player.choosed {
+    border-color: var(--player-color, aquamarine);
     transform: scale(1.05);
 }
 .craft .craft-content .craft-modifiers-panel .craft-modifier.locked {
@@ -356,6 +374,7 @@
     flex: 1;
 }
 /* 配方名称 */
+.swpt-craft .craft-content .craft-players-panel .craft-player > h3,
 .craft .craft-content .craft-modifiers-panel .craft-modifier-desc > h3,
 .craft .craft-content .craft-recipes-panel .craft-recipe-desc > h3 {
     margin: 0;
