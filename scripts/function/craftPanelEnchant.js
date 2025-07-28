@@ -93,7 +93,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 },
             ]);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
         };
         this.options.actions["new-slot"] = async (event) => {
             event.preventDefault();
@@ -110,7 +110,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     },
                 },
             ]);
-            this.render(true);
+            await this.render(true);
         };
         this.options.actions["new-result"] = async (event) => {
             event.preventDefault();
@@ -130,7 +130,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 },
             ]);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
         };
 
         this.panelSizes = this.journalEntry.getFlag(MODULE_ID, "panelSizes") ?? {
@@ -169,7 +169,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 frame: true,
                 positioned: true,
                 title: `${MODULE_ID}.${this.APP_ID}.title`,
-                icon: "fa-solid fa-utensils",
+                icon: "fa-solid fa-book-journal-whills",
                 controls: [{
                     icon: "fas fa-edit",
                     action: "edit",
@@ -378,7 +378,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             //             },
             //         },
             //     ]);
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='new-result']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -398,7 +398,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             //         },
             //     ]);
             //     this.needRefresh = true;
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -417,7 +417,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             //         },
             //     ]);
             //     this.needRefresh = true;
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='configure-panel']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -438,14 +438,14 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     const page = await fromUuid(pageUuid);
                     await page.deleteDialog();
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 });
                 modifier.addEventListener("click", async (event) => {
                     // 编辑模式下，点击调整可以编辑调整
                     event.preventDefault();
                     const modifierJEUuid = modifier.dataset.uuid;
                     await this.editModifier(modifierJEUuid);
-                    this.render(true);
+                    await this.render(true);
                 });
             });
             html.querySelectorAll(".craft-category-icon").forEach(icon => {
@@ -465,7 +465,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                         this.baseCost = Number(value);
                         await this.journalEntry.setFlag(MODULE_ID, "baseCost", this.baseCost);
                         await this.refreshCost();
-                        this.render(true);
+                        await this.render(true);
                     }
                 });
             });
@@ -521,7 +521,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     event.preventDefault();
                     const modifierJEUuid = modifier.dataset.uuid;
                     await this.chooseModifier(modifierJEUuid);
-                    this.render(true);
+                    await this.render(true);
                 });
             });
         }
@@ -540,14 +540,14 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                         const pageUuid = slot.dataset.uuid;
                         const page = await fromUuid(pageUuid);
                         await page.deleteDialog();
-                        this.render(true);
+                        await this.render(true);
                     });
                     // 编辑模式下，点击槽位可以编辑槽位
                     slot.addEventListener("click", async (event) => {
                         event.preventDefault();
                         const slotJEUuid = slot.dataset.uuid;
                         await this.editSlot(slotJEUuid);
-                        this.render(true);
+                        await this.render(true);
                     });
                     // 编辑模式下，拖拽槽位可以移动槽位
                     slot.addEventListener("dragstart", (event) => {
@@ -585,7 +585,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                         const pageUuid = slot.dataset.uuid;
                         const page = await fromUuid(pageUuid);
                         await page.deleteDialog();
-                        this.render(true);
+                        await this.render(true);
                     });
                 } else {
                     slot.addEventListener("drop", this._onDropResult.bind(this));
@@ -639,7 +639,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.baseCost = this.journalEntry.getFlag(MODULE_ID, "baseCost") ?? 0;
         this.cost.icon = this.journalEntry.getFlag(MODULE_ID, "costIcon") ?? "";
         this.cost.element = this.journalEntry.getFlag(MODULE_ID, "costElement") ?? "";
-        this.render(true);
+        await this.render(true);
     }
 
     async changePanelSize(event) {
@@ -654,7 +654,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.panelSizes[name] = data;
         await this.journalEntry.setFlag(MODULE_ID, "panelSizes", this.panelSizes);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     _onClose(options) {
@@ -707,7 +707,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             position.y -= size / 2;
             await slot.setFlag(MODULE_ID, "position", position);
             debug("CraftPanelEnchant _onDropSlotPanel: position", position);
-            this.render(true);
+            await this.render(true);
         } else if (data.type == "Item") {
             for (let i = 0; i < this.slots.length; i++) {
                 if (!this.slots[i].isLocked && (this.slotItems[i] === null || this.slotItems[i] === undefined)) {
@@ -768,7 +768,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 },
             },]);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
         } else {
             debug("CraftPanelEnchant _onDropResultPanel: this.results", this.results);
             for (let i = 0; i < this.results.length; i++) {
@@ -815,7 +815,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             },
         ]);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async _onDropCostPanel(event) {
         event.preventDefault();
@@ -854,7 +854,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             await this.journalEntry.setFlag(MODULE_ID, "costIcon", element.img);
         }
         debug("CraftPanelEnchant _onDropCostPanel: this.cost", this.cost);
-        this.render(true);
+        await this.render(true);
     }
     async _onClickResult(event) {
         event.preventDefault();
@@ -881,7 +881,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 .button({
                     label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-image`),
                     callback: async () => {
-                        //游戏模式下，左键点击结果可以选择图片
+                        //制作模式下，左键点击结果可以选择图片
                         let images = await chooseImage(result.images, this.mode, { choosed: result.img, max: 1 });
                         if (images) {
                             result.img = images[0].src;
@@ -897,7 +897,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             result.description = data.description;
             this.resultOverrides[index] = result;
             debug("CraftPanelEnchant _onClickResult: this.results this.resultOverrides", this.results, this.resultOverrides);
-            this.render(true);
+            await this.render(true);
         }
     }
     /**
@@ -968,7 +968,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         debug("CraftPanelEnchant removeResultItem: this.resultItems this.materials", this.resultItems, this.materials);
         this.resultItems[index] = null;
         await this.refreshCost();
-        this.render(true);
+        await this.render(true);
     }
     //添加物品到结果槽位中
     async addResultItem(index, item) {
@@ -989,7 +989,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             }
             debug("CraftPanelEnchant addResultItem: this.resultItems this.materials", this.resultItems, this.materials);
             await this.refreshCost();
-            this.render(true);
+            await this.render(true);
         }
     }
     //将材料整理成类似元素的格式
@@ -1030,7 +1030,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.elements.sort((a, b) => b.num - a.num);
         debug("CraftPanelEnchant refreshElements: this.elements", this.elements);
         await this.refreshCost();
-        this.render(true);
+        await this.render(true);
     }
     //刷新材料面板
     async refreshPanel() {
@@ -1492,7 +1492,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 callback: async () => {
                     fb.form().close();
                     await slotJE.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 },
                 icon: "fas fa-trash",
             });
@@ -1500,7 +1500,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         if (!data) return;
         debug("CraftPanelEnchant editSlot: data", data);
         await slotJE.update(data);
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 编辑结果槽位
@@ -1539,7 +1539,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                             [`flags.${MODULE_ID}.images`]: images,
                             src: images[0].src,
                         });
-                        this.render(true);
+                        await this.render(true);
                     }
                 },
                 icon: "fas fa-edit",
@@ -1556,7 +1556,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 callback: async () => {
                     fb.form().close();
                     await slotJE.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 },
                 icon: "fas fa-trash",
             });
@@ -1564,7 +1564,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         if (!data) return;
         debug("CraftPanelEnchant editResult: data", data);
         await slotJE.update(data);
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 编辑配方
@@ -1614,7 +1614,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             this.choosedModifiers.push(modifierJE.uuid);
         }
         debug("CraftPanelEnchant chooseModifier: this.choosedModifiers", this.choosedModifiers);
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 新增类别配置
@@ -1651,7 +1651,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         debug("CraftPanelEnchant addCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async changeCategory(category, type) {
         debug("CraftPanelEnchant changeCategory : category type", category, type);
@@ -1663,7 +1663,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     this.material_categories[index].choosed = true;
                     debug("CraftPanelEnchant changeCategory : this.material_categories", this.material_categories);
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 }
             }
         } else if (type == "modifier") {
@@ -1674,7 +1674,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     this.modifier_categories[index].choosed = true;
                     debug("CraftPanelEnchant changeCategory : this.recipe_categories", this.recipe_categories);
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 }
             }
         }
@@ -1718,7 +1718,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             categories.splice(index, 1);
             await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
             return;
         }
         if (!data) return;
@@ -1728,7 +1728,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         debug("CraftPanelEnchant editCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     /**
@@ -2006,7 +2006,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.elements = [];
         this.choosedModifiers = [];
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
         return results;
     }
 
@@ -2017,7 +2017,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.mode = this.isEdit ? "use" : "edit";
         this.window.title.textContent = this.title;
         this.needRefresh  = true;
-        this.render(true);
+        await this.render(true);
     }
 
     static get SHAPE_STYLE() {

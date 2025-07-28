@@ -87,7 +87,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                 },
             ]);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
         };
         this.options.actions["new-slot"] = async (event) => {
             event.preventDefault();
@@ -104,7 +104,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                     },
                 },
             ]);
-            this.render(true);
+            await this.render(true);
         };
 
         this.panelSizes = this.journalEntry.getFlag(MODULE_ID, "panelSizes") ?? {
@@ -143,7 +143,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                 frame: true,
                 positioned: true,
                 title: `${MODULE_ID}.${this.APP_ID}.title`,
-                icon: "fa-solid fa-utensils",
+                icon: "fa-solid fa-hammer",
                 controls: [{
                     icon: "fas fa-edit",
                     action: "edit",
@@ -348,7 +348,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             //             },
             //         },
             //     ]);
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -367,7 +367,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             //         },
             //     ]);
             //     this.needRefresh = true;
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='configure-panel']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -388,14 +388,14 @@ export class CraftPanelForge extends HandlebarsApplication {
                     const page = await fromUuid(pageUuid);
                     await page.deleteDialog();
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 });
                 modifier.addEventListener("click", async (event) => {
                     // 编辑模式下，点击调整可以编辑调整
                     event.preventDefault();
                     const modifierJEUuid = modifier.dataset.uuid;
                     await this.editModifier(modifierJEUuid);
-                    this.render(true);
+                    await this.render(true);
                 });
             });
             html.querySelectorAll(".craft-category-icon").forEach(icon => {
@@ -415,7 +415,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                         this.baseCost = Number(value);
                         await this.journalEntry.setFlag(MODULE_ID, "baseCost", this.baseCost);
                         await this.refreshCost();
-                        this.render(true);
+                        await this.render(true);
                     }
                 });
             });
@@ -471,7 +471,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                     event.preventDefault();
                     const modifierJEUuid = modifier.dataset.uuid;
                     await this.chooseModifier(modifierJEUuid);
-                    this.render(true);
+                    await this.render(true);
                 });
             });
         }
@@ -490,14 +490,14 @@ export class CraftPanelForge extends HandlebarsApplication {
                         const pageUuid = slot.dataset.uuid;
                         const page = await fromUuid(pageUuid);
                         await page.deleteDialog();
-                        this.render(true);
+                        await this.render(true);
                     });
                     // 编辑模式下，点击槽位可以编辑槽位
                     slot.addEventListener("click", async (event) => {
                         event.preventDefault();
                         const slotJEUuid = slot.dataset.uuid;
                         await this.editSlot(slotJEUuid);
-                        this.render(true);
+                        await this.render(true);
                     });
                     // 编辑模式下，拖拽槽位可以移动槽位
                     slot.addEventListener("dragstart", (event) => {
@@ -537,12 +537,12 @@ export class CraftPanelForge extends HandlebarsApplication {
                         if (confirm) {
                             this.results.splice(index, 1);
                             this.journalEntry.setFlag(MODULE_ID, "results", this.results);
-                            this.render();
+                            await this.render();
                         }
                     } else {
-                        // 游戏模式下，右键点击结果可以取消选择结果
+                        // 制作模式下，右键点击结果可以取消选择结果
                         this.choosedResults = this.choosedResults.filter(r => r !== slot.dataset.uuid);
-                        this.render(true);
+                        await this.render(true);
                     }
                 });
                 slot.addEventListener("click", this._onClickResult.bind(this));
@@ -588,7 +588,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         this.baseCost = this.journalEntry.getFlag(MODULE_ID, "baseCost") ?? 0;
         this.cost.icon = this.journalEntry.getFlag(MODULE_ID, "costIcon") ?? "";
         this.cost.element = this.journalEntry.getFlag(MODULE_ID, "costElement") ?? "";
-        this.render(true);
+        await this.render(true);
     }
 
     async changePanelSize(event) {
@@ -603,7 +603,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         this.panelSizes[name] = data;
         await this.journalEntry.setFlag(MODULE_ID, "panelSizes", this.panelSizes);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     _onClose(options) {
@@ -656,7 +656,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             position.y -= size / 2;
             await slot.setFlag(MODULE_ID, "position", position);
             debug("CraftPanelForge _onDropSlotPanel: position", position);
-            this.render(true);
+            await this.render(true);
         } else if (data.type == "Item") {
             for (let i = 0; i < this.slots.length; i++) {
                 if (!this.slots[i].isLocked && (this.slotItems[i] === null || this.slotItems[i] === undefined)) {
@@ -700,7 +700,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             }
             debug("CraftPanelForge _onDropResultPanel: this.results", this.results);
             this.journalEntry.setFlag(MODULE_ID, "results", this.results);
-            this.render(true);
+            await this.render(true);
         }
     }
     async _onDropModifierPanel(event) {
@@ -739,7 +739,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             },
         ]);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async _onDropCostPanel(event) {
         event.preventDefault();
@@ -778,7 +778,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             await this.journalEntry.setFlag(MODULE_ID, "costIcon", element.img);
         }
         debug("CraftPanelForge _onDropCostPanel: this.cost", this.cost);
-        this.render(true);
+        await this.render(true);
     }
     async _onClickResult(event) {
         event.preventDefault();
@@ -828,11 +828,11 @@ export class CraftPanelForge extends HandlebarsApplication {
                 this.journalEntry.setFlag(MODULE_ID, "results", this.results);
             }
             debug("CraftPanelForge _onClickResult: this.results", this.results);
-            this.render(true);
+            await this.render(true);
         } else if (this.choosedResults.length < (this.journalEntry.getFlag(MODULE_ID, "resultLimit") ?? 1)) {
             this.choosedResults.push(result.uuid);
             debug("CraftPanelForge _onClickResult: this.choosedResults", this.choosedResults);
-            this.render(true);
+            await this.render(true);
         }
     }
     /**
@@ -932,7 +932,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         this.elements.sort((a, b) => b.num - a.num);
         debug("CraftPanelForge refreshElements: this.elements", this.elements);
         await this.refreshCost();
-        this.render(true);
+        await this.render(true);
     }
     //刷新材料面板
     async refreshPanel() {
@@ -1283,7 +1283,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                 callback: async () => {
                     fb.form().close();
                     await slotJE.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 },
                 icon: "fas fa-trash",
             });
@@ -1291,7 +1291,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         if (!data) return;
         debug("CraftPanelForge editSlot: data", data);
         await slotJE.update(data);
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 编辑配方
@@ -1341,7 +1341,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             this.choosedModifiers.push(modifierJE.uuid);
         }
         debug("CraftPanelForge chooseModifier: this.choosedModifiers", this.choosedModifiers);
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 新增类别配置
@@ -1378,7 +1378,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         debug("CraftPanelForge addCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async changeCategory(category, type) {
         debug("CraftPanelForge changeCategory : category type", category, type);
@@ -1390,7 +1390,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                     this.material_categories[index].choosed = true;
                     debug("CraftPanelForge changeCategory : this.material_categories", this.material_categories);
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 }
             }
         } else if (type == "modifier") {
@@ -1401,7 +1401,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                     this.modifier_categories[index].choosed = true;
                     debug("CraftPanelForge changeCategory : this.recipe_categories", this.recipe_categories);
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 }
             }
         }
@@ -1445,7 +1445,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             categories.splice(index, 1);
             await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
             return;
         }
         if (!data) return;
@@ -1455,7 +1455,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         debug("CraftPanelForge editCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     /**
@@ -1769,7 +1769,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         this.elements = [];
         this.choosedModifiers = [];
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
         return results;
     }
 
@@ -1780,7 +1780,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         this.mode = this.isEdit ? "use" : "edit";
         this.window.title.textContent = this.title;
         this.needRefresh  = true;
-        this.render(true);
+        await this.render(true);
     }
 
     static get SHAPE_STYLE() {

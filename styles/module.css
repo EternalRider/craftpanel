@@ -70,7 +70,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    width: 600px;
+    /* width: 600px; */
 }
 /* 材料面板和元素面板 */
 .craft .craft-content .craft-materials-panel,

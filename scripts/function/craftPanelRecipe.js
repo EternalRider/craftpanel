@@ -175,6 +175,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         const results = await Promise.all(this.results.map(async (el, i) => {
             const item = await fromUuid(el.uuid);
             const itemColor = item ? getItemColor(item) ?? "" : "";
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h1>${el.name ?? item?.name}</h1></figure><div class="description">${el.description ?? item?.system?.description ?? item?.description ?? ""}</div>`);
             return {
                 slotIndex: i,
                 uuid: el.uuid,
@@ -182,6 +183,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 name: item?.name ?? el.name,
                 img: item?.img ?? el.img,
                 itemColor: itemColor,
+                tooltip,
             };
         }));
         debug("CraftPanelRecipe _prepareContext : results", results);
@@ -292,7 +294,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 }
                 this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
                 this.results = this.journalEntryPage.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "results"))) : [];
-                this.render(true);
+                await this.render(true);
             });
             recipe.addEventListener("click", async (event) => {
                 // 点击配方可以切换配方
@@ -302,7 +304,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 this.journalEntryPage = this.journalEntry.pages.find(p => p.uuid == pageUuid);
                 this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
                 this.results = this.journalEntryPage.getFlag(MODULE_ID, "results") ?? [];
-                this.render(true);
+                await this.render(true);
             });
             recipe.addEventListener("drop", this._onDropRecipesPanel.bind(this));
         });
@@ -346,7 +348,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 callback: async () => {
                     fb.form().close();
                     await this.journalEntryPage.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 },
                 icon: "fas fa-trash",
             });
@@ -355,7 +357,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         if (!data) return;
         await this.journalEntryPage.update(data);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async editNum(index) {
         const ingredient = this.ingredients[index];
@@ -403,7 +405,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         debug("CraftPanelRecipe editRecipe : update", update);
         await this.journalEntryPage.update(update);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     async _onDropSlotPanel(event) {
@@ -455,7 +457,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             } else {
                 this.results.push({ uuid: item.uuid, quantity: 1, img: item.img, name: item.name, type: type });
             }
-            this.render(true);
+            await this.render(true);
         }
     }
     async _onDropRecipesPanel(event) {
@@ -482,7 +484,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             target: sortTarget,
             siblings: this.journalEntry.pages.filter(p => p.id !== page.id)
         });
-        this.render(true);
+        await this.render(true);
     }
 
     async addElement(element, uuid) {
@@ -514,7 +516,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             };
             this.ingredients.push(el);
         }
-        this.render(true);
+        await this.render(true);
     }
     async removeElement(element, uuid) {
         if (element == undefined) {
@@ -532,7 +534,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 el.max--;
             }
         }
-        this.render(true);
+        await this.render(true);
     }
 
     async addMaterial(item) {
@@ -561,16 +563,16 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             };
             this.ingredients.push(el);
         }
-        this.render(true);
+        await this.render(true);
     }
 
     async removeIngredient(index) {
         this.ingredients.splice(index, 1);
-        this.render(true);
+        await this.render(true);
     }
     async removeResult(index) {
         this.results.splice(index, 1);
-        this.render(true);
+        await this.render(true);
     }
 
     async refreshPanel() {

@@ -298,7 +298,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 }
                 this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
                 this.changes = this.journalEntryPage.getFlag(MODULE_ID, "changes") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "changes"))) : [];
-                this.render(true);
+                await this.render(true);
             });
             modifier.addEventListener("click", async (event) => {
                 // 点击配方可以切换配方
@@ -308,7 +308,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 this.journalEntryPage = this.journalEntry.pages.find(p => p.uuid == pageUuid);
                 this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
                 this.changes = this.journalEntryPage.getFlag(MODULE_ID, "changes") ?? [];
-                this.render(true);
+                await this.render(true);
             });
             modifier.addEventListener("drop", this._onDropModifiersPanel.bind(this));
         });
@@ -359,7 +359,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 callback: async () => {
                     fb.form().close();
                     await this.journalEntryPage.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 },
                 icon: "fas fa-trash",
             });
@@ -371,7 +371,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         }
         await this.journalEntryPage.update(data);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async editNum(index) {
         const ingredient = this.ingredients[index];
@@ -418,7 +418,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         debug("CraftPanelModifier editModifier : update", update);
         await this.journalEntryPage.update(update);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     async _onDropSlotPanel(event) {
@@ -488,7 +488,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
             target: sortTarget,
             siblings: this.journalEntry.pages.filter(p => p.id !== page.id)
         });
-        this.render(true);
+        await this.render(true);
     }
 
     async addElement(element, uuid) {
@@ -520,7 +520,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
             this.ingredients.push(el);
         }
         debug("CraftPanelModifier addElement : this.ingredients", this.ingredients);
-        this.render(true);
+        await this.render(true);
     }
     async removeElement(element, uuid) {
         debug("CraftPanelModifier removeElement : element uuid", element, uuid);
@@ -540,7 +540,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
             }
         }
         debug("CraftPanelModifier removeElement : this.ingredients", this.ingredients);
-        this.render(true);
+        await this.render(true);
     }
     async addMaterial(item) {
         debug("CraftPanelModifier addMaterial : item", item);
@@ -568,18 +568,18 @@ export class CraftPanelModifier extends HandlebarsApplication {
             this.ingredients.push(el);
         }
         debug("CraftPanelModifier addMaterial : this.ingredients", this.ingredients);
-        this.render(true);
+        await this.render(true);
     }
 
     async removeIngredient(index) {
         debug("CraftPanelModifier removeIngredient : index this.ingredients", index, this.ingredients);
         this.ingredients.splice(index, 1);
-        this.render(true);
+        await this.render(true);
     }
     async removeResult(index) {
         debug("CraftPanelModifier removeResult : index this.changes", index, this.changes);
         this.changes.splice(index, 1);
-        this.render(true);
+        await this.render(true);
     }
 
     async refreshPanel() {
@@ -618,7 +618,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         debug("CraftPanelModifier addChange : data", data);
         if (!data) return;
         this.changes.push(data);
-        this.render(true);
+        await this.render(true);
     }
     async editChange(index) {
         const change = this.changes[index];
@@ -633,7 +633,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         debug("CraftPanelModifier editChange : data", data);
         if (!data) return;
         this.changes[index] = data;
-        this.render(true);
+        await this.render(true);
     }
 }
 

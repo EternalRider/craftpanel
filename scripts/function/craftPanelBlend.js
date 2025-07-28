@@ -76,7 +76,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     },
                 },
             ]);
-            this.render(true);
+            await this.render(true);
         };
 
         this.panelSizes = this.journalEntry.getFlag(MODULE_ID, "panelSizes") ?? {
@@ -116,7 +116,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 positioned: true,
                 title: `${MODULE_ID}.${this.APP_ID}.title`,
                 icon: "fa-regular fa-flask-round-potion",
-               controls: [{
+                controls: [{
                     icon: "fas fa-edit",
                     action: "edit",
                     label: `${MODULE_ID}.edit-mode`,
@@ -207,6 +207,24 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     }
                 }
             }
+            let isNecessary = je.getFlag(MODULE_ID, "isNecessary") ?? false;
+            let isConsumed = je.getFlag(MODULE_ID, "isConsumed") ?? true;
+            if (!this.isEdit) {
+                const script = je.getFlag(MODULE_ID, "slotScript");
+                if (script && script.trim() != "") {
+                    const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", "slotItem", script);
+                    let result;
+                    try {
+                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials, this.slotItems[i]);
+                    } catch (e) {
+                        ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                    }
+                    if (result) {
+                        isNecessary = result?.isNecessary ?? isNecessary;
+                        isConsumed = result?.isConsumed ?? isConsumed;
+                    }
+                }
+            }
             const position = je.getFlag(MODULE_ID, "position") ?? { unlock: false, x: 0, y: 0 };
             return {
                 id: je.id,
@@ -221,8 +239,8 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 overrideStyleClass,
                 tooltip,
                 elements: [],
-                isNecessary: je.getFlag(MODULE_ID, "isNecessary") ?? false,
-                isConsumed: je.getFlag(MODULE_ID, "isConsumed") ?? true,
+                isNecessary: isNecessary,
+                isConsumed: isConsumed,
                 isLocked,
                 position,
             };
@@ -298,7 +316,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             //             },
             //         },
             //     ]);
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='new-recipe']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -318,7 +336,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             //         },
             //     ]);
             //     this.needRefresh = true;
-            //     this.render(true);
+            //     await this.render(true);
             // });
             // html.querySelector("button[name='configure-panel']").addEventListener("click", async (event) => {
             //     event.preventDefault();
@@ -337,14 +355,14 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     const page = await fromUuid(pageUuid);
                     await page.deleteDialog();
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 });
                 recipe.addEventListener("click", async (event) => {
                     // 编辑模式下，点击配方可以编辑配方
                     event.preventDefault();
                     const recipeJEUuid = recipe.dataset.uuid;
                     await this.editRecipe(recipeJEUuid);
-                    this.render(true);
+                    await this.render(true);
                 });
             });
             html.querySelectorAll(".craft-category-icon").forEach(icon => {
@@ -415,14 +433,14 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     const pageUuid = slot.dataset.uuid;
                     const page = await fromUuid(pageUuid);
                     await page.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 });
                 // 编辑模式下，点击槽位可以编辑槽位
                 slot.addEventListener("click", async (event) => {
                     event.preventDefault();
                     const slotJEUuid = slot.dataset.uuid;
                     await this.editSlot(slotJEUuid);
-                    this.render(true);
+                    await this.render(true);
                 });
                 // 编辑模式下，拖拽槽位可以移动槽位
                 slot.addEventListener("dragstart", (event) => {
@@ -489,7 +507,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         if (!data) return;
         await this.journalEntry.update(data);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     async changePanelSize(event) {
@@ -504,7 +522,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         this.panelSizes[name] = data;
         await this.journalEntry.setFlag(MODULE_ID, "panelSizes", this.panelSizes);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     _onClose(options) {
@@ -557,7 +575,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             position.y -= size / 2;
             await slot.setFlag(MODULE_ID, "position", position);
             debug("CraftPanelBlend _onDropSlotPanel : position size event.offsetXY", position, size, { x: event.offsetX, y: event.offsetY });
-            this.render(true);
+            await this.render(true);
         } else if (data.type == "Item") {
             for (let i = 0; i < this.slots.length; i++) {
                 if (!this.slots[i].isLocked && (this.slotItems[i] === null || this.slotItems[i] === undefined)) {
@@ -596,7 +614,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             },
         ]);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 处理单击槽位中的物品事件
@@ -708,7 +726,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 debug("CraftPanelBlend refreshElements : this.results", this.results);
             }
         }
-        this.render(true);
+        await this.render(true);
     }
     //刷新材料面板
     async refreshPanel() {
@@ -1022,7 +1040,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 callback: async () => {
                     fb.form().close();
                     await slotJE.deleteDialog();
-                    this.render(true);
+                    await this.render(true);
                 },
                 icon: "fas fa-trash",
             });
@@ -1030,7 +1048,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         debug("CraftPanelBlend editSlot : data", data);
         if (!data) return;
         await slotJE.update(data);
-        this.render(true);
+        await this.render(true);
     }
     /**
      * 编辑配方
@@ -1079,7 +1097,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         debug("CraftPanelBlend addCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async changeCategory(category, type) {
         debug("CraftPanelBlend changeCategory : category type", category, type);
@@ -1091,7 +1109,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     this.material_categories[index].choosed = true;
                     debug("CraftPanelBlend changeCategory : this.material_categories", this.material_categories);
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 }
             }
         } else if (type == "recipe") {
@@ -1102,7 +1120,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     this.recipe_categories[index].choosed = true;
                     debug("CraftPanelBlend changeCategory : this.recipe_categories", this.recipe_categories);
                     this.needRefresh = true;
-                    this.render(true);
+                    await this.render(true);
                 }
             }
         }
@@ -1144,7 +1162,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             categories.splice(index, 1);
             await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
             return;
         }
         if (!data) return;
@@ -1154,7 +1172,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         debug("CraftPanelBlend editCategory : categories", categories);
         await this.journalEntry.setFlag(MODULE_ID, type + "-categories", categories);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     //匹配配方
@@ -1534,7 +1552,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             }
         });
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
         return results;
     }
 
@@ -1556,7 +1574,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             },
         ]);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async configUserUnlocked(event) {
         event.preventDefault();
@@ -1576,7 +1594,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         this.mode = this.isEdit ? "use" : "edit";
         this.window.title.textContent = this.title;
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     static get SHAPE_STYLE() {

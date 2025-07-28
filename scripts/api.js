@@ -52,28 +52,28 @@ export function openCraftPanel(options = {}) {
     let result;
     if (options.panel) {
         if (options.panel.getFlag(MODULE_ID, "type") === "blend") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend) && (w.journalEntry.id === options.panel.id));
             if (openWindow) openWindow.close();
             else {
                 result = new CraftPanelBlend(options.panel, options?.options ?? "craft", options);
                 result.render(true);
             };
         } else if (options.panel.getFlag(MODULE_ID, "type") === "cook") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook) && (w.journalEntry.id === options.panel.id));
             if (openWindow) openWindow.close();
             else {
                 result = new CraftPanelCook(options.panel, options?.options ?? "craft", options);
                 result.render(true);
             };
         } else if (options.panel.getFlag(MODULE_ID, "type") === "forge") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge) && (w.journalEntry.id === options.panel.id));
             if (openWindow) openWindow.close();
             else {
                 result = new CraftPanelForge(options.panel, options?.options ?? "craft", options);
                 result.render(true);
             };
         } else if (options.panel.getFlag(MODULE_ID, "type") === "enchant") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant) && (w.journalEntry.id === options.panel.id));
             if (openWindow) openWindow.close();
             else {
                 result = new CraftPanelEnchant(options.panel, options?.options ?? "craft", options);

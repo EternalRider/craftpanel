@@ -110,7 +110,7 @@ export class CraftPanelManager extends HandlebarsApplication {
             name: data.name,
             flags: flagdata
         })
-        this.render(true);
+        await this.render(true);
     }
 
     async craftButton(event) {
@@ -122,31 +122,28 @@ export class CraftPanelManager extends HandlebarsApplication {
         }
         debug("CraftPanelManager craft : uuid craftPanel", uuid, craftPanel);
         if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
             else {
                 new CraftPanelBlend(craftPanel, "craft", options).render(true);
             }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
             else {
                 new CraftPanelCook(craftPanel, "craft", options).render(true);
-                this.close();
             }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
             else {
                 new CraftPanelForge(craftPanel, "craft", options).render(true);
-                this.close();
             }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
             else {
                 new CraftPanelEnchant(craftPanel, "craft", options).render(true);
-                this.close();
             }
         }
     }
@@ -157,34 +154,25 @@ export class CraftPanelManager extends HandlebarsApplication {
         const craftPanel = await fromUuid(uuid);
         debug("CraftPanelManager edit : uuid craftPanel", uuid, craftPanel);
         if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
             else new CraftPanelBlend(craftPanel, "edit").render(true);
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "element") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelElement));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelElement) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
             else new CraftPanelElement(craftPanel).render(true);
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else {
-                new CraftPanelCook(craftPanel, "edit").render(true);
-                this.close();
-            }
+            else new CraftPanelCook(craftPanel, "edit").render(true);
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else {
-                new CraftPanelForge(craftPanel, "edit").render(true);
-                this.close();
-            }
+            else new CraftPanelForge(craftPanel, "edit").render(true);
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
-            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant));
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else {
-                new CraftPanelEnchant(craftPanel, "edit").render(true);
-                this.close();
-            }
+            else new CraftPanelEnchant(craftPanel, "edit").render(true);
         }
     }
 
@@ -202,7 +190,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         const craftPanel = await fromUuid(uuid);
         debug("CraftPanelManager delete : uuid craftPanel", uuid, craftPanel);
         await craftPanel.deleteDialog();
-        this.render(true);
+        await this.render(true);
     }
 
     _onClose(options) {

@@ -61,6 +61,12 @@
         "craft-panel-user-recipe": {
             "title": "配置用户解锁的配方"
         },
+        "craft-panel-cook-recipe": {
+            "title": "选择烹饪配方",
+            "choose": "选择配方",
+            "delete-confirm-title": "删除配方",
+            "delete-confirm-info": "确定要删除这个配方吗？"
+        },
         "craft-panel-blend": {
             "title": "调和面板",
             "new-recipe": "新配方",
@@ -397,11 +403,18 @@
             "script-error": "您的脚本出现错误。详情请查看控制台 (F12)",
             "noOwner": "没有找到所有者",
             "notEnoughMaterial": "您的材料不足",
+            "noCanAddMaterial": "无法添加材料",
             "itemNotFound": "找不到物品/随机表",
+            "modifierNotFound": "找不到调整",
             "tableNotValid": "随机表返回无效对象",
             "tableItemNotFound": "在随机表中找不到物品",
             "objectNotFound": "对象不存在！",
-            "noGM": "没有找到在线的GM"
+            "noGM": "没有找到在线的GM",
+            "materialDataError": "材料数据异常！",
+            "noParentPanel": "父面板不存在！",
+            "modifierCategoriesLimit": "已达到该类别的调整上限！",
+            "modifierLocked": "调整被锁定！",
+            "costNotEnough": "点数不足！"
         },
         "settings": {
             "quantityPath": "数量路径",
@@ -442,6 +455,7 @@
         "change-panel-size": "调整面板大小",
         "size": "大小",
         "width": "宽度",
-        "height": "高度"
+        "height": "高度",
+        "choose": "选择"
     }
 }

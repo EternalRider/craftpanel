@@ -210,7 +210,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                     let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
                     if (confirm) {
                         await item.update({ [`flags.-=${MODULE_ID}.elementConfig`]: null, [`flags.-=${MODULE_ID}.isElement`]: null });
-                        this.render(true);
+                        await this.render(true);
                     }
                 }
             });
@@ -245,7 +245,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         // await game.settings.set(MODULE_ID, 'elementConfig', data);
         await this.journalEntry.update(data);
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
     async editElement(uuid) {
         const item = await fromUuid(uuid);
@@ -269,7 +269,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                     if (confirm) {
                         fb.form().close();
                         await item.update({ [`flags.-=${MODULE_ID}.elementConfig`]: null, [`flags.-=${MODULE_ID}.isElement`]: null });
-                        this.render(true);
+                        await this.render(true);
                     }
                 },
                 icon: "fas fa-trash",
@@ -325,7 +325,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             debug("CraftPanelElement _onDropElementPanel : update", update);
             await item.update(update);
             this.needRefresh = true;
-            this.render(true);
+            await this.render(true);
         };
     }
 
@@ -379,7 +379,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         }
         this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         debug("CraftPanelElement addElement : this.elements", this.elements);
-        this.render(true);
+        await this.render(true);
     }
 
     async addMaterial(item) {
@@ -406,7 +406,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                 this.addElement(element);
             }
         }
-        this.render(true);
+        await this.render(true);
     }
     async refreshMaterials() {
         this.slots = await Promise.all(this.slots.map(async (slot, i) => {
@@ -496,16 +496,16 @@ export class CraftPanelElement extends HandlebarsApplication {
         this.needRefresh = false;
     }
 
-    removeElement(index) {
+    async removeElement(index) {
         this.elements.splice(index, 1);
-        this.render(true);
+        await this.render(true);
     }
-    removeMaterial(index) {
+    async removeMaterial(index) {
         this.slots.splice(index, 1);
         if (this.slots.length == 0) {
             this.elements = [];
         }
-        this.render(true);
+        await this.render(true);
     }
 
     async editMaterialsElement() {
@@ -530,7 +530,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         }));
         await this.refreshMaterials();
         this.needRefresh = true;
-        this.render(true);
+        await this.render(true);
     }
 
     static get REQUIREMENTS_TYPE_OPTIONS() {

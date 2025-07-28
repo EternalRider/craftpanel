@@ -22,7 +22,7 @@
                 {{/each}}
             </div>
         </div>
-        <div class="craft-main-panel" style="width: 300px;">
+        <div class="craft-main-panel">
             <div class="craft-panel">
                 <div class="craft-panel-tittle">
                     <h2>{{localize "craftpanel.ingredient"}}</h2>
@@ -31,7 +31,7 @@
                     {{#each ingredients as |element|}}
                     <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                         data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"
-                        style="{{#if element.itemColor}}--item-color: {{slot.itemColor}};{{/if}} {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                        style="{{#if element.itemColor}}--item-color: {{element.itemColor}};{{/if}} {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
                         <div class="element-num" draggable="false">{{element.num}}</div>
                     </div>
                     {{/each}}
@@ -42,11 +42,11 @@
                     <h2>{{localize "craftpanel.result"}}</h2>
                 </div>
                 <div class="craft-results-panel main-child-panel" style="width:{{exist panelSizes.results.width 300}}px;height:{{exist panelSizes.results.height 170}}px;">
-                    {{#each results as |slot|}}
-                    <div data-tooltip="{{slot.name}}"
-                        class="craft-slot" data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}"
-                        style="{{#if slot.itemColor}}--item-color: {{slot.itemColor}};{{/if}} {{#if slot.img}}background-image: url('{{slot.img}}');{{/if}} ">
-                        <div class="element-num" draggable="false">{{slot.quantity}}</div>
+                    {{#each results as |result|}}
+                    <div data-tooltip-class="craft-tooltip" data-tooltip="{{result.tooltip}}"
+                        class="craft-slot" data-index="{{result.slotIndex}}" data-uuid="{{result.uuid}}"
+                        style="{{#if result.itemColor}}--item-color: {{result.itemColor}};{{/if}} {{#if result.img}}background-image: url('{{result.img}}');{{/if}} ">
+                        <div class="element-num" draggable="false">{{result.quantity}}</div>
                     </div>
                     {{/each}}
                 </div>

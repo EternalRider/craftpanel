@@ -154,14 +154,14 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         html.querySelector(".craft-recipes-panel").scrollTop = this.scrollPositions.recipes;
 
         html.querySelectorAll(".craft-player").forEach((el) => {
-            el.addEventListener("click", (event) => {
+            el.addEventListener("click", async (event) => {
                 event.preventDefault();
                 // 点击玩家可以切换玩家
                 const userId = el.dataset.id;
                 if (this.user.id === userId) return;
                 this.user = game.users.get(userId);
                 this.unlockedRecipes = this.user.getFlag(MODULE_ID, "unlockedRecipes") ?? [];
-                this.render(true);
+                await this.render(true);
             });
         });
         html.querySelectorAll(".craft-recipe").forEach((recipe) => {
@@ -202,7 +202,7 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         if (!this.unlockedRecipes.some(el => el.id == page.id)) {
             this.unlockedRecipes.push({ id: page.id, name: page.name, img: page.src, ownership: DEFAULT_OWNERSHIP["canShow"] });
         }
-        this.render(true);
+        await this.render(true);
     }
     async _onDragEnd(event) {
         // 拖拽至其他区域，删除已解锁配置
@@ -214,7 +214,7 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
             this.unlockedRecipes = this.unlockedRecipes.filter(el => el.id !== page?.id);
         }
         this.dropOccurred = false;
-        this.render(true);
+        await this.render(true);
     }
     async edit(event) {
         event.stopPropagation();
@@ -225,7 +225,7 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         }
         
         debug("CraftPanelUserRecipe edit : this.user", this.user);
-        this.render(true);
+        await this.render(true);
     }
 }
 

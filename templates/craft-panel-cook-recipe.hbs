@@ -1,0 +1,75 @@
+<div class="standard-form">
+    <div class="craft-content">
+        <div class="craft-panel">
+            <div class="craft-panel-tittle">
+                <h2>{{localize "craftpanel.recipe"}}</h2>
+            </div>
+            <div class="craft-recipes-panel" style="width:{{exist panelSizes.recipes.width 300}}px;height:{{exist panelSizes.recipes.height 420}}px;">
+                {{#each recipes as |recipe|}}
+                <div draggable="true" class="craft-recipe {{recipe.choosed}}" data-index="{{recipe.index}}">
+                    <div class="craft-recipe-img" style="background-image: url('{{recipe.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+                    <div class="craft-recipe-desc">
+                        <h3 class="craft-recipe-tittle">{{recipe.name}}</h3>
+                        <div class="craft-recipe-ingredients">
+                            {{#each recipe.ingredients as |ingredient|}}
+                            <div class="craft-recipe-ingredient" style="background-image: url('{{ingredient.img}}');">
+                                <div class="element-num" draggable="false">{{ingredient.quantity}}</div>
+                            </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        <div class="craft-main-panel">
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.ingredient"}}</h2>
+                </div>
+                <div class="craft-ingredients-panel main-child-panel" style="width:{{exist panelSizes.ingredients.width 600}}px;height:{{exist panelSizes.ingredients.height 150}}px;">
+                    {{#each ingredients as |element|}}
+                    <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
+                        data-index="{{element.slotIndex}}" data-inslot="true"
+                        style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                        <div class="element-num" draggable="false">{{element.quantity}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.element"}}</h2>
+                </div>
+                <div class="craft-elements-panel main-child-panel" style="width:{{exist panelSizes.elements.width 600}}px;height:{{exist panelSizes.elements.height 70}}px;">
+                    {{#each elements as |element|}}
+                    <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
+                        data-uuid="{{element.uuid}}" data-id="{{element.id}}"
+                        style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                        <div class="element-num" draggable="false">{{element.num}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            <div class="craft-panel">
+                <div class="craft-panel-tittle">
+                    <h2>{{localize "craftpanel.result"}}</h2>
+                </div>
+                <div class="craft-results-panel main-child-panel" style="width:{{exist panelSizes.results.width 600}}px;height:{{exist panelSizes.results.height 100}}px;">
+                    {{#each results as |result|}}
+                    <div data-tooltip-class="craft-tooltip" data-tooltip="{{result.tooltip}}"
+                        class="craft-slot" data-index="{{result.slotIndex}}"
+                        style="width: {{result.size}}px;height: {{result.size}}px; {{#if result.img}}background-image: url('{{result.img}}');{{/if}} ">
+                        <div class="element-num" draggable="false">{{result.quantity}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="form-footer">
+        <button type="button" name="choose" data-action="choose"><i class="fas fa-plus"></i>{{localize "craftpanel.craft-panel-cook-recipe.choose"}}</button>
+        <button type="button" name="close" data-action="close"><i class="fas fa-times"></i>{{localize "Close"}}</button>
+    </footer>
+</div>
