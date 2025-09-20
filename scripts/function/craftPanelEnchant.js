@@ -1863,6 +1863,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
      */
     async editElementConfig(index) {
         const elementConfig = this.elementConfigs[index];
+        const text = "edit-element-config";
         debug("CraftPanelBlend editElementConfig : elementConfig", elementConfig);
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
