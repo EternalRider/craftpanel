@@ -15,8 +15,11 @@
 }
 /* 基础 */
 .craft .window-content {
-    max-width: 80vw;
-    max-height: 95vh;
+    /* max-width: 80vw;
+    max-height: 95vh; */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 .craft .craft-content {
     display: flex;
@@ -196,8 +199,8 @@
 .craft .craft-content .element-slot {
     pointer-events: all;
     position: relative;
-    width: 60px;
-    height: 60px;
+    width: var(--element-size, 60px);
+    height: var(--element-size, 60px);
     text-align: center;
     background-size: contain;
     background-repeat: no-repeat;
@@ -208,6 +211,9 @@
 .craft .craft-content .element-slot {
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
+}
+.craft .craft-content .element-slot.round {
+    border-radius: 50%;
 }
 .craft .craft-content .element-slot:hover {
     transform: scale(1.1);
@@ -228,7 +234,7 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    margin: 0;
+    margin: 1px 0 0 1px;
     padding: 0;
     align-content: start;
     overflow: hidden;
@@ -249,6 +255,17 @@
     height: 8px;
     border-radius: 50%;
 }
+.craft .craft-content .slot-element-circle-container .slot-element-circle.circle {
+    border-radius: 50%;
+}
+.craft .craft-content .slot-element-circle-container .slot-element-circle.square {
+    border-radius: 5%;
+    transform: scale(0.8);
+}
+.craft .craft-content .slot-element-circle-container .slot-element-circle.diamond {
+    border-radius: 0%;
+    transform: scale(0.7) rotate(45deg);
+}
 /* 提示框-材料 */
 .craft-tooltip figure {
     display: flex;
@@ -258,8 +275,8 @@
     margin: 0;
 }
 .craft-tooltip figure img {
-    width: var(--font-h1-size);
-    height: var(--font-h1-size);
+    width: var(--font-h2-size);
+    height: var(--font-h2-size);
     object-fit: cover;
     margin: 0;
     position: absolute;
@@ -269,7 +286,7 @@
     z-index: -1;
     filter: blur(5px);
 }
-.craft-tooltip figure h1 {
+.craft-tooltip figure h2 {
     margin: 0;
     border: none;
     width: 100%;
@@ -277,6 +294,7 @@
     filter: drop-shadow(0px 0px 3px black);
     line-height: normal;
     padding: 1rem 0rem;
+    text-align: center;
 }
 .craft-tooltip .description {
     text-align: left;
@@ -348,7 +366,7 @@
     transform: scale(1.05);
 }
 .craft .craft-content .craft-modifiers-panel .craft-modifier.choosed,
-.craft-panel-recipe .craft-recipes-panel .craft-recipe.choosed {
+.craft .craft-content .craft-recipes-panel .craft-recipe.choosed {
     border-color: aquamarine;
     transform: scale(1.05);
 }

@@ -4,7 +4,7 @@
 const MODULE_ID = 'craftpanel';
 
 // export const settingVariables = [
-    
+
 // ];
 
 export function register_settings() {
@@ -31,6 +31,17 @@ export function register_settings() {
         default: "system.description",
         scope: 'world',
         config: true,
+    });
+
+    // 用户自定义物品颜色脚本
+    game.settings.register(MODULE_ID, 'customItemColorScript', {
+        name: game.i18n.localize(`${MODULE_ID}.settings.customItemColorScript`),
+        hint: game.i18n.localize(`${MODULE_ID}.settings.customItemColorScript-hint`),
+        type: String,
+        default: `game.modules.get("rarity-colors")?.api?.getColorFromItem(item) ?? ""`,
+        scope: 'world',
+        config: true,
+        multiline: true,
     });
 
     game.settings.register(MODULE_ID, 'debug', {

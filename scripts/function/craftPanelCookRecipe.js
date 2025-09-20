@@ -2,10 +2,11 @@ import { HandlebarsApplication, MODULE_ID, debug, confirmDialog } from "../utils
 import { CraftPanelCook } from "./craftPanelCook.js";
 
 export class CraftPanelCookRecipe extends HandlebarsApplication {
-    constructor(journalEntry, storedRecipe) {
+    constructor(journalEntry, storedRecipe, mode = "") {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
         this.journalEntry = journalEntry;
+        this.mode = mode;
         /**@type {Recipe[]} */
         this.storedRecipe = storedRecipe;
         this.choosedIndex = 0;
@@ -39,6 +40,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         };
 
         this.options.actions.choose = this._onClickChoose.bind(this);
+        this.options.actions.delete = this.deleteConfirm.bind(this);
         craftPanels ??= [];
         craftPanels.push(this);
         debug("CraftPanelCookRecipe constructor : this journalEntry storedRecipe this.modifiersJE craftPanels", this, journalEntry, storedRecipe, this.modifiersJE, craftPanels);
@@ -97,6 +99,10 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`);
     }
 
+    get isEdit() {
+        return this.mode === "edit";
+    }
+
     _onClose(options) {
         super._onClose(options);
         craftPanels ??= [];
@@ -126,7 +132,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         };
         debug("CraftPanelCookRecipe _prepareContext : recipes recipe", recipes, recipe);
         const results = await Promise.all(recipe.products.map(async (el, i) => {
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img}'><h1>${el.name}</h1></figure><div class="description">${el.description ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img}'><h2>${el.name}</h2></figure><div class="description">${el.description ?? ""}</div>`);
             return {
                 slotIndex: i,
                 quantity: el.quantity,
@@ -159,6 +165,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
             ingredients: ingredients,
             results: results,
             panelSizes: this.panelSizes,
+            isEdit: this.isEdit
         }
     }
     /**
@@ -182,7 +189,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
             });
             recipe.addEventListener("contextmenu", (event) => {
                 event.preventDefault();
-                // 点击配方可以切换配方
+                // 右键配方可以删除配方
                 let index = recipe.dataset.index;
                 this.deleteConfirm(index);
             });
@@ -263,6 +270,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         this.close();
     }
     async deleteConfirm(index) {
+        if (typeof index != "number") index = this.choosedIndex;
         let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
         if (confirm) {
             this.storedRecipe.splice(index, 1);
@@ -314,7 +322,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
  * @property {string} class - 元素的类型，仅用于脚本检测。
- * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
  * @property {number} weight - 元素的权重，用于计算匹配度。
  * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
  * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。

@@ -69,7 +69,11 @@
     </div>
 
     <footer class="form-footer">
+        {{#if isEdit}}
+        <button type="button" name="delete" data-action="delete"><i class="fas fa-trash"></i>{{localize "Delete"}}</button>
+        {{else}}
         <button type="button" name="choose" data-action="choose"><i class="fas fa-plus"></i>{{localize "craftpanel.craft-panel-cook-recipe.choose"}}</button>
+        {{/if}}
         <button type="button" name="close" data-action="close"><i class="fas fa-times"></i>{{localize "Close"}}</button>
     </footer>
 </div>

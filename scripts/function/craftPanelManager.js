@@ -4,6 +4,7 @@ import { CraftPanelElement } from "./craftPanelElement.js";
 import { CraftPanelForge } from "./craftPanelForge.js";
 import { CraftPanelCook } from "./craftPanelCook.js";
 import { CraftPanelEnchant } from "./craftPanelEnchant.js";
+import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelManager extends HandlebarsApplication {
     constructor() {
@@ -82,7 +83,8 @@ export class CraftPanelManager extends HandlebarsApplication {
 
     async createNewButton(event) {
         event.preventDefault();
-        const data = await new Portal.FormBuilder()
+        // const data = await new Portal.FormBuilder()
+        const data = await new FormBuilder()
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-craft-panel`))
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
             .select({ name: "panelType", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.select-type`), options: CraftPanelManager.PANEL_TYPE_OPTIONS })

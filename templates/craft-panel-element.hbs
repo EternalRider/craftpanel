@@ -29,7 +29,7 @@
                             {{#each slot.elements as |element|}}
                             <div class="slot-element-circle-container">
                                 {{#each (range 0 element.num)}}
-                                <div class="slot-element-circle" draggable="false" style="background-color: {{element.color}};"></div>
+                                <div class="slot-element-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
                                 {{/each}}
                             </div>
                             {{/each}}
@@ -67,7 +67,7 @@
                         {{#each slot.elements as |element|}}
                         <div class="slot-element-circle-container">
                             {{#each (range 0 element.num)}}
-                            <div class="slot-element-circle" draggable="false" style="background-color: {{element.color}};"></div>
+                            <div class="slot-element-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
                             {{/each}}
                         </div>
                         {{/each}}

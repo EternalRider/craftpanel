@@ -1,4 +1,5 @@
 import { confirmDialog, HandlebarsApplication, waitFor, MODULE_ID, debug } from "../utils.js";
+import { FormBuilder } from "./formBuilder.js";
 
 export class ChooseImage extends HandlebarsApplication {
     constructor(images, mode = "edit", options = {}) {
@@ -333,7 +334,8 @@ export class ChooseImage extends HandlebarsApplication {
 
     async addImage(image) {
         if (!image) {
-            const fb = new Portal.FormBuilder()
+            //const fb = new Portal.FormBuilder()
+            const fb = new FormBuilder()
                 .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.add-image`))
                 .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
                 .file({ name: "src", type: "image", label: game.i18n.localize(`${MODULE_ID}.image`) })
@@ -351,7 +353,8 @@ export class ChooseImage extends HandlebarsApplication {
     }
     async editImage(index) {
         const image = this.showImages[index];
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(image)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-image`))
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })

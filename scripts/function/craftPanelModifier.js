@@ -1,4 +1,5 @@
 import { HandlebarsApplication, getItemColor, MODULE_ID, debug } from "../utils.js";
+import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelModifier extends HandlebarsApplication {
     constructor(journalEntry, journalEntryPage) {
@@ -175,16 +176,16 @@ export class CraftPanelModifier extends HandlebarsApplication {
         });
         debug("CraftPanelModifier _prepareContext : ingredients", ingredients);
         // const changes = await Promise.all(this.changes.map(async (el, i) => {
-            // const item = await fromUuid(el.uuid);
-            // const itemColor = item ? getItemColor(item) ?? "" : "";
-            // return {
-            //     slotIndex: i,
-            //     uuid: el.uuid,
-            //     quantity: el.quantity,
-            //     name: item?.name ?? el.name,
-            //     img: item?.img ?? el.img,
-            //     itemColor: itemColor,
-            // };
+        // const item = await fromUuid(el.uuid);
+        // const itemColor = item ? getItemColor(item) ?? "" : "";
+        // return {
+        //     slotIndex: i,
+        //     uuid: el.uuid,
+        //     quantity: el.quantity,
+        //     name: item?.name ?? el.name,
+        //     img: item?.img ?? el.img,
+        //     itemColor: itemColor,
+        // };
         // }));
 
 
@@ -333,7 +334,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
         for (const category of modifier_categories) {
             categoryOptions[category.id] = category.name;
         }
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(this.journalEntryPage)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-modifier`) + ": " + this.journalEntryPage.name)
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
@@ -345,8 +347,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
             .select({ name: `flags.${MODULE_ID}.asAE`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-hint`), options: { "false": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-not`), "merge": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-merge`), "separate": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-separate`) } })
             .text({ name: `flags.${MODULE_ID}.aeName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-name-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .button({
                 label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-modifier-tooltip-button`),
                 callback: async () => {
@@ -375,7 +377,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
     }
     async editNum(index) {
         const ingredient = this.ingredients[index];
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(ingredient)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "min", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.min`) })
@@ -395,7 +398,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
     }
     async editResultNum(index) {
         const result = this.changes[index];
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(result)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "quantity", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
@@ -608,12 +612,13 @@ export class CraftPanelModifier extends HandlebarsApplication {
     }
 
     async addChange() {
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.add-change`) + ": " + this.journalEntryPage.name)
             .text({ name: "key", label: game.i18n.localize("EFFECT.ChangeKey") })
             .select({ name: "mode", label: game.i18n.localize("EFFECT.ChangeMode"), options: EFFECTCHANGEMOD, value: 2 })
             .text({ name: "value", label: game.i18n.localize("EFFECT.ChangeValue") })
-        
+
         const data = await fb.render();
         debug("CraftPanelModifier addChange : data", data);
         if (!data) return;
@@ -622,13 +627,14 @@ export class CraftPanelModifier extends HandlebarsApplication {
     }
     async editChange(index) {
         const change = this.changes[index];
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(change)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-change`))
             .text({ name: "key", label: game.i18n.localize("EFFECT.ChangeKey") })
             .select({ name: "mode", label: game.i18n.localize("EFFECT.ChangeMode"), options: EFFECTCHANGEMOD })
             .text({ name: "value", label: game.i18n.localize("EFFECT.ChangeValue") })
-        
+
         const data = await fb.render();
         debug("CraftPanelModifier editChange : data", data);
         if (!data) return;
@@ -640,10 +646,10 @@ export class CraftPanelModifier extends HandlebarsApplication {
 const EFFECTCHANGEMOD = {
     0: "EFFECT.MODE_CUSTOM",
     1: "EFFECT.MODE_MULTIPLY",
-    2 : "EFFECT.MODE_ADD",
-    3 : "EFFECT.MODE_DOWNGRADE",
-    4 : "EFFECT.MODE_UPGRADE",
-    5 : "EFFECT.MODE_OVERRIDE",
+    2: "EFFECT.MODE_ADD",
+    3: "EFFECT.MODE_DOWNGRADE",
+    4: "EFFECT.MODE_UPGRADE",
+    5: "EFFECT.MODE_OVERRIDE",
 }
 /**
  * @typedef {Object} CraftElement
@@ -652,7 +658,7 @@ const EFFECTCHANGEMOD = {
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
  * @property {string} class - 元素的类型，仅用于脚本检测。
- * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
  * @property {number} weight - 元素的权重，用于计算匹配度。
  * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
  * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。

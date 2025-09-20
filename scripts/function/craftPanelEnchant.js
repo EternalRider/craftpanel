@@ -1,6 +1,7 @@
-import { HandlebarsApplication, getItemColor, MODULE_ID, getFolder, debug, chatMessage, buildActiveEffect, applyChange } from "../utils.js";
+import { HandlebarsApplication, getItemColor, MODULE_ID, getFolder, debug, chatMessage, buildActiveEffect, applyChange, multiShowOptions, multiValueOptions } from "../utils.js";
 import { CraftPanelModifier } from "./craftPanelModifier.js";
 import { chooseImage } from "../api.js";
+import { FormBuilder } from "./formBuilder.js";
 
 const DEFAULT_SLOT_DATA = {
     hue: 180,
@@ -38,7 +39,14 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.actor = options.actor;
         this.panelOptions = options;
 
+        /**@type {CraftElement[]} */
         this.elements = [];
+        /**@type {CraftElementShow[]} */
+        this.elementsShow = [];
+        /**@type {CraftElement[]} */
+        this.elementsAll = [];
+        /**@type {CraftElementConfig[]} */
+        this.elementConfigs = this.journalEntry.getFlag(MODULE_ID, "elementConfig") ?? [];
         this.slotItems = {};
         this.slotMaterials = [];
         this.results = [];
@@ -215,7 +223,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
     }
 
     get title() {
-        return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`) + ": " + this.journalEntry.name + (this.isEdit ? " - " + game.i18n.localize(`${MODULE_ID}.edit-mode`) : "");
+        return this.journalEntry.name + (this.isEdit ? " - " + game.i18n.localize(`${MODULE_ID}.edit-mode`) : "");
     }
 
     get isEdit() {
@@ -229,7 +237,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
     async _prepareContext(options) {
         if (this.needRefresh) {
             await this.refreshPanel();
-            await this.refreshCost();
+            await this.refreshElements();
             await this.refreshResults();
         }
         await this.refreshModifiers();
@@ -238,7 +246,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.slots = await Promise.all(slotsJE.map(async (je, i) => {
             const overrideStyle = (je.getFlag(MODULE_ID, "shape") ?? "default") !== "default";
             const overrideStyleClass = je.getFlag(MODULE_ID, "shape") == "circle" ? "round" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><h1>${je.name}</h1></figure><div class="description">${je.text.content ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div>`);
             let isLocked = je.getFlag(MODULE_ID, "isLocked") ?? false;
             if (isLocked && !this.isEdit) {
                 const script = je.getFlag(MODULE_ID, "unlockCondition");
@@ -256,6 +264,24 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     }
                 }
             }
+            let isNecessary = je.getFlag(MODULE_ID, "isNecessary") ?? false;
+            let isConsumed = je.getFlag(MODULE_ID, "isConsumed") ?? true;
+            if (!this.isEdit) {
+                const script = je.getFlag(MODULE_ID, "slotScript");
+                if (script && script.trim() != "") {
+                    const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", "slotItem", script);
+                    let result;
+                    try {
+                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials, this.slotItems[i]);
+                    } catch (e) {
+                        ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                    }
+                    if (result) {
+                        isNecessary = result?.isNecessary ?? isNecessary;
+                        isConsumed = result?.isConsumed ?? isConsumed;
+                    }
+                }
+            }
             const position = je.getFlag(MODULE_ID, "position") ?? { unlock: false, x: 0, y: 0 };
             return {
                 id: je.id,
@@ -270,8 +296,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 overrideStyleClass,
                 tooltip,
                 elements: [],
-                isNecessary: je.getFlag(MODULE_ID, "isNecessary") ?? false,
-                isConsumed: je.getFlag(MODULE_ID, "isConsumed") ?? true,
+                isNecessary: isNecessary,
+                isConsumed: isConsumed,
                 isLocked,
                 position,
             };
@@ -292,6 +318,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     slot.itemColor = r.itemColor;
                     slot.empty = "";
                     slot.draggable = true;
+                    slot.tooltip = r.tooltip;
                 } else {
                     slot.empty = "empty";
                     slot.draggable = false;
@@ -308,7 +335,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 data.img = this.resultOverrides[i]?.img ?? this.resultItems[i]?.img ?? el.img;
                 data.description = this.resultOverrides[i]?.description ?? this.resultItems[i]?.description ?? el.description;
                 data.name = this.resultOverrides[i]?.name ?? this.resultItems[i]?.name ?? el.name;
-                let tooltip = await TextEditor.enrichHTML(`<figure><img src='${data.img}'><h1>${data.name}</h1></figure><div class="description">${data.description ?? ""}</div>`);
+                let tooltip = await TextEditor.enrichHTML(`<figure><img src='${data.img}'><h2>${data.name}</h2></figure><div class="description">${data.description ?? ""}</div>`);
                 let r = this.resultItems[i];
                 if (r !== null && r !== undefined) {
                     data.uuid = r.uuid;
@@ -342,6 +369,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             material_categories: this.material_categories,
             cost: this.cost,
             panelSizes: this.panelSizes,
+            background: `url('${this.journalEntry.getFlag(MODULE_ID, "background") ?? ""}')`,
         };
     }
 
@@ -356,6 +384,12 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         // 恢复滚动条位置
         html.querySelector(".craft-materials-panel").scrollTop = this.scrollPositions.materials;
         html.querySelector(".craft-modifiers-panel").scrollTop = this.scrollPositions.modifiers;
+
+        // 设置背景图像
+        const windowContent = html.querySelector('.window-content');
+        if (typeof context.background == "string" && windowContent.style.getPropertyValue("background-image") != context.background) {
+            windowContent.style.setProperty("background-image", context.background);
+        }
 
         // 绑定分类图标的点击事件
         html.querySelectorAll(".craft-category-icon").forEach(icon => {
@@ -430,6 +464,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             html.querySelector(".craft-results-panel").addEventListener("drop", this._onDropResultPanel.bind(this));
             html.querySelector(".craft-modifiers-panel").addEventListener("drop", this._onDropModifierPanel.bind(this));
             html.querySelector(".craft-cost-panel").addEventListener("drop", this._onDropCostPanel.bind(this));
+            html.querySelector(".craft-elements-panel").addEventListener("drop", this._onDropElementPanel.bind(this));
             html.querySelectorAll(".craft-modifier").forEach((modifier) => {
                 modifier.addEventListener("contextmenu", async (event) => {
                     // 编辑模式下，右键点击调整可以删除调整
@@ -456,6 +491,24 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     const type = event.currentTarget.dataset.type;
                     this.editCategory(category, type);
                 });
+            });
+            html.querySelectorAll(".element-slot.elements").forEach((el) => {
+                el.addEventListener("dragstart", async (event) => {
+                    event.dataTransfer.setData(
+                        "text/plain",
+                        JSON.stringify({
+                            type: "CraftElementConfig",
+                            parent: this.journalEntry.uuid,
+                            elementConfig: this.elementConfigs[el.dataset.index],
+                            index: el.dataset.index,
+                        }),
+                    );
+                });
+                el.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    this.editElementConfig(el.dataset.index);
+                });
+                el.addEventListener("drop", this._onDropElementPanel.bind(this));
             });
             html.querySelectorAll("input").forEach((input) => {
                 input.addEventListener("change", async (event) => {
@@ -611,7 +664,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
      * 配置界面
      */
     async configure() {
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(this.journalEntry)
             .title(game.i18n.localize(`${MODULE_ID}.configure`) + ": " + this.journalEntry.name)
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
@@ -622,15 +676,15 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             .number({ name: `flags.${MODULE_ID}.baseCost`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost-hint`) })
             .file({ name: `flags.${MODULE_ID}.costIcon`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-icon`) })
             .text({ name: `flags.${MODULE_ID}.costElement`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-element`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-element-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.costScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.costScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-script-hint`) })
             .tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-requirements-tab`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-hint`), options: { ...CraftPanelEnchant.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-name-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
-            .textArea({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-script-hint`) })
             .tab({ id: "scripts", icon: "fa-solid fa-code", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-scripts-tab`) })
-            .textArea({ name: `flags.${MODULE_ID}.craft-pre-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.craft-post-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craft-pre-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craft-post-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script-hint`) })
 
         const data = await fb.render();
         debug("CraftPanelEnchant configure: data", data);
@@ -644,7 +698,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
 
     async changePanelSize(event) {
         const name = event.currentTarget.dataset.name;
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(this.panelSizes[name])
             .title(game.i18n.localize(`${MODULE_ID}.change-panel-size`))
             .number({ name: "width", label: game.i18n.localize(`${MODULE_ID}.width`), min: 0 })
@@ -856,6 +911,93 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         debug("CraftPanelEnchant _onDropCostPanel: this.cost", this.cost);
         await this.render(true);
     }
+    /**
+     * 处理物品或元素放置在元素面板中的事件
+     * @param {Event} event 
+     */
+    async _onDropElementPanel(event) {
+        event.preventDefault();
+        let data;
+        try {
+            data = JSON.parse(event.dataTransfer.getData("text/plain"));
+        } catch (e) {
+            return;
+        }
+        debug("CraftPanelBlend _onDropElementPanel : data", data);
+        if (data.type !== "Item" && data.type !== "CraftElement" && data.type !== "CraftElementConfig") return;
+        const targetIndex = event.currentTarget.dataset.index;
+        if (data.type === "CraftElementConfig") {
+            /**
+             * 如果来源为相同的界面，则调整位置。
+             * 如果来源为不同的界面，则新增元素配置。
+             */
+            if (data.parent === this.journalEntry.uuid) {
+                const sourceIndex = data.index;
+                /**
+                 * 如果没有目标索引，说明是拖拽到空白区域，则放到最后。
+                 * 如果目标索引小于来源索引，说明是向前移动，则插入到目标索引位置。
+                 * 如果目标索引大于来源索引，说明是向后移动，则插入到目标索引+1位置。
+                 */
+                if (targetIndex === undefined && (sourceIndex < this.elementConfigs.length - 1)) {
+                    const elementConfig = this.elementConfigs.splice(sourceIndex, 1)[0];
+                    this.elementConfigs.push(elementConfig);
+                } else if (targetIndex < sourceIndex) {
+                    const elementConfig = this.elementConfigs.splice(sourceIndex, 1)[0];
+                    this.elementConfigs.splice(targetIndex, 0, elementConfig);
+                } else if (targetIndex > sourceIndex) {
+                    const elementConfig = this.elementConfigs.splice(sourceIndex, 1)[0];
+                    this.elementConfigs.splice(targetIndex + 1, 0, elementConfig);
+                }
+            } else {
+                this.elementConfigs.push(JSON.parse(JSON.stringify(data.elementConfig)));
+            }
+            debug("CraftPanelBlend _onDropElementPanel : this.elementConfigs", this.elementConfigs);
+            //保存当前的元素配置。
+            this.journalEntry.setFlag(MODULE_ID, "elementConfig", this.elementConfigs);
+        } else {
+            const item = await fromUuid(data.uuid);
+            if (item) {
+                const element = item.getFlag(MODULE_ID, "elementConfig");
+                if (element) {
+                    /**@type {CraftElementConfig} */
+                    const elementConfig = {
+                        ids: [element.id],
+                        name: element.name,
+                        img: element.img,
+                        color: element.color,
+                        size: 60,
+                        shape: "circle",
+                        multiShow: "max",
+                        multiValue: "only-max",
+                        plusElements: "",
+                        minusElements: "",
+                        visible: true,
+                        value: 1,
+                        useMin: false,
+                        min: 0,
+                        useMax: false,
+                        max: 0,
+                    }
+                    /**
+                     * 如果存在同id的元素配置，则覆盖配置。
+                     * 如果不存在，则新增元素配置。
+                     */
+                    const index = this.elementConfigs.findIndex(elc => elc.ids.includes(element.id));
+                    if (index >= 0) {
+                        elementConfig.ids = [...this.elementConfigs[index].ids];
+                        this.elementConfigs[index] = elementConfig;
+                    } else {
+                        this.elementConfigs.push(elementConfig);
+                    }
+                    debug("CraftPanelBlend _onDropElementPanel : elementConfig this.elementConfigs", elementConfig, this.elementConfigs);
+                    //保存当前的元素配置。
+                    this.journalEntry.setFlag(MODULE_ID, "elementConfig", this.elementConfigs);
+                }
+            }
+        }
+        this.needRefresh = true;
+        await this.render(true);
+    }
     async _onClickResult(event) {
         event.preventDefault();
         const index = event.currentTarget.dataset.index;
@@ -873,7 +1015,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     images: this.results[index].images ?? [{ name: this.resultItems[index]?.img ?? "", src: this.resultItems[index]?.img ?? "" }, { name: this.results[index]?.img ?? "", src: this.results[index]?.img ?? "" }],
                 }
             }
-            const fb = new Portal.FormBuilder()
+            //const fb = new Portal.FormBuilder()
+            const fb = new FormBuilder()
                 .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-result`))
                 .object(result)
                 .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
@@ -937,16 +1080,20 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         //将材料整理成类似元素的格式
         this.refreshSlotMaterials();
         await this.refreshElements();
+        await this.render(true);
     }
     //添加物品到槽位中
     async addIngredient(index, item) {
         if (await this.checkAdd(index, item)) {
+            const elements = item.getFlag(MODULE_ID, "element") ?? [];
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
             const data = {
                 uuid: item.uuid,
                 name: item.name,
                 img: item.img,
-                elements: item.getFlag(MODULE_ID, "element") ?? [],
+                elements: elements,
                 itemColor: item ? getItemColor(item) ?? "" : "",
+                tooltip: tooltip
             }
             this.slotItems[index] = data;
             let material = this.materials.find(m => m.uuid == item.uuid);
@@ -957,6 +1104,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             //将材料整理成类似元素的格式
             this.refreshSlotMaterials();
             await this.refreshElements();
+            await this.render(true);
         }
     }
     //移除结果槽位中的物品
@@ -1012,25 +1160,140 @@ export class CraftPanelEnchant extends HandlebarsApplication {
      * 刷新元素和结果
      */
     async refreshElements() {
+        /**@type {CraftElement[]} */
         this.elements = [];
+        this.elementsAll = [];
+        this.elementsShow = [];
+        /**@type {CraftElementConfig[]} */
+        let elementConfigs = this.elementConfigs;
         Object.entries(this.slotItems).forEach(([index, data]) => {
             if (data) {
                 let elements = data.elements;
                 for (let el of elements) {
-                    let element = this.elements.find(e => e.id == el.id);
+                    let element = this.elementsAll.find(e => e.id == el.id);
                     if (element) {
                         element.num += el.num;
                     } else {
-                        this.elements.push(JSON.parse(JSON.stringify(el)));
+                        this.elementsAll.push(JSON.parse(JSON.stringify(el)));
                     }
                 }
             }
         });
+        if (elementConfigs.length > 0) {
+            elementConfigs.forEach((elc) => {
+                const ids = elc.ids.map(id => id.trim()).filter(id => id != "");
+                const elements = this.elementsAll.filter(el => ids.includes(el.id));
+                const plusElements = this.elementsAll.filter(el => elc.plusElements.replaceAll(/，/g, ",").split(",").includes(el.id));
+                const minusElements = this.elementsAll.filter(el => elc.minusElements.replaceAll(/，/g, ",").split(",").includes(el.id));
+                const mod = plusElements.map(el => el.num).reduce((prev, current) => prev + current, 0) - minusElements.map(el => el.num).reduce((prev, current) => prev + current, 0);
+                const visible = elc.visible == true || elc.visible == "true";
+                /**@type {CraftElement} */
+                let elementShow = {};
+                if (elements.length > 0) {
+                    /**@type {CraftElement} */
+                    let element = {};
+                    if (elements.length == 1) {
+                        element = JSON.parse(JSON.stringify(elements[0]));
+                        elementShow = JSON.parse(JSON.stringify(elements[0]));
+                        elementShow.shapeClass = elc.shape == "square" ? "" : "round";
+                        elementShow.size = elc.size;
+                    } else {
+                        let maxElement = elements.reduce((prev, current) => (prev.num > current.num) ? prev : current);
+                        let minElement = elements.reduce((prev, current) => (prev.num < current.num) ? prev : current);
+                        if (elc.multiShow == "max") {
+                            elementShow = JSON.parse(JSON.stringify(maxElement));
+                        } else if (elc.multiShow == "min") {
+                            elementShow = JSON.parse(JSON.stringify(minElement));
+                        } else {
+                            elementShow.id = ids[0];
+                            elementShow.img = elc.img;
+                            elementShow.name = elc.name;
+                            elementShow.color = elc.color;
+                        }
+                        if (elc.multiValue == "only-max") {
+                            element = JSON.parse(JSON.stringify(maxElement));
+                        } else if (elc.multiValue == "only-min") {
+                            element = JSON.parse(JSON.stringify(minElement));
+                        } else if (elc.multiValue == "max-plus") {
+                            element = JSON.parse(JSON.stringify(maxElement));
+                            let value = elements.filter(el => el.id != element.id).map(el => el.num).reduce((prev, current) => prev + current, 0);
+                            element.num = element.num + value;
+                        } else if (elc.multiValue == "max-minus") {
+                            element = JSON.parse(JSON.stringify(maxElement));
+                            let value = elements.filter(el => el.id != element.id).map(el => el.num).reduce((prev, current) => prev + current, 0);
+                            element.num = element.num - value;
+                        } else if (elc.multiValue == "min-plus") {
+                            element = JSON.parse(JSON.stringify(minElement));
+                            let value = elements.filter(el => el.id != element.id).map(el => el.num).reduce((prev, current) => prev + current, 0);
+                            element.num = element.num + value;
+                        } else if (elc.multiValue == "min-minus") {
+                            element = JSON.parse(JSON.stringify(minElement));
+                            let value = elements.filter(el => el.id != element.id).map(el => el.num).reduce((prev, current) => prev + current, 0);
+                            element.num = element.num - value;
+                        }
+                    }
+                    if (elc.multiValue == "all") {
+                        /**@type {CraftElement[]} */
+                        let els = elements.map(el => JSON.parse(JSON.stringify(el)));
+                        els.forEach(el => {
+                            if (el.num > 0) el.num += mod;
+                            if ((elc.useMax ?? false) && (el.num > elc.max)) {
+                                el.num = elc.max;
+                            } else if ((elc.useMin ?? false) && (el.num < elc.min)) {
+                                el.num = elc.min;
+                            }
+                        });
+                        let value = els.map(el => el.num).reduce((prev, current) => prev + current, 0);
+                        elementShow.num = value; //显示数量
+                        if (visible || (elementShow.num > 0 && elc.visible == "visibleWhenUp0") || (elementShow.num < 0 && elc.visible == "visibleWhenDown0")) {
+                            elementShow.shapeClass = elc.shape == "square" ? "" : "round";
+                            elementShow.size = elc.size;
+                            this.elementsShow.push(elementShow);
+                        }
+                        this.elements.push(...els);
+                    } else {
+                        if (element.num > 0) element.num += mod;
+                        if ((elc.useMax ?? false) && (element.num > elc.max)) {
+                            element.num = elc.max;
+                        } else if ((elc.useMin ?? false) && (element.num < elc.min)) {
+                            element.num = elc.min;
+                        }
+                        elementShow.num = element.num; //显示数量
+                        if (visible || (elementShow.num > 0 && elc.visible == "visibleWhenUp0") || (elementShow.num < 0 && elc.visible == "visibleWhenDown0")) {
+                            elementShow.shapeClass = elc.shape == "square" ? "" : "round";
+                            elementShow.size = elc.size;
+                            this.elementsShow.push(elementShow);
+                        }
+                        this.elements.push(element);
+                    }
+                } else if (this.isEdit || visible) {
+                    elementShow.id = ids[0];
+                    elementShow.img = elc.img;
+                    elementShow.name = elc.name;
+                    elementShow.num = 0;
+                    elementShow.color = elc.color;
+                    elementShow.shapeClass = elc.shape == "square" ? "" : "round";
+                    elementShow.size = elc.size;
+                    this.elementsShow.push(elementShow);
+                }
+            });
+        } else {
+            this.elements = this.elementsAll;
+            this.elementsShow = this.elementsAll.map((e) => {
+                return {
+                    shapeClass: "round",
+                    ...e,
+                }
+            });
+            //按元素数量排序
+            this.elements.sort((a, b) => b.num - a.num);
+            this.elementsShow.sort((a, b) => b.num - a.num);
+        }
+        this.elementsShow.map((el, i) => el.index = i);
         //按元素数量排序
         this.elements.sort((a, b) => b.num - a.num);
         debug("CraftPanelEnchant refreshElements: this.elements", this.elements);
         await this.refreshCost();
-        await this.render(true);
     }
     //刷新材料面板
     async refreshPanel() {
@@ -1105,14 +1368,26 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             if (await checkItemRequirements(item, requirements) && (material_category == "all" || await checkItemRequirements(item, categoryRequirements))) {
                 const elements = item.getFlag(MODULE_ID, "element") ?? [];
                 const itemColor = item ? getItemColor(item) ?? "" : "";
-                let tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h1>${item.name}</h1></figure><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+                const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
                 let quantity = this.countQuantity(item);
                 const showQuantity = (this.actor ?? false) && (typeof quantity === "number");
                 let totalElements = 0;
-                if (elements.filter(e => e.color != "").length > 0) {
-                    totalElements = elements.filter(e => e.color != "").reduce((a, b) => a + b.num, 0);
+                // 根据elementConfigs中的value配置来计算总元素数量
+                if (this.elementConfigs.length > 0) {
+                    this.elementConfigs.forEach((elc) => {
+                        const ids = elc.ids.map(id => id.trim()).filter(id => id != "");
+                        const els = elements.filter(el => ids.includes(el.id));
+                        if (els.length > 0) {
+                            totalElements += els.map(el => (el.num * elc.value)).reduce((prev, current) => prev + current, 0);
+                        }
+                    });
                 } else {
-                    totalElements = elements.reduce((a, b) => a + b.num, 0);
+                    // 计算总元素数量，有颜色的元素数量之和，如果没有颜色的元素，则计算所有元素数量之和
+                    if (elements.filter(e => e.color != "").length > 0) {
+                        totalElements = elements.filter(e => e.color != "").reduce((a, b) => a + b.num, 0);
+                    } else {
+                        totalElements = elements.reduce((a, b) => a + b.num, 0);
+                    }
                 }
                 this.materials.push({
                     // slotIndex: i,
@@ -1227,7 +1502,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 }
             }
 
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h1>${je.name}</h1></figure><div class="description">${je.text.content ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div>`);
             let choosed = "";
             let cost = je.getFlag(MODULE_ID, "cost") ?? 0;
             if ((auto || hasEnchanted || this.choosedModifiers.includes(je.uuid)) && !locked) {
@@ -1278,7 +1553,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     index: index,
                     uuid: je.uuid,
                     ingredients: ingredients,
-                    tooltip: await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h1>${je.name}</h1></figure><div class="description">${je.text.content}</div>`),
+                    tooltip: await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h2>${je.name}</h2></figure><div class="description">${je.text.content}</div>`),
                     locked: "",
                     auto: false,
                     category: je.getFlag(MODULE_ID, "category") ?? [],
@@ -1337,7 +1612,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         this.results = await Promise.all(resultsJE.map(async (je, i) => {
             const overrideStyle = (je.getFlag(MODULE_ID, "shape") ?? "default") !== "default";
             const overrideStyleClass = je.getFlag(MODULE_ID, "shape") == "circle" ? "round" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><h1>${je.name}</h1></figure><div class="description">${je.text.content ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div>`);
             let isLocked = je.getFlag(MODULE_ID, "isLocked") ?? false;
             if (isLocked && !this.isEdit) {
                 const script = je.getFlag(MODULE_ID, "unlockCondition");
@@ -1369,7 +1644,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 overrideStyle,
                 overrideStyleClass,
                 tooltip,
-                isNecessary: je.getFlag(MODULE_ID, "isNecessary") ?? false,
+                isNecessary: je.getFlag(MODULE_ID, "isNecessary") ?? true,
                 isLocked,
                 position,
                 images,
@@ -1457,7 +1732,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
     async editSlot(slotJEUuid) {
         const slotJE = await fromUuid(slotJEUuid);
         debug("CraftPanelEnchant editSlot: slotJE", slotJE);
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(slotJE)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot`) + ": " + slotJE.name)
             .tab({ id: "aspect", icon: "fas fa-image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-aspect-tab`) })
@@ -1470,12 +1746,13 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             .checkbox({ name: `flags.${MODULE_ID}.isNecessary`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isConsumed`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-consumed`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-consumed-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.slotScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-script-hint`) })
             .tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-requirements-tab`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-hint`), options: { ...CraftPanelEnchant.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-name-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
-            .textArea({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-script-hint`) })
             .tab({ id: "position", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-position-tab`) })
             .checkbox({ name: `flags.${MODULE_ID}.position.unlock`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.position-unlock`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.position-unlock-hint`) })
             .number({ name: `flags.${MODULE_ID}.position.x`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.position-x`) })
@@ -1508,7 +1785,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
     async editResult(slotJEUuid) {
         const slotJE = await fromUuid(slotJEUuid);
         debug("CraftPanelEnchant editResult: slotJE", slotJE);
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(slotJE)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot`) + ": " + slotJE.name)
             .tab({ id: "aspect", icon: "fas fa-image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-aspect-tab`) })
@@ -1519,12 +1797,12 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             .tab({ id: "behavior", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-behavior-tab`) })
             .checkbox({ name: `flags.${MODULE_ID}.isNecessary`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
             .tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-requirements-tab`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-hint`), options: { ...CraftPanelEnchant.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-name-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
-            .textArea({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.slot-requirements-script-hint`) })
             .tab({ id: "position", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-position-tab`) })
             .checkbox({ name: `flags.${MODULE_ID}.position.unlock`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.position-unlock`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.position-unlock-hint`) })
             .number({ name: `flags.${MODULE_ID}.position.x`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.position-x`) })
@@ -1581,6 +1859,61 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         };
     }
     /**
+     * 编辑元素配置
+     */
+    async editElementConfig(index) {
+        const elementConfig = this.elementConfigs[index];
+        debug("CraftPanelBlend editElementConfig : elementConfig", elementConfig);
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
+            .object(elementConfig)
+            .title(game.i18n.localize(`${MODULE_ID}.${text}.title`) + ": " + elementConfig.name)
+            .tab({ id: "aspect", icon: "fas fa-image", label: game.i18n.localize(`${MODULE_ID}.${text}.aspect-tab`) })
+            .text({ name: "ids", label: game.i18n.localize(`${MODULE_ID}.id`), value: elementConfig.ids.join(","), hint: game.i18n.localize(`${MODULE_ID}.${text}.ids-hint`) })
+            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`), hint: game.i18n.localize(`${MODULE_ID}.${text}.name-hint`) })
+            .file({ name: "img", type: "image", label: game.i18n.localize(`${MODULE_ID}.${text}.img`), hint: game.i18n.localize(`${MODULE_ID}.${text}.img-hint`) })
+            .color({ name: "color", label: game.i18n.localize(`${MODULE_ID}.${text}.color`), hint: game.i18n.localize(`${MODULE_ID}.${text}.color-hint`) })
+            .number({ name: "size", label: game.i18n.localize(`${MODULE_ID}.size`), min: 40, max: 160, step: 5 })
+            .select({ name: "shape", label: game.i18n.localize(`${MODULE_ID}.${text}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelBlend.SHAPE_STYLE } })
+            .select({ name: "visible", label: game.i18n.localize(`${MODULE_ID}.${text}.visible`), options: { "true": game.i18n.localize(`${MODULE_ID}.${text}.visible-always-show`), "false": game.i18n.localize(`${MODULE_ID}.${text}.visible-always-not-show`), "visibleWhenUp0": game.i18n.localize(`${MODULE_ID}.${text}.visible-when-up-0`), "visibleWhenDown0": game.i18n.localize(`${MODULE_ID}.${text}.visible-when-down-0`) } })
+            .tab({ id: "behavior", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${text}.behavior-tab`) })
+            .number({ name: "value", label: game.i18n.localize(`${MODULE_ID}.${text}.value`), hint: game.i18n.localize(`${MODULE_ID}.${text}.value-hint`) })
+            .checkbox({ name: "useMin", label: game.i18n.localize(`${MODULE_ID}.${text}.use-min`), hint: game.i18n.localize(`${MODULE_ID}.${text}.use-min-hint`) })
+            .number({ name: "min", label: game.i18n.localize(`${MODULE_ID}.${text}.min`), hint: game.i18n.localize(`${MODULE_ID}.${text}.min-hint`) })
+            .checkbox({ name: "useMax", label: game.i18n.localize(`${MODULE_ID}.${text}.use-max`), hint: game.i18n.localize(`${MODULE_ID}.${text}.use-max-hint`) })
+            .number({ name: "max", label: game.i18n.localize(`${MODULE_ID}.${text}.max`), hint: game.i18n.localize(`${MODULE_ID}.${text}.max-hint`) })
+            .select({ name: "multiShow", label: game.i18n.localize(`${MODULE_ID}.${text}.multi-show`), options: multiShowOptions, hint: game.i18n.localize(`${MODULE_ID}.${text}.multi-show-hint`) })
+            .select({ name: "multiValue", label: game.i18n.localize(`${MODULE_ID}.${text}.multi-value`), options: multiValueOptions, hint: game.i18n.localize(`${MODULE_ID}.${text}.multi-value-hint`) })
+            .text({ name: "plusElements", label: game.i18n.localize(`${MODULE_ID}.${text}.plus-elements`), hint: game.i18n.localize(`${MODULE_ID}.${text}.plus-elements-hint`) })
+            .text({ name: "minusElements", label: game.i18n.localize(`${MODULE_ID}.${text}.minus-elements`), hint: game.i18n.localize(`${MODULE_ID}.${text}.minus-elements-hint`) })
+            .button({
+                label: game.i18n.localize(`Delete`),
+                callback: async () => {
+                    fb.form().close();
+                    this.elementConfigs.splice(index, 1);
+                    await this.journalEntry.setFlag(MODULE_ID, "elementConfig", this.elementConfigs);
+                    this.needRefresh = true;
+                    await this.render(true);
+                },
+                icon: "fas fa-trash",
+            });
+        const data = await fb.render();
+        debug("CraftPanelBlend editElementConfig : data", data);
+        if (!data) return;
+        Object.keys(elementConfig).forEach(key => {
+            if (key == "ids") {
+                elementConfig[key] = data[key].split(",").map(id => id.trim()).filter(id => id != "");
+            } else if (key == "visible") {
+                elementConfig[key] = data[key] == "true" ? true : (data[key] == "false" ? false : data[key]);
+            } else {
+                elementConfig[key] = data[key] ?? elementConfig[key];
+            }
+        });
+        await this.journalEntry.setFlag(MODULE_ID, "elementConfig", this.elementConfigs);
+        this.needRefresh = true;
+        await this.render(true);
+    }
+    /**
      * 选择调整
      */
     async chooseModifier(modifierJEUuid) {
@@ -1626,7 +1959,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-category`),
             icon: "icons/svg/barrel.svg",
         }
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(defaultData)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-category`))
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
@@ -1638,7 +1972,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 .multiSelect({ name: `requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-hint`), options: { ...CraftPanelEnchant.REQUIREMENTS_TYPE_OPTIONS } })
                 .text({ name: `requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-name-hint`) })
                 .multiSelect({ name: `requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
-                .textArea({ name: `requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-script-hint`) })
+                .script({ name: `requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-script-hint`) })
         } else if (type == "modifier") {
             fb.number({ name: "limit", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num-hint`), min: 0 });
         }
@@ -1689,7 +2023,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             return;
         }
         let needDelete = false;
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(categories[index])
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-category`) + ": " + category)
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
@@ -1708,7 +2043,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 .multiSelect({ name: `requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-hint`), options: { ...CraftPanelEnchant.REQUIREMENTS_TYPE_OPTIONS } })
                 .text({ name: `requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-name-hint`) })
                 .multiSelect({ name: `requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
-                .textArea({ name: `requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-script-hint`) })
+                .script({ name: `requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.category-requirements-script-hint`) })
         } else if (type == "modifier") {
             fb.number({ name: "limit", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.limit-num-hint`), min: 0 });
         }
@@ -2016,7 +2351,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         if (!game.user.isGM) return;
         this.mode = this.isEdit ? "use" : "edit";
         this.window.title.textContent = this.title;
-        this.needRefresh  = true;
+        this.needRefresh = true;
         await this.render(true);
     }
 
@@ -2034,7 +2369,54 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         };
     }
 }
-
+/**
+ * @typedef {Object} CraftElement
+ * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。
+ * @property {string} name - 元素的名称，为对应物品的名称。仅用于显示。
+ * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
+ * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
+ * @property {string} class - 元素的类型，仅用于脚本检测。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
+ * @property {number} weight - 元素的权重，用于计算匹配度。
+ * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
+ * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。
+ * @property {number} min - 仅需求元素使用，为元素的最小数量。用于显示合成时最少需要的元素数量。
+ * @property {boolean} useMax - 仅需求元素使用，为是否使用最大数量。
+ * @property {number} max - 仅需求元素使用，为元素的最大数量。用于显示合成时最多需要的元素数量。
+ * @property {string} shape - 元素的形状，用于显示。默认为圆形circle，还可以配置方形square，以及菱形diamond。
+ */
+/**
+ * @typedef {Object} CraftElementConfig
+ * @property {string[]} ids - 显示元素的id。配置时通过逗号分隔以支持多个元素。
+ * @property {string} name - 数量为0时显示的默认名称。
+ * @property {string} img - 数量为0时显示的默认图标。
+ * @property {boolean} useMin - 是否限制最小数量。
+ * @property {number} min - 当实际元素少于最小数量时，实际数量为最小数量。
+ * @property {boolean} useMax - 是否限制最大数量。
+ * @property {number} max - 当实际元素多于最大数量时，实际数量为最大数量。
+ * @property {"default" | "max" | "min"} multiShow - 多个元素时的图标和名称显示方式。default: 只显示默认名称和图标，max: 显示最多元素的名称和图标，min: 显示最少元素的名称和图标。
+ * @property {"all" | "only-max" | "only-min" | "max-plus" | "max-minus" | "min-plus" | "min-minus"} multiValue - 多个元素时的实际使用的元素数据。all：包含的元素都会被使用（显示总和数量），only-max：只使用最多数量的元素，only-min：只使用最少数量的元素，max-plus：选择数量最多的元素然后其数量加上其他元素，max-minus：选择数量最多的元素然后其数量减去其他元素，min-plus：选择数量最少的元素然后其数量加上其他元素，min-minus：选择数量最少的元素然后其数量减去其他元素。
+ * @property {string} plusElements - 配置元素的id（逗号分隔），这些元素不参与multiShow和multiValue的判断，但会在原值不为0时将数量加在最终结果中。
+ * @property {string} minusElements - 配置元素的id（逗号分隔），这些元素不参与multiShow和multiValue的判断，但会在原值不为0时将数量减在最终结果中。
+ * @property {string} shape - 元素的形状，用于显示。默认为圆形circle，与slot的shape配置相同，可用选项使用CraftPanelBlend.SHAPE_STYLE。
+ * @property {boolean | "visibleWhenUp0" | "visibleWhenDown0"} visible - 元素的显示条件。true: 总是显示，false: 总是不显示，visibleWhenUp0: 仅当元素数量大于0时显示，visibleWhenDown0: 仅当元素数量小于等于0时显示。默认为true。
+ * @property {number} value - 元素的价值，仅用于右侧材料面板计算元素数量时的参考价值。默认为1。未配置CraftElementConfig的元素价值为0。
+ * @property {number} size - 元素的尺寸，仅用于显示时的图标大小。默认为60。
+ * @property {string} color - 元素的颜色，边框的默认颜色。仅用于显示。
+ */
+/**
+ * @typedef {Object} CraftElementShow
+ * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。
+ * @property {string} name - 元素的名称，为对应物品的名称。仅用于显示。
+ * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
+ * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
+ * @property {number} weight - 元素的权重，用于计算匹配度。
+ * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
+ * @property {string} shapeClass - 元素的形状，用于显示。默认为圆形circle，与slot的shape配置相同，可用选项使用CraftPanelBlend.SHAPE_STYLE。
+ * @property {number} size - 元素的尺寸，仅用于显示时的图标大小。默认为60。
+ * @property {number} index - 元素的索引，用于事件绑定时获取指定的元素。
+ */
 /**
  * 检测物品是否符合要求
  * @param {Item} item - 要检测的物品

@@ -1,4 +1,5 @@
 import { HandlebarsApplication, getItemColor, confirmDialog, debug, MODULE_ID } from "../utils.js";
+import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelElement extends HandlebarsApplication {
     constructor(journalEntry) {
@@ -11,6 +12,8 @@ export class CraftPanelElement extends HandlebarsApplication {
         this.elementItems = [];
         this.needRefresh = true;
 
+        this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
+
         this.scrollPositions = {
             elementItems: 0,
             materials: 0,
@@ -19,7 +22,7 @@ export class CraftPanelElement extends HandlebarsApplication {
 
         this.options.actions.edit = this.editMaterialsElement.bind(this);
         this.options.actions.configure = this.configure.bind(this);
-        
+
         this.panelSizes = {
             elementitems: {
                 width: 420,
@@ -226,7 +229,8 @@ export class CraftPanelElement extends HandlebarsApplication {
     }
 
     async configure() {
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(this.journalEntry)
             .title(game.i18n.localize(`${MODULE_ID}.configure`) + ": " + this.journalEntry.name)
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
@@ -237,7 +241,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-hint`), options: { ...CraftPanelElement.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-folder`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-folder`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-folder-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
-            .textArea({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script-hint`) });
+            .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script-hint`) });
 
         const data = await fb.render();
         debug("CraftPanelElement configure : data", data);
@@ -253,7 +257,8 @@ export class CraftPanelElement extends HandlebarsApplication {
         /** @type {CraftElement} */
         const element = item.getFlag(MODULE_ID, "elementConfig");
         debug("CraftPanelElement editElement : element", element);
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(element)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-element`))
             .text({ name: "id", label: game.i18n.localize(`${MODULE_ID}.id`) })
@@ -284,7 +289,8 @@ export class CraftPanelElement extends HandlebarsApplication {
     async editNum(index) {
         const element = this.elements[index];
         debug("CraftPanelElement editNum : element", element);
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(element)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-element`))
             .number({ name: "num", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
@@ -389,7 +395,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         const elements = item.getFlag(MODULE_ID, "element") ?? [];
         const itemColor = item ? getItemColor(item) ?? "" : "";
         debug("CraftPanelElement addMaterial : elements itemColor", elements, itemColor);
-        let tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h1>${item.name}</h1></figure><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+        const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
         let el = {
             item: item,
             uuid: item.uuid,
@@ -413,7 +419,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             const item = await fromUuid(slot.uuid);
             const elements = item.getFlag(MODULE_ID, "element") ?? [];
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h1>${item.name}</h1></figure><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
             return {
                 slotIndex: i,
                 item: item,
@@ -473,7 +479,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         this.materials = await Promise.all(materials_items.map(async (item, i) => {
             const elements = item.getFlag(MODULE_ID, "element") ?? [];
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h1>${item.name}</h1></figure><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
             let totalElements = 0;
             if (showClasses[0] != "") {
                 totalElements = elements.filter(el => showClasses.includes(el.class)).reduce((a, b) => a + b.num, 0);
@@ -577,7 +583,7 @@ async function checkItemRequirements(item, requirements) {
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
  * @property {string} class - 元素的类型，仅用于脚本检测。
- * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
  * @property {number} weight - 元素的权重，用于计算匹配度。
  * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
  * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。

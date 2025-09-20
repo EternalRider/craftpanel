@@ -1,6 +1,7 @@
 // import * as CONST from './constants.js'
 export const MODULE_ID = 'craftpanel';
 export class HandlebarsApplication extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) { };
+import { FormBuilder } from "./function/formBuilder.js";
 
 /**
  * debug输出信息函数
@@ -34,12 +35,24 @@ export async function notice(type, message) {
 }
 
 /**
- * 获得物品的颜色-目前依赖rarity-colors这个mod
+ * 获得物品的颜色-支持用户自定义脚本
  * @param {Item} item 物品
- * @returns {string} 颜色
+ * @returns {string} 颜色，如"#ff0000"
  */
 export function getItemColor(item) {
-  return game.modules.get("rarity-colors")?.api?.getColorFromItem(item) ?? "";
+  // 获取用户自定义脚本
+  const script = game.settings.get(MODULE_ID, "customItemColorScript");
+  if (script && typeof script === "string" && script.trim().length > 0) {
+    try {
+      // 构造函数，item为参数
+      const fn = new Function("item", script);
+      const result = fn(item);
+      if (typeof result === "string") return result;
+    } catch (e) {
+      debug("自定义物品颜色脚本执行出错：", e);
+    }
+  }
+  return "";
 }
 /**
  * 确认对话框
@@ -51,7 +64,8 @@ export function getItemColor(item) {
  */
 export async function confirmDialog(title, info = "", yes = "yes", no = "no") {
   let result = false;
-  const fb = new Portal.FormBuilder()
+  //const fb = new Portal.FormBuilder()
+  const fb = new FormBuilder()
     .title(game.i18n.localize(title))
     .info(game.i18n.localize(info))
     .submitButton({ enabled: false })
@@ -456,3 +470,23 @@ export function _applyUpgrade(change, current, delta, updates) {
   }
   updates[change.key] = update;
 }
+/**
+ * 编辑元素配置的选项
+ */
+export const multiShowOptions = {
+  "max": `${MODULE_ID}.edit-element-config.multi-show-max`,
+  "min": `${MODULE_ID}.edit-element-config.multi-show-min`,
+  "default": `${MODULE_ID}.edit-element-config.multi-show-default`,
+};
+/**
+ * 编辑元素配置的选项
+ */
+export const multiValueOptions = {
+  "only-max": `${MODULE_ID}.edit-element-config.multi-value-only-max`,
+  "only-min": `${MODULE_ID}.edit-element-config.multi-value-only-min`,
+  "max-plus": `${MODULE_ID}.edit-element-config.multi-value-max-plus`,
+  "max-minus": `${MODULE_ID}.edit-element-config.multi-value-max-minus`,
+  "min-plus": `${MODULE_ID}.edit-element-config.multi-value-min-plus`,
+  "min-minus": `${MODULE_ID}.edit-element-config.multi-value-min-minus`,
+  "all": `${MODULE_ID}.edit-element-config.multi-value-all`
+};

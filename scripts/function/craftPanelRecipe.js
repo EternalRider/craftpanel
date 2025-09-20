@@ -1,4 +1,5 @@
 import { HandlebarsApplication, getItemColor, debug, MODULE_ID } from "../utils.js";
+import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelRecipe extends HandlebarsApplication {
     constructor(journalEntry, journalEntryPage) {
@@ -19,7 +20,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             elementItems: 0,
             recipes: 0,
         };
-        
+
         this.options.actions.edit = this.editRecipe.bind(this);
         this.options.actions.configure = this.configure.bind(this);
         this.options.actions.permissions = async (event) => {
@@ -175,7 +176,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         const results = await Promise.all(this.results.map(async (el, i) => {
             const item = await fromUuid(el.uuid);
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h1>${el.name ?? item?.name}</h1></figure><div class="description">${el.description ?? item?.system?.description ?? item?.description ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${el.description ?? item?.system?.description ?? item?.description ?? ""}</div>`);
             return {
                 slotIndex: i,
                 uuid: el.uuid,
@@ -324,7 +325,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             categoryOptions[category.id] = category.name;
         }
         debug("CraftPanelRecipe configure : recipe_categories categoryOptions", recipe_categories, categoryOptions);
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(this.journalEntryPage)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-recipe`) + ": " + this.journalEntryPage.name)
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
@@ -334,8 +336,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             .number({ name: `flags.${MODULE_ID}.weight`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-weight`), min: 0 })
             .select({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), "yes": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.yes`), "no": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.no`) } })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
-            .textArea({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .button({
                 label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-recipe-tooltip-button`),
                 callback: async () => {
@@ -361,7 +363,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
     }
     async editNum(index) {
         const ingredient = this.ingredients[index];
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(ingredient)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "min", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.min`) })
@@ -382,7 +385,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
     }
     async editResultNum(index) {
         const result = this.results[index];
-        const fb = new Portal.FormBuilder()
+        //const fb = new Portal.FormBuilder()
+        const fb = new FormBuilder()
             .object(result)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "quantity", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
@@ -608,7 +612,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
  * @property {string} class - 元素的类型，仅用于脚本检测。
- * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
  * @property {number} weight - 元素的权重，用于计算匹配度。
  * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
  * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。

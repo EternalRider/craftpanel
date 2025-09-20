@@ -5,6 +5,7 @@ import { ChooseImage } from "./function/choose-image.js";
 import { CraftPanelCook } from "./function/craftPanelCook.js";
 import { CraftPanelForge } from "./function/craftPanelForge.js";
 import { CraftPanelEnchant } from "./function/craftPanelEnchant.js";
+import { FormBuilder } from "./function/formBuilder.js";
 
 const craftPanelsTypes = ["blend", "cook", "forge", "enchant"];
 /**
@@ -25,7 +26,8 @@ export async function selectCraftPanel() {
     craftPanels.forEach(j => {
         selectOptions[j.uuid] = j.name;
     });
-    const fb = new Portal.FormBuilder()
+    //const fb = new Portal.FormBuilder()
+    const fb = new FormBuilder()
         .title(game.i18n.localize(`${MODULE_ID}.select-craft-panel`))
         .select({ name: "craftPanel", label: game.i18n.localize(`${MODULE_ID}.craft-panel`), options: selectOptions });
     const data = await fb.render();

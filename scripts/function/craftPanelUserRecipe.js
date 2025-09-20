@@ -236,7 +236,7 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
  * @property {string} class - 元素的类型，仅用于脚本检测。
- * @property {string} color - 元素的颜色，为对应图标的颜色。仅用于显示。
+ * @property {string} color - 元素的颜色，为对应形状以及边框的颜色。仅用于显示。
  * @property {number} weight - 元素的权重，用于计算匹配度。
  * @property {number} num - 仅成分元素使用，为元素的数量。用于显示作为合成素材时提供的元素数量。
  * @property {boolean} useMin - 仅需求元素使用，为是否使用最小数量。

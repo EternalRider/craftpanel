@@ -36,10 +36,32 @@ Hooks.on('ready', () => {
     console.log('Craftpanel | Ready');
 });
 
-Hooks.on("renderSidebarTab", (app, html) => {
-    if (!(app instanceof ItemDirectory)) return;
-    const buttonContainer = html[0].querySelector(".header-actions.action-buttons");
+// Hooks.on("renderSidebarTab", (app, html) => {
+//     if (!(app instanceof ItemDirectory)) return;
+//     const buttonContainer = html[0].querySelector(".header-actions.action-buttons");
+//     const button = document.createElement("button");
+//     button.classList.add(`${MODULE_ID}-open-panel-manager`);
+//     button.innerHTML = `<i class="fas fa-book"></i> ${game.i18n.localize(`${MODULE_ID}.openCraftPanelManager`)}`;
+//     button.onclick = () => {
+//         if (game.user.isGM) {
+//             api.openCraftPanelManager();
+//         } else {
+//             api.selectCraftPanel();
+//         }
+//     }
+//     buttonContainer.appendChild(button);
+// })
+Hooks.on("renderItemDirectory", (app, html) => {
+    //检查版本为v12还是v13
+    let buttonContainer;
+    if (game.version.startsWith("12")) {
+        buttonContainer = html[0].querySelector(".header-actions.action-buttons");
+    } else if (game.version.startsWith("13")) {
+        buttonContainer = html.querySelector(".header-actions.action-buttons");
+    }
+    // const buttonContainer = html.querySelector(".header-actions.action-buttons");
     const button = document.createElement("button");
+    button.type = "button";
     button.classList.add(`${MODULE_ID}-open-panel-manager`);
     button.innerHTML = `<i class="fas fa-book"></i> ${game.i18n.localize(`${MODULE_ID}.openCraftPanelManager`)}`;
     button.onclick = () => {
