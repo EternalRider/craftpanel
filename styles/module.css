@@ -227,6 +227,16 @@
     position: relative;
     top: 35px;
 }
+.craft .craft-content .element-color-circle.circle {
+    border-radius: 50%;
+}
+.craft .craft-content .element-color-circle.square {
+    border-radius: 5%;
+}
+.craft .craft-content .element-color-circle.diamond {
+    border-radius: 0%;
+    transform: scale(0.7) rotate(45deg);
+}
 /* 图块-材料-元素点列容器 */
 .craft .craft-content .craft-slot-elements {
     display: flex;

@@ -21,7 +21,7 @@ export async function openCraftPanelManager() {
  * 显示并选择所有具有权限的制造面板
  */
 export async function selectCraftPanel() {
-    const craftPanels = game.journal.filter(j => j.getFlag(MODULE_ID, "isCraftPanel") && (j?.ownership[game.user.id] >= 2 && craftPanelsTypes.includes(j.getFlag(MODULE_ID, "type")))).sort((a, b) => a.sort - b.sort);
+    const craftPanels = game.journal.filter(j => j.getFlag(MODULE_ID, "isCraftPanel") && (j?.visible == true || j?.ownership[game.user.id] >= 1 || (j?.ownership["default"] >= 1 && j?.ownership[game.user.id] !== 0)) && craftPanelsTypes.includes(j.getFlag(MODULE_ID, "type"))).sort((a, b) => a.sort - b.sort);
     const selectOptions = {};
     craftPanels.forEach(j => {
         selectOptions[j.uuid] = j.name;
@@ -48,7 +48,7 @@ export async function selectCraftPanel() {
  * @param {JournalEntry} options.panel - 制造面板
  * @param {string} options.mode - 打开模式，craft为制造，edit为编辑
  * @param {Actor} options.actor - 使用制造面板的角色
- * @returns {CraftPanelBlend} - 制造面板
+ * @returns {CraftPanelBlend | CraftPanelCook | CraftPanelForge | CraftPanelEnchant} - 制造面板
  */
 export function openCraftPanel(options = {}) {
     let result;

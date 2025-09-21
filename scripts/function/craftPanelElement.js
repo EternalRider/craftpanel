@@ -212,7 +212,8 @@ export class CraftPanelElement extends HandlebarsApplication {
                     const item = await fromUuid(el.dataset.uuid);
                     let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
                     if (confirm) {
-                        await item.update({ [`flags.-=${MODULE_ID}.elementConfig`]: null, [`flags.-=${MODULE_ID}.isElement`]: null });
+                        await item.update({ [`flags.${MODULE_ID}.-=elementConfig`]: null, [`flags.${MODULE_ID}.-=isElement`]: null });
+                        this.needRefresh = true;
                         await this.render(true);
                     }
                 }
@@ -267,13 +268,15 @@ export class CraftPanelElement extends HandlebarsApplication {
             .text({ name: "class", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.class`) })
             .color({ name: "color", label: game.i18n.localize(`${MODULE_ID}.color`) })
             .number({ name: "weight", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.weight`) })
+            .select({ name: "shape", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: CraftPanelElement.SHAPE_STYLE })
             .button({
                 label: game.i18n.localize(`Delete`),
                 callback: async () => {
                     let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
                     if (confirm) {
                         fb.form().close();
-                        await item.update({ [`flags.-=${MODULE_ID}.elementConfig`]: null, [`flags.-=${MODULE_ID}.isElement`]: null });
+                        await item.update({ [`flags.${MODULE_ID}.-=elementConfig`]: null, [`flags.${MODULE_ID}.-=isElement`]: null });
+                        this.needRefresh = true;
                         await this.render(true);
                     }
                 },
@@ -284,6 +287,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         debug("CraftPanelElement editElement : data", data);
         if (!data) return;
         await item.setFlag(MODULE_ID, "elementConfig", data);
+        this.needRefresh = true;
         await this.render(true);
     }
     async editNum(index) {
@@ -469,6 +473,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                 img: element.img,
                 color: element.color,
                 class: element.class,
+                shape: element.shape,
             };
         });
         if (showClasses[0] != "") {
@@ -524,6 +529,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                 color: el.color,
                 num: el.num,
                 weight: el.weight,
+                shape: el.shape,
             }
         });
         debug("CraftPanelElement editMaterialsElement : element", element);
@@ -539,6 +545,13 @@ export class CraftPanelElement extends HandlebarsApplication {
         await this.render(true);
     }
 
+    static get SHAPE_STYLE() {
+        return {
+            circle: `${MODULE_ID}.${this.APP_ID}.shape-circle`,
+            square: `${MODULE_ID}.${this.APP_ID}.shape-square`,
+            diamond: `${MODULE_ID}.${this.APP_ID}.shape-diamond`,
+        };
+    }
     static get REQUIREMENTS_TYPE_OPTIONS() {
         return {
             "folder": `${MODULE_ID}.${this.APP_ID}.requirements-folder`,
@@ -590,4 +603,5 @@ async function checkItemRequirements(item, requirements) {
  * @property {number} min - 仅需求元素使用，为元素的最小数量。用于显示合成时最少需要的元素数量。
  * @property {boolean} useMax - 仅需求元素使用，为是否使用最大数量。
  * @property {number} max - 仅需求元素使用，为元素的最大数量。用于显示合成时最多需要的元素数量。
+ * @property {string} shape - 元素的形状，用于显示。默认为圆形circle，还可以配置方形square，以及菱形diamond。
  */

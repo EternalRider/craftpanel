@@ -31,6 +31,10 @@
             "requirements-script-hint": "脚本必须返回一个Boolean值，如果返回true，则满足需求。可以在其中引用item变量，即检测需求的物品。",
             "configure-general-tab": "常规",
             "configure-requirements-tab": "识别",
+            "shape": "形状",
+            "shape-circle": "圆形",
+            "shape-square": "方形",
+            "shape-diamond": "菱形",
             "weight": "权重"
         },
         "craft-panel-recipe": {
