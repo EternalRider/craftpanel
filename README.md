@@ -12,3 +12,5 @@ https://github.com/user-attachments/assets/33cc8485-8c8b-4198-872e-53199f3e5c7f
 选中角色，点击制作，即可开始使用材料进行合成。
 
 支持许多详细的配置项。
+
+详细配置方式可以查看wiki。

@@ -303,8 +303,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 const pageUuid = recipe.dataset.uuid;
                 if (this.journalEntryPage.uuid == pageUuid) return;
                 this.journalEntryPage = this.journalEntry.pages.find(p => p.uuid == pageUuid);
-                this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
-                this.results = this.journalEntryPage.getFlag(MODULE_ID, "results") ?? [];
+                this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
+                this.results = this.journalEntryPage.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "results"))) : [];
                 await this.render(true);
             });
             recipe.addEventListener("drop", this._onDropRecipesPanel.bind(this));
@@ -401,8 +401,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         const update = {
             flags: {
                 [MODULE_ID]: {
-                    ingredients: this.ingredients,
-                    results: this.results,
+                    ingredients: JSON.parse(JSON.stringify(this.ingredients)),
+                    results: JSON.parse(JSON.stringify(this.results)),
                 },
             },
         }
@@ -597,6 +597,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 img: element.img,
                 color: element.color,
                 class: element.class,
+                shape: element.shape,
             };
         });
         this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });

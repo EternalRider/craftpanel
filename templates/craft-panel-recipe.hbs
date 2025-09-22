@@ -61,7 +61,7 @@
                 <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                     data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
                     style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
-                    <div class="element-color-circle" draggable="false" style="background-color: {{element.color}};"></div>
+                    <div class="element-color-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
                 </div>
                 {{/each}}
             </div>

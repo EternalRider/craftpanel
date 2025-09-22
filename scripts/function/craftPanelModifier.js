@@ -307,8 +307,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 const pageUuid = modifier.dataset.uuid;
                 if (this.journalEntryPage.uuid == pageUuid) return;
                 this.journalEntryPage = this.journalEntry.pages.find(p => p.uuid == pageUuid);
-                this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
-                this.changes = this.journalEntryPage.getFlag(MODULE_ID, "changes") ?? [];
+                this.ingredients = this.journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
+                this.changes = this.journalEntryPage.getFlag(MODULE_ID, "changes") ? JSON.parse(JSON.stringify(this.journalEntryPage.getFlag(MODULE_ID, "changes"))) : [];
                 await this.render(true);
             });
             modifier.addEventListener("drop", this._onDropModifiersPanel.bind(this));
@@ -414,8 +414,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
         const update = {
             flags: {
                 [MODULE_ID]: {
-                    ingredients: this.ingredients,
-                    changes: this.changes,
+                    ingredients: JSON.parse(JSON.stringify(this.ingredients)),
+                    changes: JSON.parse(JSON.stringify(this.changes)),
                 },
             },
         }
@@ -604,6 +604,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 img: element.img,
                 color: element.color,
                 class: element.class,
+                shape: element.shape,
             };
         });
         this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });

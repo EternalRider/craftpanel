@@ -46,7 +46,7 @@
                     {{#each elements as |element|}}
                     <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                         data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"
-                        style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+                        style="{{#if element.color}}--item-color: {{element.color}};{{/if}} {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
                         <div class="element-num" draggable="false">{{element.num}}</div>
                     </div>
                     {{/each}}

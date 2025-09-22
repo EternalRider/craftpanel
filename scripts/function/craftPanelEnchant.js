@@ -752,7 +752,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             return;
         }
         debug("CraftPanelEnchant _onDropSlotPanel: data", data);
-        if (data.type == "CraftSlot") {
+        if ((data.type == "CraftSlot") && this.isEdit) {
             const position = { unlock: true, x: event.offsetX, y: event.offsetY };
             const slotUuid = this.slots[data.index].uuid;
             const slot = await fromUuid(slotUuid);
@@ -763,7 +763,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             await slot.setFlag(MODULE_ID, "position", position);
             debug("CraftPanelEnchant _onDropSlotPanel: position", position);
             await this.render(true);
-        } else if (data.type == "Item") {
+        } else if ((data.type == "Item") && !this.isEdit) {
             for (let i = 0; i < this.slots.length; i++) {
                 if (!this.slots[i].isLocked && (this.slotItems[i] === null || this.slotItems[i] === undefined)) {
                     debug("CraftPanelEnchant _onDropSlotPanel : i this.slots[i] this.slotItems[i]", i, this.slots[i], this.slotItems[i]);
@@ -2015,6 +2015,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         }
     }
     async editCategory(category, type) {
+        if (category == "all" || category == "add") return;
         debug("CraftPanelEnchant editCategory : category type", category, type);
         let categories = this.journalEntry.getFlag(MODULE_ID, type + "-categories") ?? [];
         let index = categories.findIndex(el => el.id == category);
