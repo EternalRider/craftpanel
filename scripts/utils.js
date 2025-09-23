@@ -220,6 +220,14 @@ export async function waitFor(fn, maxIter = 600, iterWaitTime = 100, i = 0) {
   // 如果达到最大迭代次数，则返回false，否则返回true
   return i === maxIter ? false : true;
 }
+/**
+ * 异步函数wait，用于等待一定时间。
+ * @param {number} ms 等待的时间，以毫秒为单位。
+ * @returns {Promise} 返回一个无意义Promise对象。
+ */
+export async function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * 构建动态效果，返回动态效果，用于addActiveEffect
