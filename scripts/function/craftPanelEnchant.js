@@ -1842,6 +1842,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         if (!data) return;
         debug("CraftPanelEnchant editResult: data", data);
         await slotJE.update(data);
+        this.needRefresh = true;
         await this.render(true);
     }
     /**
