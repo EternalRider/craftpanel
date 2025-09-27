@@ -26,7 +26,7 @@
                         <h3 class="craft-recipe-tittle">{{recipe.name}}</h3>
                         <div class="craft-recipe-ingredients">
                             {{#each recipe.ingredients as |ingredient|}}
-                            <div class="craft-recipe-ingredient" style="background-image: url('{{ingredient.img}}');">
+                            <div class="craft-recipe-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
                                 <div class="element-num" draggable="false">{{ingredient.num}}</div>
                             </div>
                             {{/each}}

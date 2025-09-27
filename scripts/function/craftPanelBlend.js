@@ -419,7 +419,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         //     event.preventDefault();
         //     this.close();
         // });
-        html.querySelectorAll(".craft-slot").forEach((slot) => {
+        html.querySelectorAll(".craft-slot-panel .craft-slot").forEach((slot) => {
             const isEmpty = slot.classList.contains("empty");
             if (this.isEdit) {
                 // 编辑模式下，右键点击槽位可以删除槽位
@@ -1474,8 +1474,8 @@ export class CraftPanelBlend extends HandlebarsApplication {
             //将材料整理成类似元素的格式
             Object.values(this.slotItems).forEach(data => {
                 if (data) {
-                    if (slotMaterials.some(el => el.name == data.name)) {
-                        slotMaterials.find(el => el.name == data.name).num++;
+                    if (slotMaterials.some(el => el.id == data.name)) {
+                        slotMaterials.find(el => el.id == data.name).num++;
                     } else {
                         slotMaterials.push({
                             num: 1,

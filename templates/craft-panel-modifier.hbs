@@ -12,7 +12,7 @@
                         <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
                         <div class="craft-modifier-ingredients">
                             {{#each modifier.ingredients as |ingredient|}}
-                            <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');">
+                            <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
                                 <div class="element-num" draggable="false">{{ingredient.num}}</div>
                             </div>
                             {{/each}}

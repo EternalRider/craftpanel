@@ -431,6 +431,10 @@
     background-repeat: no-repeat;
     background-position: center;
 }
+.craft .craft-content .craft-modifiers-panel .craft-modifier-desc .craft-modifier-ingredients .craft-modifier-ingredient:hover,
+.craft .craft-content .craft-recipes-panel .craft-recipe-desc .craft-recipe-ingredients .craft-recipe-ingredient:hover {
+    transform: scale(1.2);
+}
 /* 材料数量 */
 .craft .craft-content .craft-materials-panel .craft-slot-quantity {
     position: absolute;
