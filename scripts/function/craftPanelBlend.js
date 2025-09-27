@@ -1753,7 +1753,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             });
 
-            debug("CraftPanelBlend craft : updates toDelete products canceled", updates, toDelete, products, canceled);
+            debug("CraftPanelBlend craft : updates toDelete products canceled", updates, toDelete, products, this.canceled);
             if (!this.canceled) {
                 // await this.actor.updateEmbeddedDocuments("Item", updates);
                 await this.actor.createEmbeddedDocuments("Item", products);
@@ -1797,8 +1797,8 @@ export class CraftPanelBlend extends HandlebarsApplication {
             }));
         }
         //解锁配方
-        debug("CraftPanelBlend craft : selectedRecipe canceled game.user.isGM this.journalEntry.getFlag(MODULE_ID, unlockRecipe)", selectedRecipe, canceled, game.user.isGM, this.journalEntry.getFlag(MODULE_ID, "unlockRecipe"));
-        if (selectedRecipe && !canceled && !game.user.isGM && this.journalEntry.getFlag(MODULE_ID, "unlockRecipe")) {
+        debug("CraftPanelBlend craft : selectedRecipe canceled game.user.isGM this.journalEntry.getFlag(MODULE_ID, unlockRecipe)", selectedRecipe, this.canceled, game.user.isGM, this.journalEntry.getFlag(MODULE_ID, "unlockRecipe"));
+        if (selectedRecipe && !this.canceled && !game.user.isGM && this.journalEntry.getFlag(MODULE_ID, "unlockRecipe")) {
             // if ((selectedRecipe.ownership?.[game.user.id] ?? selectedRecipe.ownership?.default ?? -1) <= 0) {
             //     if (getActiveGM()) {
             //         await Socket.executeAsGM("updateDocument", selectedRecipe.uuid, { "ownership": { [game.user.id]: 2 } });
