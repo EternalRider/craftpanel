@@ -1955,8 +1955,8 @@ export class CraftPanelForge extends HandlebarsApplication {
                         console.error(e);
                     }
                 }
-                debug("Hooks.call craftPanelForgeRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
-                await Hooks.call("craftPanelForgeRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                debug("Hooks.call craftPanelForgeModifier", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                await Hooks.call("craftPanelForgeModifier", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
                 //应用调整的效果
                 let changes = modifier.getFlag(MODULE_ID, "changes") ?? [];
                 let asAE = modifier.getFlag(MODULE_ID, "asAE") ?? false;

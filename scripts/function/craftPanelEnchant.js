@@ -2181,8 +2181,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                         console.error(e);
                     }
                 }
-                debug("Hooks.call craftPanelEnchantRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
-                await Hooks.call("craftPanelEnchantRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                debug("Hooks.call craftPanelEnchantModifier", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                await Hooks.call("craftPanelEnchantModifier", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
                 //应用调整的效果
                 let changes = modifier.getFlag(MODULE_ID, "changes") ?? [];
                 let asAE = modifier.getFlag(MODULE_ID, "asAE") ?? false;

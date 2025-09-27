@@ -1843,7 +1843,7 @@ export class CraftPanelCook extends HandlebarsApplication {
                 console.error(e);
             }
         }
-        debug("Hooks.call craftPanelCookPre", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, this.canceled);
+        debug("Hooks.call craftPanelCookPre", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, this.canceled);
         await Hooks.call("craftPanelCookPre", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, this.canceled);
         //获取当前选择的所有调整
         let selectedModifiers = this.modifiersJE.filter(m => this.choosedModifiers.includes(m.uuid));
@@ -1971,8 +1971,8 @@ export class CraftPanelCook extends HandlebarsApplication {
                         console.error(e);
                     }
                 }
-                debug("Hooks.call craftPanelCookRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
-                await Hooks.call("craftPanelCookRecipe", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                debug("Hooks.call craftPanelCookModifier", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
+                await Hooks.call("craftPanelCookModifier", this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, modifier, results, this.canceled);
                 //应用调整的效果
                 let changes = modifier.getFlag(MODULE_ID, "changes") ?? [];
                 let asAE = modifier.getFlag(MODULE_ID, "asAE") ?? false;
