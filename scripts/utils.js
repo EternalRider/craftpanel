@@ -106,11 +106,11 @@ export async function chatMessage(content, options = {}, others = {}) {
   let message = "";
   let chatData = {};
   if ((options.img ?? false) && (options.title ?? false)) {
-    message += `<h2><img style="vertical-align:middle" src=${options.img} width="28" height="28"> ${options.title} </h2>`;
+    message += `<div class="craft-message-title"><img style="vertical-align:middle" src=${options.img} width="28" height="28"><h2>${options.title}</h2></div>`;
   } else if (options.img ?? false) {
-    message += `<h2><img style="vertical-align:middle" src=${options.img} width="28" height="28"></h2>`;
+    message += `<div class="craft-message-title"><img style="vertical-align:middle" src=${options.img} width="28" height="28"><h2></h2></div>`;
   } else if (options.title ?? false) {
-    message += `<h2> ${options.title} </h2>`;
+    message += `<div class="craft-message-title"><h2>${options.title}</h2></div>`;
   }
   // if (options.item ?? false) {
   //   message += await getItemCard(options.item);

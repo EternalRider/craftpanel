@@ -9,7 +9,7 @@
                 <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                     data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
                     style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
-                    <div class="element-color-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
+                    <div class="element-color-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></div>
                 </div>
                 {{/each}}
             </div>
@@ -29,7 +29,7 @@
                             {{#each slot.elements as |element|}}
                             <div class="slot-element-circle-container">
                                 {{#each (range 0 element.num)}}
-                                <div class="slot-element-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
+                                <i class="slot-element-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></i>
                                 {{/each}}
                             </div>
                             {{/each}}
@@ -67,7 +67,7 @@
                         {{#each slot.elements as |element|}}
                         <div class="slot-element-circle-container">
                             {{#each (range 0 element.num)}}
-                            <div class="slot-element-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
+                            <i class="slot-element-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></i>
                             {{/each}}
                         </div>
                         {{/each}}

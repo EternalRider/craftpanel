@@ -1,5 +1,5 @@
 const MODULE_ID = "craftpanel";
-const PARTIAL_KEY = "6uy8g1tXqHlhlp65dhiL-genericFormHelper-" + MODULE_ID;
+const PARTIAL_KEY = "genericFormHelper-" + MODULE_ID;
 
 export class FormBuilder {
     constructor() {

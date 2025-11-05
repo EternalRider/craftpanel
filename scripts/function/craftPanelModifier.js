@@ -140,6 +140,18 @@ export class CraftPanelModifier extends HandlebarsApplication {
                     ...el,
                 };
             });
+            let cost = je.getFlag(MODULE_ID, "cost") ?? 0;
+            let costInfo = "";
+            let costClass = "";
+            if (cost != 0) {
+                if (cost > 0) {
+                    costInfo = `-${cost}`;
+                    costClass = "minus-cost";
+                } else {
+                    costInfo = `+${-cost}`;
+                    costClass = "plus-cost";
+                }
+            }
             return {
                 id: je.id,
                 name: je.name,
@@ -147,7 +159,10 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 index: i,
                 uuid: je.uuid,
                 ingredients: ingredients,
-                choosed: je.id == this.journalEntryPage.id ? "choosed" : ""
+                choosed: je.id == this.journalEntryPage.id ? "choosed" : "",
+                cost,
+                costInfo,
+                costClass,
             };
         });
         debug("CraftPanelModifier _prepareContext : modifiers", modifiers);

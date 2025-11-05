@@ -10,6 +10,7 @@
                     <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
                     <div class="craft-modifier-desc">
                         <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
+                        {{#if modifier.cost}}<div class="craft-modifier-cost {{modifier.costClass}}" draggable="false">{{modifier.costInfo}}</div>{{/if}}
                         <div class="craft-modifier-ingredients">
                             {{#each modifier.ingredients as |ingredient|}}
                             <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
@@ -82,7 +83,7 @@
                 <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                     data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
                     style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
-                    <div class="element-color-circle {{element.shape}}" draggable="false" style="background-color: {{element.color}};"></div>
+                    <div class="element-color-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></div>
                 </div>
                 {{/each}}
             </div>

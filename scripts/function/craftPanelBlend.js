@@ -46,6 +46,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         this.results = [];
         this.slots = [];
         this.recipes = [];
+        this.recipesCanShow = [];
         this.materials = [];
         this.needRefresh = true;
         this.panelOptions = options;
@@ -206,7 +207,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", script);
                     let unlock = false;
                     try {
-                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials);
+                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
                         console.error(e);
@@ -224,9 +225,10 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", "slotItem", script);
                     let result;
                     try {
-                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials, this.slotItems[i]);
+                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems), this.slotItems[i]);
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                        console.error(e);
                     }
                     if (result) {
                         isNecessary = result?.isNecessary ?? isNecessary;
@@ -277,6 +279,22 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             });
         }
+
+        const refreshScript = this.journalEntry.getFlag(MODULE_ID, "refresh-script");
+        if (refreshScript && refreshScript.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", refreshScript);
+            let unlock = false;
+            try {
+                unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
+            }
+            if (unlock) {
+                isLocked = false;
+            }
+        }
+
         debug("CraftPanelBlend _prepareContext : this.slots", this.slots);
 
         return {
@@ -478,6 +496,12 @@ export class CraftPanelBlend extends HandlebarsApplication {
      * 配置界面
      */
     async configure() {
+        const showResultOptions = {
+            "none": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.not-show`),
+            "show": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show`),
+            "question mark": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.question-mark`),
+            "by unlock": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.by-unlock`),
+        };
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntry)
@@ -488,14 +512,16 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .file({ name: `flags.${MODULE_ID}.background`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.background-image`) })
             .checkbox({ name: `flags.${MODULE_ID}.unlockRecipe`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-recipe`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-recipe-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name-hint`) })
-            .select({ name: `flags.${MODULE_ID}.showResult`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result`), options: { "none": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.not-show`), "show": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show`), "question mark": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.question-mark`) }, hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result-hint`) })
+            .select({ name: `flags.${MODULE_ID}.showResult`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result`), options: showResultOptions, hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result-hint`) })
             .tab({ id: "requirements", icon: "fas fa-list-check", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-requirements-tab`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-hint`), options: { ...CraftPanelBlend.REQUIREMENTS_TYPE_OPTIONS } })
             .text({ name: `flags.${MODULE_ID}.requirements-name`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-name-hint`) })
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
             .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-script-hint`) })
             .tab({ id: "scripts", icon: "fa-solid fa-code", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-scripts-tab`) })
+            .script({ name: `flags.${MODULE_ID}.refresh-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.refresh-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.refresh-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craft-pre-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craft-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craft-post-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script-hint`) })
 
         const data = await fb.render();
@@ -508,10 +534,24 @@ export class CraftPanelBlend extends HandlebarsApplication {
 
     async changePanelSize(event) {
         const name = event.currentTarget.dataset.name;
+        // Ensure the panelSizes entry exists
+        this.panelSizes[name] = this.panelSizes[name] ?? {};
+
+        // Default localization keys for pre-filling the name field
+        const defaultTitleKeys = {
+            recipes: `${MODULE_ID}.recipe`,
+            slots: `${MODULE_ID}.${this.APP_ID}.slot`,
+            elements: `${MODULE_ID}.element`,
+            results: `${MODULE_ID}.result`,
+            materials: `${MODULE_ID}.material`,
+        };
+        const key = defaultTitleKeys[name] ?? `${MODULE_ID}.${name}`;
+
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.panelSizes[name])
             .title(game.i18n.localize(`${MODULE_ID}.change-panel-size`))
+            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`), value: this.panelSizes[name].name ?? game.i18n.localize(key) })
             .number({ name: "width", label: game.i18n.localize(`${MODULE_ID}.width`), min: 0 })
             .number({ name: "height", label: game.i18n.localize(`${MODULE_ID}.height`), min: 0 });
         const data = await fb.render();
@@ -911,11 +951,11 @@ export class CraftPanelBlend extends HandlebarsApplication {
     async refreshResults() {
         const showResult = this.journalEntry.getFlag(MODULE_ID, "showResult");
         debug("CraftPanelBlend refreshResults : showResult", showResult);
-        if ((showResult === "show" || showResult === "question mark") && this.checkSlot()) {
+        if ((showResult === "show" || showResult === "question mark" || showResult == "by unlock") && this.checkSlot()) {
             let recipes = await this.matchRecipe();
             debug("CraftPanelBlend refreshResults : recipes", recipes);
             if (recipes.length > 0) {
-                if ((recipes.length > 1) || (showResult === "question mark")) {
+                if ((recipes.length > 1) || (showResult === "question mark") || (showResult === "by unlock" && this.recipesCanShow.find(r => r.id == recipes[0].id) === undefined)) {
                     this.results.push({
                         name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unknown-result`),
                         img: "icons/magic/symbols/question-stone-yellow.webp",
@@ -1046,6 +1086,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         } else {
             this.recipesJE = recipesJE;
         }
+        this.recipesCanShow = recipesJE;
         debug("CraftPanelBlend refreshPanel : recipesJE", recipesJE);
         if (recipe_category != "all") {
             // recipesJE = recipesJE.filter(r => r.getFlag(MODULE_ID, "category") == recipe_category);
@@ -1064,7 +1105,15 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     ...el,
                 };
             });
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div>`);
+            let showResult = je.getFlag(MODULE_ID, "showResult") ?? "yes";
+            let resultToolTip = "";
+            if (showResult != "no") {
+                let results = je.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(je.getFlag(MODULE_ID, "results"))) : [];
+                if (results.length > 0) {
+                    resultToolTip = `<div class="tooltip-elements">${results.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.quantity}</div></div>` }).join('')}</div>`;
+                }
+            }
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div>${resultToolTip}`);
             return {
                 id: je.id,
                 name: je.name,
@@ -1526,6 +1575,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             return false
         };
         let preScript = this.journalEntry.getFlag(MODULE_ID, "craft-pre-script");
+        let craftScript = this.journalEntry.getFlag(MODULE_ID, "craft-script");
         let postScript = this.journalEntry.getFlag(MODULE_ID, "craft-post-script");
         debug("CraftPanelBlend craft : preScript postScript", preScript, postScript);
         let materials = [];
@@ -1660,6 +1710,16 @@ export class CraftPanelBlend extends HandlebarsApplication {
             }
             debug("Hooks.call craftPanelBlendRecipe", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
             await Hooks.call("craftPanelBlendRecipe", this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
+        }
+        //执行创建物品前最后的脚本
+        if (craftScript && craftScript.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "recipes", "elements", "materials", "recipe", "results", "canceled", craftScript);
+            try {
+                await fn(this, this.journalEntry, this.actor, this.recipesJE, this.elements, materials, selectedRecipe, results, this.canceled);
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
+            }
         }
         //结算结果
         if (this.actor) {

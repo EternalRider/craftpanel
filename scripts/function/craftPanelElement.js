@@ -258,6 +258,7 @@ export class CraftPanelElement extends HandlebarsApplication {
         /** @type {CraftElement} */
         const element = item.getFlag(MODULE_ID, "elementConfig");
         debug("CraftPanelElement editElement : element", element);
+        let shape_alter = element?.shape_alter ?? "";
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(element)
@@ -269,6 +270,7 @@ export class CraftPanelElement extends HandlebarsApplication {
             .color({ name: "color", label: game.i18n.localize(`${MODULE_ID}.color`) })
             .number({ name: "weight", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.weight`) })
             .select({ name: "shape", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: CraftPanelElement.SHAPE_STYLE })
+            .text({ name: "shape_alter", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape-alter`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape-alter-hint`), value: shape_alter })
             .button({
                 label: game.i18n.localize(`Delete`),
                 callback: async () => {
@@ -286,6 +288,10 @@ export class CraftPanelElement extends HandlebarsApplication {
         const data = await fb.render();
         debug("CraftPanelElement editElement : data", data);
         if (!data) return;
+        if (data.shape_alter != "") {
+            shape_alter = data.shape_alter;
+            data.shape = shape_alter;
+        }
         await item.setFlag(MODULE_ID, "elementConfig", data);
         this.needRefresh = true;
         await this.render(true);
@@ -547,9 +553,29 @@ export class CraftPanelElement extends HandlebarsApplication {
 
     static get SHAPE_STYLE() {
         return {
-            circle: `${MODULE_ID}.${this.APP_ID}.shape-circle`,
-            square: `${MODULE_ID}.${this.APP_ID}.shape-square`,
-            diamond: `${MODULE_ID}.${this.APP_ID}.shape-diamond`,
+            "circle": `${MODULE_ID}.${this.APP_ID}.shape-circle`,
+            "square": `${MODULE_ID}.${this.APP_ID}.shape-square`,
+            "diamond": `${MODULE_ID}.${this.APP_ID}.shape-diamond`,
+            "triangle": `${MODULE_ID}.${this.APP_ID}.shape-triangle`,
+            "bolt": `${MODULE_ID}.${this.APP_ID}.shape-bolt`,
+            "feather-pointed": `${MODULE_ID}.${this.APP_ID}.shape-feather`,
+            "sun": `${MODULE_ID}.${this.APP_ID}.shape-sun`,
+            "moon": `${MODULE_ID}.${this.APP_ID}.shape-moon`,
+            "star": `${MODULE_ID}.${this.APP_ID}.shape-star`,
+            "gem": `${MODULE_ID}.${this.APP_ID}.shape-gem`,
+            "heart": `${MODULE_ID}.${this.APP_ID}.shape-heart`,
+            "droplet": `${MODULE_ID}.${this.APP_ID}.shape-droplet`,
+            "pot-food": `${MODULE_ID}.${this.APP_ID}.shape-food`,
+            "hat-chef": `${MODULE_ID}.${this.APP_ID}.shape-chef`,
+            "meat": `${MODULE_ID}.${this.APP_ID}.shape-meat`,
+            "leaf": `${MODULE_ID}.${this.APP_ID}.shape-leaf`,
+            "leafy-green": `${MODULE_ID}.${this.APP_ID}.shape-leafy-green`,
+            "fish": `${MODULE_ID}.${this.APP_ID}.shape-fish`,
+            "cheese": `${MODULE_ID}.${this.APP_ID}.shape-cheese`,
+            "strawberry": `${MODULE_ID}.${this.APP_ID}.shape-strawberry`,
+            "mushroom": `${MODULE_ID}.${this.APP_ID}.shape-mushroom`,
+            "egg": `${MODULE_ID}.${this.APP_ID}.shape-egg`,
+            "bottle-droplet": `${MODULE_ID}.${this.APP_ID}.shape-bottle-droplet`,
         };
     }
     static get REQUIREMENTS_TYPE_OPTIONS() {

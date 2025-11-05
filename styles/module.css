@@ -160,6 +160,7 @@
     box-shadow: inset 0 0 10px var(--item-color, #191005);
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
+    align-self: center;
 }
 .craft .craft-content .craft-main-panel .craft-slot.round {
     border-radius: 50%;
@@ -190,9 +191,15 @@
     width: 60px;
     height: 60px;
 }
+.craft-panel-enchant .craft-main-panel .craft-slot.choosed,
 .craft-panel-forge .craft-main-panel .craft-slot.choosed {
-    transform: scale(1.05);
-    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 10px var(--item-color, #191005);
+    transform: scale(1.1);
+    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 10px var(--item-color, #191005), 0 0 15px var(--item-color, #191005);
+    margin: 0 20px;
+}
+.craft-panel-enchant .craft-main-panel .craft-slot.choosed:hover,
+.craft-panel-forge .craft-main-panel .craft-slot.choosed:hover {
+    transform: scale(1.2);
 }
 /* 图块-元素 */
 .craft-tooltip .tooltip-element,
@@ -211,6 +218,7 @@
 .craft .craft-content .element-slot {
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
+    align-self: center;
 }
 .craft .craft-content .element-slot.round {
     border-radius: 50%;
@@ -221,13 +229,13 @@
 }
 /* 图块-元素-元素颜色 */
 .craft .craft-content .element-color-circle {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
     position: relative;
     top: 35px;
+    left: 17.5px;
+    font-size: 20px;
+    color: #00000000;
 }
-.craft .craft-content .element-color-circle.circle {
+/* .craft .craft-content .element-color-circle.circle {
     border-radius: 50%;
 }
 .craft .craft-content .element-color-circle.square {
@@ -236,7 +244,7 @@
 .craft .craft-content .element-color-circle.diamond {
     border-radius: 0%;
     transform: scale(0.7) rotate(45deg);
-}
+} */
 /* 图块-材料-元素点列容器 */
 .craft .craft-content .craft-slot-elements {
     display: flex;
@@ -261,11 +269,11 @@
 }
 /* 图块-材料-元素点 */
 .craft .craft-content .slot-element-circle-container .slot-element-circle {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    font-size: 8px;
+    position: relative;
+    color: #00000000;
 }
-.craft .craft-content .slot-element-circle-container .slot-element-circle.circle {
+/* .craft .craft-content .slot-element-circle-container .slot-element-circle.circle {
     border-radius: 50%;
 }
 .craft .craft-content .slot-element-circle-container .slot-element-circle.square {
@@ -275,7 +283,7 @@
 .craft .craft-content .slot-element-circle-container .slot-element-circle.diamond {
     border-radius: 0%;
     transform: scale(0.7) rotate(45deg);
-}
+} */
 /* 提示框-材料 */
 .craft-tooltip figure {
     display: flex;
@@ -342,6 +350,38 @@
     line-height: 13px;
     font-size: 13px;
 }
+.craft .craft-content .craft-modifiers-panel .craft-modifier-cost {
+    height: 20px;
+    vertical-align: middle;
+    font-weight: bold;
+    line-height: 20px;
+    text-shadow: -1px -1px 2px black, 1px 1px 2px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
+    background-size: 30px;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 50%;
+    box-shadow: 0 0 10px black;
+
+    /* 关键定位/溢出控制：以右侧为锚点，让超长内容向左扩展 */
+    position: absolute;
+    right: 0;       /* 锚定右边缘 */
+    left: auto;       /* 明确禁止左锚定，保证以右边为固定点 */
+    top: 0;
+    /* 不换行，允许内容超出父元素（向左扩展）；并限制最大宽度避免跑出屏幕 */
+    white-space: nowrap;
+    overflow: visible;
+    text-align: right; /* 文本从右向左呈现，更符合右侧锚点 */
+    transform-origin: right top;
+    box-sizing: border-box;
+    min-width: 20px;
+    width: auto; /* 让宽度随内容增长（向左扩展） */
+}
+.craft .craft-content .craft-modifiers-panel .craft-modifier-cost.plus-cost {
+    color: #4fff4f;
+}
+.craft .craft-content .craft-modifiers-panel .craft-modifier-cost.minus-cost {
+    color: #ff4f4f;
+}
 /* 配方组件 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier,
 .craft .craft-content .craft-recipes-panel .craft-recipe {
@@ -355,7 +395,7 @@
     gap: 5px;
     transition: transform 0.2s, box-shadow 0.2s;
 }
-.swpt-craft .craft-content .craft-players-panel .craft-player {
+.craft .craft-content .craft-players-panel .craft-player {
     width: 100%;
     padding: 5px;
     border: 1px solid var(--player-color, white);
@@ -366,7 +406,7 @@
     gap: 5px;
     transition: transform 0.2s, box-shadow 0.2s;
 }
-.swpt-craft .craft-content .craft-players-panel .craft-player,
+.craft .craft-content .craft-players-panel .craft-player,
 .craft .craft-content .craft-recipes-panel .craft-recipe,
 .craft .craft-content .craft-modifiers-panel .craft-modifier:not([locked]) {
     cursor: pointer;
@@ -380,7 +420,7 @@
     border-color: aquamarine;
     transform: scale(1.05);
 }
-.swpt-craft .craft-content .craft-players-panel .craft-player.choosed {
+.craft .craft-content .craft-players-panel .craft-player.choosed {
     border-color: var(--player-color, aquamarine);
     transform: scale(1.05);
 }
@@ -400,9 +440,10 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    position: relative;
 }
 /* 配方名称 */
-.swpt-craft .craft-content .craft-players-panel .craft-player > h3,
+.craft .craft-content .craft-players-panel .craft-player > h3,
 .craft .craft-content .craft-modifiers-panel .craft-modifier-desc > h3,
 .craft .craft-content .craft-recipes-panel .craft-recipe-desc > h3 {
     margin: 0;
@@ -471,10 +512,9 @@
 }
 .craft .craft-content .craft-cost-panel input[type=number] {
     font-size: var(--font-h1-size);
-    min-width: 70px;
-    max-width: 70px;
-    min-height: 70px;
-    max-height: 70px;
+    width: 70px;
+    height: 70px;
+    flex: 0 0 auto;
     text-align: center;
     border-radius: 50%;
     background-position: center;
@@ -556,4 +596,15 @@
     transform: scale(1.1);
     border-color: #00ff00;
     box-shadow: inset 0 0 10px #00ff00, 0 0 10px #00ff00;
+}
+
+.craft-message-title {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+}
+
+.craft-message-title h2 {
+    margin: 0;
+    line-height: 36px;
 }

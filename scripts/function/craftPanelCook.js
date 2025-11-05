@@ -59,6 +59,7 @@ export class CraftPanelCook extends HandlebarsApplication {
             icon: journalEntry.getFlag(MODULE_ID, "costIcon") ?? "",
             element: journalEntry.getFlag(MODULE_ID, "costElement") ?? "",
         }
+        this.modifierLimit = journalEntry.getFlag(MODULE_ID, "modifierLimit") ?? 0;
         /**@type {number[]} */
         this.choosedModifiers = [];
 
@@ -233,7 +234,7 @@ export class CraftPanelCook extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", script);
                     let unlock = false;
                     try {
-                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials);
+                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
                         console.error(e);
@@ -251,9 +252,10 @@ export class CraftPanelCook extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", "slotItem", script);
                     let result;
                     try {
-                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials, this.slotItems[i]);
+                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems), this.slotItems[i]);
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                        console.error(e);
                     }
                     if (result) {
                         isNecessary = result?.isNecessary ?? isNecessary;
@@ -331,6 +333,20 @@ export class CraftPanelCook extends HandlebarsApplication {
             modifiers = modifiers.filter(m => m.category.includes(modifier_category));
         }
         debug("CraftPanelCook _prepareContext: modifiers", modifiers);
+        const refreshScript = this.journalEntry.getFlag(MODULE_ID, "refresh-script");
+        if (refreshScript && refreshScript.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", refreshScript);
+            let unlock = false;
+            try {
+                unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
+            }
+            if (unlock) {
+                isLocked = false;
+            }
+        }
         return {
             isEdit: this.isEdit,
             slots: this.slots,  //中间显示的槽位
@@ -621,6 +637,7 @@ export class CraftPanelCook extends HandlebarsApplication {
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
             .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelCook.SHAPE_STYLE } })
             .file({ name: `flags.${MODULE_ID}.background`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.background-image`) })
+            .number({ name: `flags.${MODULE_ID}.modifierLimit`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-limit`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-limit-hint`), min: 0, step: 1 })
             .tab({ id: "cost", icon: "fa-solid fa-coins", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-cost-tab`) })
             .number({ name: `flags.${MODULE_ID}.baseCost`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost-hint`) })
             .file({ name: `flags.${MODULE_ID}.costIcon`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-icon`) })
@@ -632,7 +649,9 @@ export class CraftPanelCook extends HandlebarsApplication {
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
             .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-script-hint`) })
             .tab({ id: "scripts", icon: "fa-solid fa-code", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-scripts-tab`) })
+            .script({ name: `flags.${MODULE_ID}.refresh-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.refresh-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.refresh-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craft-pre-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craft-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craft-post-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script-hint`) })
 
         const data = await fb.render();
@@ -647,10 +666,24 @@ export class CraftPanelCook extends HandlebarsApplication {
 
     async changePanelSize(event) {
         const name = event.currentTarget.dataset.name;
+        // Ensure the panelSizes entry exists
+        this.panelSizes[name] = this.panelSizes[name] ?? {};
+
+        // Default localization keys for pre-filling the name field
+        const defaultTitleKeys = {
+            modifiers: `${MODULE_ID}.modifier`,
+            slots: `${MODULE_ID}.${this.APP_ID}.slot`,
+            elements: `${MODULE_ID}.element`,
+            results: `${MODULE_ID}.result`,
+            materials: `${MODULE_ID}.material`,
+        };
+        const key = defaultTitleKeys[name] ?? `${MODULE_ID}.${name}`;
+
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.panelSizes[name])
             .title(game.i18n.localize(`${MODULE_ID}.change-panel-size`))
+            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`), value: this.panelSizes[name].name ?? game.i18n.localize(key) })
             .number({ name: "width", label: game.i18n.localize(`${MODULE_ID}.width`), min: 0 })
             .number({ name: "height", label: game.i18n.localize(`${MODULE_ID}.height`), min: 0 });
         const data = await fb.render();
@@ -1388,6 +1421,17 @@ export class CraftPanelCook extends HandlebarsApplication {
                 choosed = "choosed";
                 this.cost.value -= cost;
             }
+            let costInfo = "";
+            let costClass = "";
+            if (cost != 0) {
+                if (cost > 0) {
+                    costInfo = `-${cost}`;
+                    costClass = "minus-cost";
+                } else {
+                    costInfo = `+${-cost}`;
+                    costClass = "plus-cost";
+                }
+            }
             return {
                 id: je.id,
                 name: je.name,
@@ -1401,12 +1445,16 @@ export class CraftPanelCook extends HandlebarsApplication {
                 category: je.getFlag(MODULE_ID, "category") ?? [],
                 choosed,
                 cost,
+                costInfo,
+                costClass,
             };
         }));
         debug("CraftPanelCook refreshModifiers: this.modifiers", this.modifiers);
         this.choosedModifiers = this.modifiers.filter(m => m.choosed).map(m => m.uuid);
-        debug("CraftPanelCook refreshModifiers: this.choosedModifiers", this.choosedModifiers);
-        if (this.cost.value < 0) {
+        this.modifierLimit = Number(this.modifierLimit) || 0;
+        let choosedCount = this.modifiers.filter(m => m.choosed && !m.auto).length;
+        debug("CraftPanelCook refreshModifiers: this.choosedModifiers choosedCount this.modifierLimit", this.choosedModifiers, choosedCount, this.modifierLimit);
+        if (this.cost.value < 0 || (choosedCount > this.modifierLimit && this.modifierLimit > 0)) {
             this.modifiers.filter(m => m.choosed && !m.auto).forEach(m => {
                 m.choosed = "";
                 this.cost.value += m.cost;
@@ -1649,9 +1697,18 @@ export class CraftPanelCook extends HandlebarsApplication {
             this.choosedModifiers = this.choosedModifiers.filter(m => m !== modifierJE.uuid);
         } else {
             //检查能否选择
-            if (modifier.locked || this.cost.value < cost) {
+            let choosedCount = this.modifiers.filter(m => m.choosed && !m.auto).length;
+            if (modifier.locked || this.cost.value < cost || (choosedCount >= this.modifierLimit && this.modifierLimit > 0)) {
                 if (notice) {
-                    ui.notifications.error(modifier.locked ? game.i18n.localize(`${MODULE_ID}.notification.modifierLocked`) : game.i18n.localize(`${MODULE_ID}.notification.costNotEnough`));
+                    let message = "";
+                    if (modifier.locked) {
+                        message = game.i18n.localize(`${MODULE_ID}.notification.modifierLocked`);
+                    } else if (this.cost.value < cost) {
+                        message = game.i18n.localize(`${MODULE_ID}.notification.costNotEnough`);
+                    } else if (choosedCount >= this.modifierLimit && this.modifierLimit > 0) {
+                        message = game.i18n.localize(`${MODULE_ID}.notification.modifierLimit`);
+                    }
+                    ui.notifications.error(message);
                 }
                 return;
             }
@@ -1805,6 +1862,7 @@ export class CraftPanelCook extends HandlebarsApplication {
             return false
         };
         let preScript = this.journalEntry.getFlag(MODULE_ID, "craft-pre-script");
+        let craftScript = this.journalEntry.getFlag(MODULE_ID, "craft-script");
         let postScript = this.journalEntry.getFlag(MODULE_ID, "craft-post-script");
         debug("CraftPanelCook craft : preScript postScript", preScript, postScript);
         let materials = [];
@@ -2009,6 +2067,16 @@ export class CraftPanelCook extends HandlebarsApplication {
                         }
                     }
                 }
+            }
+        }
+        //执行创建物品前最后的脚本
+        if (craftScript && craftScript.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "modifiers", "elements", "materials", "results", "canceled", craftScript);
+            try {
+                await fn(this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, results, this.canceled);
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
             }
         }
         debug("CraftPanelCook craft : results", results);

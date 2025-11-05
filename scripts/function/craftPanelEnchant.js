@@ -66,8 +66,11 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             icon: journalEntry.getFlag(MODULE_ID, "costIcon") ?? "",
             element: journalEntry.getFlag(MODULE_ID, "costElement") ?? "",
         }
+        this.modifierLimit = journalEntry.getFlag(MODULE_ID, "modifierLimit") ?? 0;
         /**@type {number[]} */
         this.choosedModifiers = [];
+        /**@type {string[]} */
+        this.choosedResults = [];
 
         this.quantityPath = game.settings.get(MODULE_ID, 'quantityPath');
         this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
@@ -131,7 +134,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                         [MODULE_ID]: {
                             type: "result",
                             images: [{ name: "icons/magic/symbols/runes-etched-steel-blade.webp", src: "icons/magic/symbols/runes-etched-steel-blade.webp" }],
-                            size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
+                            size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.6,
                             ...DEFAULT_RESULT_DATA,
                         },
                     },
@@ -254,7 +257,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", script);
                     let unlock = false;
                     try {
-                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials);
+                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
                         console.error(e);
@@ -272,9 +275,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", "slotItem", script);
                     let result;
                     try {
-                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials, this.slotItems[i]);
+                        result = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems), this.slotItems[i]);
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                        console.error(e);
                     }
                     if (result) {
                         isNecessary = result?.isNecessary ?? isNecessary;
@@ -331,6 +335,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             if (this.isEdit) {
                 data.empty = "empty";
                 data.draggable = el.position.unlock;
+                data.choosed = "";
             } else {
                 data.img = this.resultOverrides[i]?.img ?? this.resultItems[i]?.img ?? el.img;
                 data.description = this.resultOverrides[i]?.description ?? this.resultItems[i]?.description ?? el.description;
@@ -342,9 +347,11 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     data.itemColor = r.itemColor;
                     data.empty = "";
                     data.draggable = true;
+                    data.choosed = "choosed";
                 } else {
                     data.empty = "empty";
                     data.draggable = false;
+                    data.choosed = "";
                 }
                 data.tooltip = tooltip;
             }
@@ -357,6 +364,20 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             modifiers = modifiers.filter(m => m.category.includes(modifier_category));
         }
         debug("CraftPanelEnchant _prepareContext: modifiers", modifiers);
+        const refreshScript = this.journalEntry.getFlag(MODULE_ID, "refresh-script");
+        if (refreshScript && refreshScript.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", refreshScript);
+            let unlock = false;
+            try {
+                unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
+            }
+            if (unlock) {
+                isLocked = false;
+            }
+        }
         return {
             isEdit: this.isEdit,
             slots: this.slots,  //中间显示的槽位
@@ -397,66 +418,6 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         });
 
         if (this.isEdit) {
-            // html.querySelector("button[name='new-slot']").addEventListener("click", async (event) => {
-            //     event.preventDefault();
-            //     await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
-            //         {
-            //             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-slot`),
-            //             src: "icons/commodities/materials/bowl-powder-pink.webp",
-            //             "text.content": null,
-            //             flags: {
-            //                 [MODULE_ID]: {
-            //                     type: "slot",
-            //                     ...DEFAULT_SLOT_DATA,
-            //                 },
-            //             },
-            //         },
-            //     ]);
-            //     await this.render(true);
-            // });
-            // html.querySelector("button[name='new-result']").addEventListener("click", async (event) => {
-            //     event.preventDefault();
-            //     await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
-            //         {
-            //             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-result`),
-            //             src: "icons/magic/symbols/runes-etched-steel-blade.webp",
-            //             "text.content": null,
-            //             flags: {
-            //                 [MODULE_ID]: {
-            //                     type: "result",
-            //                     images: [{ name: "icons/magic/symbols/runes-etched-steel-blade.webp", src: "icons/magic/symbols/runes-etched-steel-blade.webp" }],
-            //                     size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
-            //                     ...DEFAULT_RESULT_DATA,
-            //                 },
-            //             },
-            //         },
-            //     ]);
-            //     this.needRefresh = true;
-            //     await this.render(true);
-            // });
-            // html.querySelector("button[name='new-modifier']").addEventListener("click", async (event) => {
-            //     event.preventDefault();
-            //     await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
-            //         {
-            //             name: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.new-modifier`),
-            //             src: "icons/magic/symbols/rune-sigil-green.webp",
-            //             "text.content": null,
-            //             flags: {
-            //                 [MODULE_ID]: {
-            //                     type: "modifier",
-            //                     changes: [],
-            //                     ...DEFAULT_MODIFIER_DATA,
-            //                 },
-            //             },
-            //         },
-            //     ]);
-            //     this.needRefresh = true;
-            //     await this.render(true);
-            // });
-            // html.querySelector("button[name='configure-panel']").addEventListener("click", async (event) => {
-            //     event.preventDefault();
-            //     await this.configure();
-            // });
             html.querySelectorAll(".craft-panel-tittle > i").forEach((icon) => {
                 icon.addEventListener("click", this.changePanelSize.bind(this));
             });
@@ -670,8 +631,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             .title(game.i18n.localize(`${MODULE_ID}.configure`) + ": " + this.journalEntry.name)
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
+            .number({ name: `flags.${MODULE_ID}.resultLimit`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.result-limit`), min: 0, max: Math.max(this.results.length, 1), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.result-limit-hint`), step: 1 })
             .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelEnchant.SHAPE_STYLE } })
             .file({ name: `flags.${MODULE_ID}.background`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.background-image`) })
+            .number({ name: `flags.${MODULE_ID}.modifierLimit`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-limit`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-limit-hint`), min: 0, step: 1 })
             .tab({ id: "cost", icon: "fa-solid fa-coins", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-cost-tab`) })
             .number({ name: `flags.${MODULE_ID}.baseCost`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.base-cost-hint`) })
             .file({ name: `flags.${MODULE_ID}.costIcon`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.cost-icon`) })
@@ -683,7 +646,9 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             .multiSelect({ name: `flags.${MODULE_ID}.requirements-type`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-type-hint`), options: { ...CONFIG.Item.typeLabels } })
             .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.panel-requirements-script-hint`) })
             .tab({ id: "scripts", icon: "fa-solid fa-code", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-scripts-tab`) })
+            .script({ name: `flags.${MODULE_ID}.refresh-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.refresh-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.refresh-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craft-pre-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-pre-script-hint`) })
+            .script({ name: `flags.${MODULE_ID}.craft-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craft-post-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-post-script-hint`) })
 
         const data = await fb.render();
@@ -698,10 +663,24 @@ export class CraftPanelEnchant extends HandlebarsApplication {
 
     async changePanelSize(event) {
         const name = event.currentTarget.dataset.name;
+        // Ensure the panelSizes entry exists
+        this.panelSizes[name] = this.panelSizes[name] ?? {};
+
+        // Default localization keys for pre-filling the name field
+        const defaultTitleKeys = {
+            modifiers: `${MODULE_ID}.modifier`,
+            slots: `${MODULE_ID}.${this.APP_ID}.slot`,
+            elements: `${MODULE_ID}.element`,
+            results: `${MODULE_ID}.result`,
+            materials: `${MODULE_ID}.material`,
+        };
+        const key = defaultTitleKeys[name] ?? `${MODULE_ID}.${name}`;
+
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.panelSizes[name])
             .title(game.i18n.localize(`${MODULE_ID}.change-panel-size`))
+            .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`), value: this.panelSizes[name].name ?? game.i18n.localize(key) })
             .number({ name: "width", label: game.i18n.localize(`${MODULE_ID}.width`), min: 0 })
             .number({ name: "height", label: game.i18n.localize(`${MODULE_ID}.height`), min: 0 });
         const data = await fb.render();
@@ -817,7 +796,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     [MODULE_ID]: {
                         type: "result",
                         images: [{ name: item.img, src: item.img }],
-                        size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.75,
+                        size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.6,
                         ...DEFAULT_RESULT_DATA,
                     },
                 },
@@ -1115,6 +1094,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         }
         debug("CraftPanelEnchant removeResultItem: this.resultItems this.materials", this.resultItems, this.materials);
         this.resultItems[index] = null;
+        this.choosedResults.splice(this.choosedResults.indexOf(this.results[index].id), 1);
         await this.refreshCost();
         await this.render(true);
     }
@@ -1135,6 +1115,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             if (material) {
                 material.quantity--;
             }
+            this.choosedResults.push(this.results[index].id);
             debug("CraftPanelEnchant addResultItem: this.resultItems this.materials", this.resultItems, this.materials);
             await this.refreshCost();
             await this.render(true);
@@ -1509,6 +1490,17 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 choosed = "choosed";
                 this.cost.value -= cost;
             }
+            let costInfo = "";
+            let costClass = "";
+            if (cost != 0) {
+                if (cost > 0) {
+                    costInfo = `-${cost}`;
+                    costClass = "minus-cost";
+                } else {
+                    costInfo = `+${-cost}`;
+                    costClass = "plus-cost";
+                }
+            }
             return {
                 id: je.id,
                 name: je.name,
@@ -1522,6 +1514,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 category: je.getFlag(MODULE_ID, "category") ?? [],
                 choosed,
                 cost,
+                costInfo,
+                costClass,
                 hasEnchanted,
             };
         }));
@@ -1564,8 +1558,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                 index++;
             }
         }
-        debug("CraftPanelEnchant refreshModifiers: this.modifiers", this.modifiers);
-        if (this.cost.value < 0) {
+        this.modifierLimit = Number(this.modifierLimit) || 0;
+        let choosedCount = this.modifiers.filter(m => m.choosed && !m.auto && !m.hasEnchanted).length;
+        debug("CraftPanelEnchant refreshModifiers: this.modifiers choosedCount this.modifierLimit", this.modifiers, choosedCount, this.modifierLimit);
+        if (this.cost.value < 0 || (choosedCount > this.modifierLimit && this.modifierLimit > 0)) {
             this.modifiers.filter(m => m.choosed && !(m.auto || m.hasEnchanted)).forEach(m => {
                 m.choosed = "";
                 this.cost.value += m.cost;
@@ -1620,7 +1616,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                     const fn = new AsyncFunction("data", "panel", "actor", "elements", "materials", script);
                     let unlock = false;
                     try {
-                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, this.materials);
+                        unlock = await fn(this, this.journalEntry, this.actor ?? game?.user?.character, this.elements, Object.values(this.slotItems));
                     } catch (e) {
                         ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
                         console.error(e);
@@ -1662,6 +1658,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         if (type == "result") {
             slots = this.results;
             slotItems = this.resultItems;
+            const resultLimit = this.journalEntry.getFlag(MODULE_ID, "resultLimit") ?? 0;
+            if (resultLimit > 0 && this.choosedResults.length >= resultLimit) {
+                return false;
+            }
         }
         if (slots[index].isLocked) return false;
         if (this.actor) {
@@ -1705,6 +1705,10 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         let results = this.results.filter(result => result.isNecessary);
         debug("CraftPanelEnchant checkSlot : slots results", slots, results);
         return slots.every(slot => this.slotItems[slot.slotIndex] !== null && this.slotItems[slot.slotIndex] !== undefined) && results.every(result => this.resultItems[result.slotIndex] !== null && this.resultItems[result.slotIndex] !== undefined);
+    }
+    //检查是否未选择结果
+    checkNoResult() {
+        return this.choosedResults.length == 0;
     }
     countQuantity(item) {
         let quantity = foundry.utils.getProperty(item, this.quantityPath);
@@ -1929,7 +1933,8 @@ export class CraftPanelEnchant extends HandlebarsApplication {
             this.choosedModifiers = this.choosedModifiers.filter(m => m !== modifierJE.uuid);
         } else {
             //检查能否选择
-            if (modifier.locked || this.cost.value < cost) {
+            let choosedCount = this.modifiers.filter(m => m.choosed && !m.auto).length;
+            if (modifier.locked || this.cost.value < cost || (choosedCount >= this.modifierLimit && this.modifierLimit > 0)) {
                 return;
             }
             let categories = modifierJE.getFlag(MODULE_ID, "category") ?? [];
@@ -2073,11 +2078,16 @@ export class CraftPanelEnchant extends HandlebarsApplication {
      * 合成物品
      */
     async craft() {
+        if (this.checkNoResult()) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.notification.must-fill-at-least-one-result`));
+            return false;
+        }
         if (!this.checkSlot()) {
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.notification.must-fill-necessary-slot`));
             return false
         };
         let preScript = this.journalEntry.getFlag(MODULE_ID, "craft-pre-script");
+        let craftScript = this.journalEntry.getFlag(MODULE_ID, "craft-script");
         let postScript = this.journalEntry.getFlag(MODULE_ID, "craft-post-script");
         debug("CraftPanelEnchant craft: preScript postScript", preScript, postScript);
         let materials = [];
@@ -2219,6 +2229,16 @@ export class CraftPanelEnchant extends HandlebarsApplication {
                         }
                     }
                 }
+            }
+        }
+        //执行创建物品前最后的脚本
+        if (craftScript && craftScript.trim() != "") {
+            const fn = new AsyncFunction("data", "panel", "actor", "modifiers", "elements", "materials", "results", "canceled", craftScript);
+            try {
+                await fn(this, this.journalEntry, this.actor, this.modifiersJE, this.elements, materials, results, this.canceled);
+            } catch (e) {
+                ui.notifications.error(game.i18n.localize(`${MODULE_ID}.notification.script-error`));
+                console.error(e);
             }
         }
         debug("CraftPanelEnchant craft: results", results);
