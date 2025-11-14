@@ -624,6 +624,14 @@ export class CraftPanelBlend extends HandlebarsApplication {
             }
         }
     }
+
+    createRepiceData(){
+        const ret = foundry.utils.deepClone(DEFAULT_RECIPE_DATA);
+        const categories = this.recipe_categories.filter(i=>i.choosed&&i.id!='all'&&i.id!='add');
+        for(const key in categories)ret.category.push(categories[key].name)
+        return ret;
+    }
+
     /**
      * 处理物品或随机表放置在配方面板中的事件
      * @param {Event} event
@@ -649,7 +657,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     [MODULE_ID]: {
                         type: "recipe",
                         results: [{ uuid: item.uuid, quantity: 1, img: item.img, name: item.name, type: data.type }],
-                        ...DEFAULT_RECIPE_DATA,
+                        ...this.createRepiceData(),
                     },
                 },
             },
@@ -1915,7 +1923,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                         type: "recipe",
                         results: [],
                         "element.craft": [],
-                        ...DEFAULT_RECIPE_DATA,
+                        ...this.createRepiceData(),
                     },
                 },
             },
@@ -1923,6 +1931,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
         this.needRefresh = true;
         await this.render(true);
     }
+
     async configUserUnlocked(event) {
         event.preventDefault();
         //配置用户解锁的配方
