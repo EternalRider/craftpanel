@@ -95,7 +95,8 @@
     gap: 5px;
     justify-content: center;
     align-content: center;
-    height: 25px;
+    height: auto;
+    flex-wrap: wrap;
 }
 /* 调整列表 */
 .craft .craft-content .craft-modifiers-panel {

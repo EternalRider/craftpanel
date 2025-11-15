@@ -9,7 +9,7 @@
                 <input style="{{#unless isEdit}}pointer-events: none;{{/unless}}{{#if cost.icon}}background-image: url('{{cost.icon}}');{{/if}}" type="number" name="cost" value="{{cost.value}}" />
                 <span>{{cost.max}}</span>
             </div>
-            <div class="craft-category-panel">
+            <div class="craft-category-panel" style="width:{{exist panelSizes.modifiers.width 300}}px;">
                 {{#each modifier_categories as |category|}}
                 <img src="{{category.icon}}" alt="{{category.name}}" class="craft-category-icon {{#if category.choosed}}selected{{/if}}" data-category="{{category.id}}" data-type="modifier" data-tooltip="{{category.name}}">
                 {{/each}}
@@ -99,7 +99,7 @@
                 <h2>{{#if panelSizes.materials.name}}{{panelSizes.materials.name}}{{else}}{{localize "craftpanel.material"}}{{/if}}</h2>
                 {{#if isEdit}}<i class="fas fa-cog" data-name="materials" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
             </div>
-            <div class="craft-category-panel">
+            <div class="craft-category-panel" style="width:{{exist panelSizes.materials.width 300}}px;">
                 {{#each material_categories as |category|}}
                 <img src="{{category.icon}}" alt="{{category.name}}" class="craft-category-icon {{#if category.choosed}}selected{{/if}}" data-category="{{category.id}}" data-type="material" data-tooltip="{{category.name}}">
                 {{/each}}
