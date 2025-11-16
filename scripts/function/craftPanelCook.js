@@ -821,7 +821,7 @@ export class CraftPanelCook extends HandlebarsApplication {
                     [MODULE_ID]: {
                         type: "modifier",
                         changes: changes,
-                        ...DEFAULT_MODIFIER_DATA,
+                        ...this.createModifierData(),
                     },
                 },
             },
@@ -1558,6 +1558,12 @@ export class CraftPanelCook extends HandlebarsApplication {
         });
         debug("CraftPanelCook countQuantity : quantity", quantity);
         return quantity;
+    }
+    createModifierData() {
+        const ret = foundry.utils.deepClone(DEFAULT_MODIFIER_DATA);
+        const categories = this.modifier_categories.filter(i => i.choosed && i.id != 'all' && i.id != 'add');
+        for (const key in categories) ret.category.push(categories[key].name)
+        return ret;
     }
 
     /**

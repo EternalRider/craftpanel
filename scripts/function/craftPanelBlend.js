@@ -624,14 +624,6 @@ export class CraftPanelBlend extends HandlebarsApplication {
             }
         }
     }
-
-    createRepiceData(){
-        const ret = foundry.utils.deepClone(DEFAULT_RECIPE_DATA);
-        const categories = this.recipe_categories.filter(i=>i.choosed&&i.id!='all'&&i.id!='add');
-        for(const key in categories)ret.category.push(categories[key].name)
-        return ret;
-    }
-
     /**
      * 处理物品或随机表放置在配方面板中的事件
      * @param {Event} event
@@ -943,10 +935,10 @@ export class CraftPanelBlend extends HandlebarsApplication {
                     ...e,
                 }
             });
-            //按元素数量排序
-            this.elements.sort((a, b) => b.num - a.num);
             this.elementsShow.sort((a, b) => b.num - a.num);
         }
+        //按元素数量排序
+        this.elements.sort((a, b) => b.num - a.num);
         this.elementsShow.map((el, i) => el.index = i);
         debug("CraftPanelBlend refreshElements : this.elements this.elementsShow this.elementsAll this.elementConfigs", this.elements, this.elementsShow, this.elementsAll, this.elementConfigs);
         if (!(this.isEdit)) {
@@ -1281,6 +1273,12 @@ export class CraftPanelBlend extends HandlebarsApplication {
         debug("CraftPanelBlend countQuantity : quantity", quantity);
         return quantity;
     }
+    createRepiceData() {
+        const ret = foundry.utils.deepClone(DEFAULT_RECIPE_DATA);
+        const categories = this.recipe_categories.filter(i => i.choosed && i.id != 'all' && i.id != 'add');
+        for (const key in categories) ret.category.push(categories[key].name)
+        return ret;
+    }
 
     /**
      * 编辑槽位
@@ -1554,7 +1552,10 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
                 //材料的匹配度效力更大
                 if (materials.length > 0) {
-                    match += checkCraftElementsMatch(slotMaterials, materials) * 100;
+                    let num = checkCraftElementsMatch(slotMaterials, materials);
+                    if (num > 0) {
+                        match += num * 100;
+                    }
                 }
                 //没有任何指定材料和元素时，匹配度为最小值
                 if (elements.length == 0 && materials.length == 0) {
@@ -2070,7 +2071,7 @@ function checkCraftElementsMatch(elements, craftElements) {
     let match = 0;
     for (let el of elements) {
         let el2 = craftElements.find((el3) => el3.id === el.id);
-        if (!el2) match -= 1;
+        if (!el2) match -= (el.weight ?? 10) * 0.1;
         if (el2?.useMin) match += el2.min * 10;
         if (el2?.useMax && !el.useMin) match -= el.num;
     }

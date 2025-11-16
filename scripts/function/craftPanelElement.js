@@ -200,6 +200,8 @@ export class CraftPanelElement extends HandlebarsApplication {
                 event.preventDefault();
                 if (el.dataset.inslot == "true") {
                     this.editNum(el.dataset.index);
+                } else if (event.altKey) {
+                    this.addElement(this.elements[el.dataset.index], el.dataset.uuid);
                 } else {
                     this.editElement(el.dataset.uuid);
                 }
@@ -208,6 +210,8 @@ export class CraftPanelElement extends HandlebarsApplication {
                 event.preventDefault();
                 if (el.dataset.inslot == "true") {
                     this.removeElement(el.dataset.index);
+                } else if (event.altKey) {
+                    await this.minusElement(this.elements[el.dataset.index], el.dataset.uuid);
                 } else {
                     const item = await fromUuid(el.dataset.uuid);
                     let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
@@ -395,6 +399,21 @@ export class CraftPanelElement extends HandlebarsApplication {
         }
         this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         debug("CraftPanelElement addElement : this.elements", this.elements);
+        await this.render(true);
+    }
+    async minusElement(element, uuid) {
+        if (element == undefined) {
+            let item = await fromUuid(uuid);
+            element = item.getFlag(MODULE_ID, "elementConfig");
+        }
+        let el = this.elements.find((el) => el.id == element.id);
+        if (el) {
+            el.num--;
+        }
+        if (el.num <= 0) {
+            this.elements.splice(this.elements.indexOf(element), 1);
+        }
+        this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         await this.render(true);
     }
 
