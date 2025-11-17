@@ -15,6 +15,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         this.ingredients = journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
         this.results = journalEntryPage.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "results"))) : [];
 
+        this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
+
         this.needRefresh = true;
         this.scrollPositions = {
             elementItems: 0,
@@ -176,7 +178,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         const results = await Promise.all(this.results.map(async (el, i) => {
             const item = await fromUuid(el.uuid);
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${el.description ?? item?.system?.description ?? item?.description ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div>`);
             return {
                 slotIndex: i,
                 uuid: el.uuid,
