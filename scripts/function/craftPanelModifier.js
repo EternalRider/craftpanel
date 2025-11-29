@@ -2,7 +2,7 @@ import { HandlebarsApplication, getItemColor, MODULE_ID, debug } from "../utils.
 import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelModifier extends HandlebarsApplication {
-    constructor(journalEntry, journalEntryPage) {
+    constructor(journalEntry, journalEntryPage, options = {}) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
         if (typeof journalEntryPage === "string") journalEntryPage = fromUuidSync(journalEntryPage);
@@ -21,6 +21,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
             elementItems: 0,
             modifiers: 0,
         };
+        this.focusModifierUuid = options?.focusModifierUuid ?? null;
+        this._scrollScheduled = false;
 
         this.options.actions.edit = this.editModifier.bind(this);
         this.options.actions.configure = this.configure.bind(this);
@@ -223,6 +225,26 @@ export class CraftPanelModifier extends HandlebarsApplication {
         // 恢复滚动条位置
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
         html.querySelector(".craft-modifiers-panel").scrollTop = this.scrollPositions.modifiers;
+        // 如果请求聚焦某个调整项，则在 DOM 稳定后延迟滚动一次
+        if (this.focusModifierUuid && !this._scrollScheduled) {
+            this._scrollScheduled = true;
+            const uuidToFocus = this.focusModifierUuid;
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    try {
+                        const panel = html.querySelector('.craft-modifiers-panel');
+                        const target = panel?.querySelector(`.craft-modifier[data-uuid="${uuidToFocus}"]`);
+                        if (panel && target) {
+                            const rect = target.getBoundingClientRect();
+                            const contRect = panel.getBoundingClientRect();
+                            const top = panel.scrollTop + (rect.top - contRect.top) - (panel.clientHeight / 2) + (rect.height / 2);
+                            panel.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+                        }
+                    } catch (e) { }
+                    this.focusModifierUuid = null;
+                }, 80);
+            });
+        }
 
         // html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
         //     event.preventDefault();

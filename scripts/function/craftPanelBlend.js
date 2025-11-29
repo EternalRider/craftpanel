@@ -1342,7 +1342,8 @@ export class CraftPanelBlend extends HandlebarsApplication {
         const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelRecipe));
         if (openWindow) openWindow.close();
         else {
-            let newWindow = new CraftPanelRecipe(this.journalEntry, recipeJE);
+            // pass the recipe uuid to the recipe panel so it can scroll to the chosen recipe
+            let newWindow = new CraftPanelRecipe(this.journalEntry, recipeJE, { focusRecipeUuid: recipeJE.uuid });
             newWindow.parentPanel = this;
             newWindow.render(true);
         };

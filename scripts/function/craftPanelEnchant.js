@@ -1864,7 +1864,7 @@ export class CraftPanelEnchant extends HandlebarsApplication {
         const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelModifier));
         if (openWindow) openWindow.close();
         else {
-            let newWindow = new CraftPanelModifier(this.journalEntry, modifierJE);
+            let newWindow = new CraftPanelModifier(this.journalEntry, modifierJE, { focusModifierUuid: modifierJE.uuid });
             newWindow.parentPanel = this;
             newWindow.render(true);
         };

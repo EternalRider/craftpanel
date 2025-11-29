@@ -2,7 +2,7 @@ import { HandlebarsApplication, getItemColor, debug, MODULE_ID } from "../utils.
 import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelRecipe extends HandlebarsApplication {
-    constructor(journalEntry, journalEntryPage) {
+    constructor(journalEntry, journalEntryPage, options = {}) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
         if (typeof journalEntryPage === "string") journalEntryPage = fromUuidSync(journalEntryPage);
@@ -22,6 +22,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             elementItems: 0,
             recipes: 0,
         };
+        this.focusRecipeUuid = options?.focusRecipeUuid ?? null;
+        this._scrollScheduled = false;
 
         this.options.actions.edit = this.editRecipe.bind(this);
         this.options.actions.configure = this.configure.bind(this);
@@ -210,6 +212,26 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         // 恢复滚动条位置
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
         html.querySelector(".craft-recipes-panel").scrollTop = this.scrollPositions.recipes;
+        // 如果上层请求在打开时聚焦某个配方，则在 DOM 稳定后延迟滚动配方面板一次
+        if (this.focusRecipeUuid && !this._scrollScheduled) {
+            this._scrollScheduled = true;
+            const uuidToFocus = this.focusRecipeUuid;
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    try {
+                        const panel = html.querySelector('.craft-recipes-panel');
+                        const target = panel?.querySelector(`.craft-recipe[data-uuid="${uuidToFocus}"]`);
+                        if (panel && target) {
+                            const rect = target.getBoundingClientRect();
+                            const contRect = panel.getBoundingClientRect();
+                            const top = panel.scrollTop + (rect.top - contRect.top) - (panel.clientHeight / 2) + (rect.height / 2);
+                            panel.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+                        }
+                    } catch (e) { /* ignore */ }
+                    this.focusRecipeUuid = null;
+                }, 80);
+            });
+        }
 
         // html.querySelector("button[name='edit']").addEventListener("click", async (event) => {
         //     event.preventDefault();
