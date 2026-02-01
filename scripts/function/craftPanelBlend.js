@@ -10,6 +10,7 @@ const DEFAULT_SLOT_DATA = {
     isConsumed: true,
     size: 80,
     position: { unlock: false, x: 0, y: 0 },
+    showType: "default",
 }
 
 const DEFAULT_RECIPE_DATA = {
@@ -194,6 +195,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             await this.refreshPanel();
             await this.refreshElements();
         }
+        const defaultShowType = this.journalEntry.getFlag(MODULE_ID, "defaultShowType") ?? "mod1";
         const slotsJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "slot");
         debug("CraftPanelBlend _prepareContext : slotsJE", slotsJE);
         this.slots = await Promise.all(slotsJE.map(async (je, i) => {
@@ -237,6 +239,8 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 }
             }
             const position = je.getFlag(MODULE_ID, "position") ?? { unlock: false, x: 0, y: 0 };
+            const showType = je.getFlag(MODULE_ID, "showType") ?? "default";
+            const actualShowType = showType === "default" ? defaultShowType : showType;
             return {
                 id: je.id,
                 name: je.name,
@@ -245,7 +249,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 uuid: je.uuid,
                 hue: je.flags[MODULE_ID].hue,
                 size: je.flags[MODULE_ID].size,
-                lockSize: je.flags[MODULE_ID].size * 0.8,
+                lockSize: je.flags[MODULE_ID].size * 0.6,
                 overrideStyle,
                 overrideStyleClass,
                 tooltip,
@@ -254,6 +258,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
                 isConsumed: isConsumed,
                 isLocked,
                 position,
+                actualShowType,
             };
         }));
         if (this.isEdit) {
@@ -502,6 +507,12 @@ export class CraftPanelBlend extends HandlebarsApplication {
             "question mark": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.question-mark`),
             "by unlock": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.by-unlock`),
         };
+        const showTypeOptions = {
+            mod1: game.i18n.localize(`${MODULE_ID}.show-type.mod1`),
+            mod2: game.i18n.localize(`${MODULE_ID}.show-type.mod2`),
+            mod3: game.i18n.localize(`${MODULE_ID}.show-type.mod3`),
+            mod4: game.i18n.localize(`${MODULE_ID}.show-type.mod4`),
+        };
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntry)
@@ -509,6 +520,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .tab({ id: "general", icon: "fas fa-cog", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-general-tab`) })
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
             .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelBlend.SHAPE_STYLE } })
+            .select({ name: `flags.${MODULE_ID}.defaultShowType`, label: game.i18n.localize(`${MODULE_ID}.show-type.default-show-type`), options: showTypeOptions })
             .file({ name: `flags.${MODULE_ID}.background`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.background-image`) })
             .checkbox({ name: `flags.${MODULE_ID}.unlockRecipe`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-recipe`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-recipe-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name-hint`) })
@@ -1286,6 +1298,13 @@ export class CraftPanelBlend extends HandlebarsApplication {
     async editSlot(slotJEUuid) {
         const slotJE = await fromUuid(slotJEUuid);
         debug("CraftPanelBlend editSlot : slotJE", slotJE);
+        const showTypeOptions = {
+            default: game.i18n.localize(`${MODULE_ID}.show-type.default`),
+            mod1: game.i18n.localize(`${MODULE_ID}.show-type.mod1`),
+            mod2: game.i18n.localize(`${MODULE_ID}.show-type.mod2`),
+            mod3: game.i18n.localize(`${MODULE_ID}.show-type.mod3`),
+            mod4: game.i18n.localize(`${MODULE_ID}.show-type.mod4`),
+        };
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(slotJE)
@@ -1296,6 +1315,7 @@ export class CraftPanelBlend extends HandlebarsApplication {
             .number({ name: `flags.${MODULE_ID}.size`, label: game.i18n.localize(`${MODULE_ID}.size`), min: 40, max: 160, step: 5 })
             .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelBlend.SHAPE_STYLE } })
             .number({ name: `flags.${MODULE_ID}.hue`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.hue`), min: 0, max: 360, step: 1 })
+            .select({ name: `flags.${MODULE_ID}.showType`, label: game.i18n.localize(`${MODULE_ID}.show-type.show-type`), options: showTypeOptions })
             .tab({ id: "behavior", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-behavior-tab`) })
             .checkbox({ name: `flags.${MODULE_ID}.isNecessary`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isConsumed`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-consumed`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-consumed-hint`) })

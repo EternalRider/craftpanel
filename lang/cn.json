@@ -455,6 +455,15 @@
             "limit-num": "限制数量",
             "limit-num-hint": "如果设置，则该类别调整最多只能选择此数量个。0表示不限制。"
         },
+        "show-type": {
+            "show-type": "显示模式",
+            "default-show-type": "默认显示模式",
+            "default": "默认",
+            "mod1": "模式1",
+            "mod2": "模式2",
+            "mod3": "模式3",
+            "mod4": "模式4"
+        },
         "edit-element-config": {
             "title": "编辑属性",
             "aspect-tab": "特征",

@@ -455,6 +455,15 @@
             "limit-num": "Limit Number",
             "limit-num-hint": "If set, this category's modifiers can be selected at most this many times. 0 means unlimited."
         },
+        "show-type": {
+            "show-type": "Show Type",
+            "default-show-type": "Default Show Type",
+            "default": "Default",
+            "mod1": "Mode 1",
+            "mod2": "Mode 2",
+            "mod3": "Mode 3",
+            "mod4": "Mode 4"
+        },
         "edit-element-config": {
             "title": "Edit Element",
             "aspect-tab": "Aspects",

@@ -44,7 +44,7 @@
                 <div class="craft-slot-panel main-child-panel" style="width:{{exist panelSizes.slots.width 600}}px;height:{{exist panelSizes.slots.height 200}}px;position: relative;">
                     {{#each slots as |slot|}}
                     <div {{#if slot.draggable}}draggable="true"{{/if}} data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
-                        class="craft-slot {{slot.empty}} {{#if slot.overrideStyle}}{{slot.overrideStyleClass}}{{else}}{{#if ../useCircleStyle}}round{{/if}}{{/if}}" 
+                        class="craft-slot {{slot.empty}} {{slot.actualShowType}} {{#if slot.overrideStyle}}{{slot.overrideStyleClass}}{{else}}{{#if ../useCircleStyle}}round{{/if}}{{/if}}" 
                         data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}" data-type="slot"
                         style="width: {{slot.size}}px;height: {{slot.size}}px; {{#if slot.position.unlock}}position: absolute; top: {{slot.position.y}}px; left: {{slot.position.x}}px;{{/if}} {{#if slot.itemColor}}--item-color: {{slot.itemColor}};{{/if}} background-image: url('{{#if slot.item.img}}{{slot.item.img}}{{else}}{{slot.image}}{{/if}}'); {{#if slot.empty}}filter: sepia(1) brightness(0.6) hue-rotate({{slot.hue}}deg);{{/if}}">
                         <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if slot.empty}}hidden="true" {{/if}} draggable="false">

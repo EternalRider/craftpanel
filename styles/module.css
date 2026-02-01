@@ -168,8 +168,19 @@
 }
 .craft .craft-content .craft-main-panel .craft-slot.empty {
     filter: sepia(1) brightness(0.6) hue-rotate(180deg);
+}
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod1 {
     mix-blend-mode: exclusion;
     opacity: 0.8;
+}
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod2 {
+    opacity: 1;
+}
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod3 {
+    opacity: 0.5;
+}
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod4 {
+    mix-blend-mode: plus-lighter;
 }
 .craft .craft-content .craft-main-panel .craft-slot:hover {
     transform: scale(1.1);

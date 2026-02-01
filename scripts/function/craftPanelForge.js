@@ -10,6 +10,7 @@ const DEFAULT_SLOT_DATA = {
     isConsumed: true,
     size: 80,
     position: { unlock: false, x: 0, y: 0 },
+    showType: "mod1",
 }
 
 const DEFAULT_MODIFIER_DATA = {
@@ -217,6 +218,7 @@ export class CraftPanelForge extends HandlebarsApplication {
         await this.refreshModifiers();
         const slotsJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "slot");
         debug("CraftPanelForge _prepareContext: slotsJE", slotsJE);
+        const defaultShowType = this.journalEntry.getFlag(MODULE_ID, "defaultShowType") ?? "mod1";
         this.slots = await Promise.all(slotsJE.map(async (je, i) => {
             const overrideStyle = (je.getFlag(MODULE_ID, "shape") ?? "default") !== "default";
             const overrideStyleClass = je.getFlag(MODULE_ID, "shape") == "circle" ? "round" : "";
@@ -258,6 +260,8 @@ export class CraftPanelForge extends HandlebarsApplication {
                 }
             }
             const position = je.getFlag(MODULE_ID, "position") ?? { unlock: false, x: 0, y: 0 };
+            const showType = je.getFlag(MODULE_ID, "showType") ?? "default";
+            const actualShowType = showType === "default" ? defaultShowType : showType;
             return {
                 id: je.id,
                 name: je.name,
@@ -266,7 +270,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                 uuid: je.uuid,
                 hue: je.flags[MODULE_ID].hue,
                 size: je.flags[MODULE_ID].size,
-                lockSize: je.flags[MODULE_ID].size * 0.8,
+                lockSize: je.flags[MODULE_ID].size * 0.6,
                 overrideStyle,
                 overrideStyleClass,
                 tooltip,
@@ -275,6 +279,7 @@ export class CraftPanelForge extends HandlebarsApplication {
                 isConsumed: isConsumed,
                 isLocked,
                 position,
+                actualShowType,
             };
         }));
         if (this.isEdit) {
@@ -628,6 +633,12 @@ export class CraftPanelForge extends HandlebarsApplication {
      * 配置界面
      */
     async configure() {
+        const showTypeOptions = {
+            mod1: game.i18n.localize(`${MODULE_ID}.show-type.mod1`),
+            mod2: game.i18n.localize(`${MODULE_ID}.show-type.mod2`),
+            mod3: game.i18n.localize(`${MODULE_ID}.show-type.mod3`),
+            mod4: game.i18n.localize(`${MODULE_ID}.show-type.mod4`),
+        };
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntry)
@@ -636,6 +647,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             .text({ name: "name", label: game.i18n.localize(`${MODULE_ID}.name`) })
             .number({ name: `flags.${MODULE_ID}.resultLimit`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.result-limit`), min: 0, max: Math.max(this.results.length, 1), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.result-limit-hint`), step: 1 })
             .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelForge.SHAPE_STYLE } })
+            .select({ name: `flags.${MODULE_ID}.defaultShowType`, label: game.i18n.localize(`${MODULE_ID}.show-type.default-show-type`), options: showTypeOptions })
             .file({ name: `flags.${MODULE_ID}.background`, type: "image", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.background-image`) })
             .number({ name: `flags.${MODULE_ID}.modifierLimit`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-limit`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.modifier-limit-hint`), min: 0, step: 1 })
             .tab({ id: "cost", icon: "fa-solid fa-coins", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.configure-cost-tab`) })
@@ -1582,6 +1594,13 @@ export class CraftPanelForge extends HandlebarsApplication {
     async editSlot(slotJEUuid) {
         const slotJE = await fromUuid(slotJEUuid);
         debug("CraftPanelForge editSlot: slotJE", slotJE);
+        const showTypeOptions = {
+            default: game.i18n.localize(`${MODULE_ID}.show-type.default`),
+            mod1: game.i18n.localize(`${MODULE_ID}.show-type.mod1`),
+            mod2: game.i18n.localize(`${MODULE_ID}.show-type.mod2`),
+            mod3: game.i18n.localize(`${MODULE_ID}.show-type.mod3`),
+            mod4: game.i18n.localize(`${MODULE_ID}.show-type.mod4`),
+        };
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(slotJE)
@@ -1592,6 +1611,7 @@ export class CraftPanelForge extends HandlebarsApplication {
             .number({ name: `flags.${MODULE_ID}.size`, label: game.i18n.localize(`${MODULE_ID}.size`), min: 40, max: 160, step: 5 })
             .select({ name: `flags.${MODULE_ID}.shape`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.shape`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), ...CraftPanelForge.SHAPE_STYLE } })
             .number({ name: `flags.${MODULE_ID}.hue`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.hue`), min: 0, max: 360, step: 1 })
+            .select({ name: `flags.${MODULE_ID}.showType`, label: game.i18n.localize(`${MODULE_ID}.show-type.show-type`), options: showTypeOptions })
             .tab({ id: "behavior", icon: "fas fa-cogs", label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-slot-behavior-tab`) })
             .checkbox({ name: `flags.${MODULE_ID}.isNecessary`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-necessary-hint`) })
             .checkbox({ name: `flags.${MODULE_ID}.isConsumed`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-consumed`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-consumed-hint`) })
