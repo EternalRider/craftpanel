@@ -1,6 +1,6 @@
 <div class="craft-panel">
     {{> craft-panel-tittle type="results" panelSizes=panelSizes isEdit=isEdit}}
-    <div class="craft-results-panel main-child-panel" style="width:{{exist panelSizes.results.width width}}px;height:{{exist panelSizes.results.height height}}px;position: relative;">
+    <div class="craft-results-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.results.width width}}px;height:{{craftpanel-exist panelSizes.results.height height}}px;position: relative;">
         {{#each results as |result|}}
         <div {{#if result.draggable}}draggable="true"{{/if}} data-tooltip-class="craft-tooltip" data-tooltip="{{result.tooltip}}"
             class="craft-slot {{result.empty}} {{result.choosed}} {{#if result.overrideStyle}}{{result.overrideStyleClass}}{{else}}round{{/if}}"

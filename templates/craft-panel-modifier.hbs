@@ -5,7 +5,7 @@
             {{> craft-ingredients-panel width=300 height=200 ingredients=ingredients panelSizes=panelSizes}}
             <div class="craft-panel">
                 {{> craft-panel-tittle tittle="craftpanel.modifier"}}
-                <div class="craft-changes-panel main-child-panel" style="width:{{exist panelSizes.changes.width 300}}px;height:{{exist panelSizes.changes.height 170}}px;">
+                <div class="craft-changes-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.changes.width 300}}px;height:{{craftpanel-exist panelSizes.changes.height 170}}px;">
                     {{!-- <header class="effect-change effects-header flexrow" style="">
                         <div class="key">{{localize "EFFECT.ChangeKey"}}</div>
                         <div class="mode">{{localize "EFFECT.ChangeMode"}}</div>
@@ -19,12 +19,12 @@
                             </div>
                             <div class="mode" data-tooltip="{{localize "EFFECT.ChangeMode"}}">
                                 <select name="changes.{{@index}}.mode" data-dtype="Number" style="pointer-events: none;">
-                                    <option value="0" {{#if (equal 0 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_CUSTOM"}}</option>
-                                    <option value="1" {{#if (equal 1 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_MULTIPLY"}}</option>
-                                    <option value="2" {{#if (equal 2 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_ADD"}}</option>
-                                    <option value="3" {{#if (equal 3 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_DOWNGRADE"}}</option>
-                                    <option value="4" {{#if (equal 4 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_UPGRADE"}}</option>
-                                    <option value="5" {{#if (equal 5 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_OVERRIDE"}}</option>
+                                    <option value="0" {{#if (craftpanel-equal 0 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_CUSTOM"}}</option>
+                                    <option value="1" {{#if (craftpanel-equal 1 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_MULTIPLY"}}</option>
+                                    <option value="2" {{#if (craftpanel-equal 2 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_ADD"}}</option>
+                                    <option value="3" {{#if (craftpanel-equal 3 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_DOWNGRADE"}}</option>
+                                    <option value="4" {{#if (craftpanel-equal 4 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_UPGRADE"}}</option>
+                                    <option value="5" {{#if (craftpanel-equal 5 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_OVERRIDE"}}</option>
                                 </select>
                             </div>
                             <div class="value" data-tooltip="{{localize "EFFECT.ChangeValue"}}">

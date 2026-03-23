@@ -1,4 +1,4 @@
-<div class="craft-category-panel" style="width:{{exist panelSizes.[type].width width}}px;">
+<div class="craft-category-panel" style="width:{{craftpanel-exist panelSizes.[type].width width}}px;">
     {{#each (lookup categories type) as |category|}}
     <img src="{{category.icon}}" alt="{{category.name}}" class="craft-category-icon {{#if category.choosed}}selected{{/if}}" 
     data-category="{{category.id}}" data-type="{{../type}}" data-tooltip="{{category.name}}">

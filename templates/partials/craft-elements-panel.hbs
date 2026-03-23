@@ -1,6 +1,6 @@
 <div class="craft-panel">
     {{> craft-panel-tittle type="elements" panelSizes=panelSizes isEdit=isEdit}}
-    <div class="craft-elements-panel main-child-panel" style="width:{{exist panelSizes.elements.width width}}px;height:{{exist panelSizes.elements.height height}}px;">
+    <div class="craft-elements-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.elements.width width}}px;height:{{craftpanel-exist panelSizes.elements.height height}}px;">
         {{#each elements as |element|}}
         <div {{#if ../isEdit}}draggable="true"{{/if}} data-tooltip="{{element.name}}" class="element-slot elements {{element.shapeClass}}"
             data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-index="{{element.index}}"

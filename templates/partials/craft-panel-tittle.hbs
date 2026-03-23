@@ -1,4 +1,4 @@
 <div class="craft-panel-tittle">
-    <h2>{{#if tittle}}{{localize tittle}}{{else}}{{#if panelSizes.[type].name}}{{panelSizes.[type].name}}{{else}}{{localize (concat "craftpanel." type)}}{{/if}}{{/if}}</h2>
+    <h2>{{#if tittle}}{{localize tittle}}{{else}}{{#if panelSizes.[type].name}}{{panelSizes.[type].name}}{{else}}{{localize (craftpanel-concat "craftpanel." type)}}{{/if}}{{/if}}</h2>
     {{#if isEdit}}<i class="fas fa-cog" data-name="{{type}}" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
 </div>

@@ -20,20 +20,20 @@ Hooks.once('init', function () {
 // });
 
 Hooks.on('ready', () => {
-    Handlebars.registerHelper('range', function (start, end) {
+    Handlebars.registerHelper(`${MODULE_ID}-range`, function (start, end) {
         let array = [];
         for (let i = start; i < end; i++) {
             array.push(i);
         }
         return array;
     });
-    Handlebars.registerHelper('equal', function (a, b) {
+    Handlebars.registerHelper(`${MODULE_ID}-equal`, function (a, b) {
         return a == b;
     });
-    Handlebars.registerHelper('exist', function (a, b) {
+    Handlebars.registerHelper(`${MODULE_ID}-exist`, function (a, b) {
         return a ?? b;
     });
-    Handlebars.registerHelper('concat', function (a, b) {
+    Handlebars.registerHelper(`${MODULE_ID}-concat`, function (a, b) {
         return a + b;
     });
     CraftPanel.registerPartial();
@@ -66,6 +66,7 @@ Hooks.on("renderItemDirectory", (app, html) => {
     } else if (game.version.startsWith("13")) {
         buttonContainer = html.querySelector(".header-actions.action-buttons");
     }
+    console.log("Craftpanel | renderItemDirectory : app html buttonContainer game.version", app, html, buttonContainer, game.version);
     // const buttonContainer = html.querySelector(".header-actions.action-buttons");
     const button = document.createElement("button");
     button.type = "button";

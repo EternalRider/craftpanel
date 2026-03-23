@@ -1,6 +1,6 @@
 <div class="craft-panel">
     {{> craft-panel-tittle type="ingredients" panelSizes=panelSizes isEdit=isEdit}}
-    <div class="craft-ingredients-panel main-child-panel" style="width:{{exist panelSizes.ingredients.width width}}px;height:{{exist panelSizes.ingredients.height height}}px;">
+    <div class="craft-ingredients-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.ingredients.width width}}px;height:{{craftpanel-exist panelSizes.ingredients.height height}}px;">
         {{#each ingredients as |element|}}
         <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
             data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"

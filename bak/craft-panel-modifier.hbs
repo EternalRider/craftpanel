@@ -4,7 +4,7 @@
             <div class="craft-panel-tittle">
                 <h2>{{localize "craftpanel.modifier"}}</h2>
             </div>
-            <div class="craft-modifiers-panel" style="width:{{exist panelSizes.modifiers.width 300}}px;height:{{exist panelSizes.modifiers.height 420}}px;">
+            <div class="craft-modifiers-panel" style="width:{{craftpanel-exist panelSizes.modifiers.width 300}}px;height:{{craftpanel-exist panelSizes.modifiers.height 420}}px;">
                 {{#each modifiers as |modifier|}}
                 <div draggable="true" class="craft-modifier {{modifier.choosed}}" data-uuid="{{modifier.uuid}}" data-index="{{modifier.index}}">
                     <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
@@ -28,7 +28,7 @@
                 <div class="craft-panel-tittle">
                     <h2>{{localize "craftpanel.ingredient"}}</h2>
                 </div>
-                <div class="craft-ingredients-panel main-child-panel" style="width:{{exist panelSizes.ingredients.width 300}}px;height:{{exist panelSizes.ingredients.height 200}}px;">
+                <div class="craft-ingredients-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.ingredients.width 300}}px;height:{{craftpanel-exist panelSizes.ingredients.height 200}}px;">
                     {{#each ingredients as |element|}}
                     <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                         data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"
@@ -42,7 +42,7 @@
                 <div class="craft-panel-tittle">
                     <h2>{{localize "craftpanel.modifier"}}</h2>
                 </div>
-                <div class="craft-changes-panel main-child-panel" style="width:{{exist panelSizes.changes.width 300}}px;height:{{exist panelSizes.changes.height 170}}px;">
+                <div class="craft-changes-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.changes.width 300}}px;height:{{craftpanel-exist panelSizes.changes.height 170}}px;">
                     {{!-- <header class="effect-change effects-header flexrow" style="">
                         <div class="key">{{localize "EFFECT.ChangeKey"}}</div>
                         <div class="mode">{{localize "EFFECT.ChangeMode"}}</div>
@@ -56,12 +56,12 @@
                             </div>
                             <div class="mode" data-tooltip="{{localize "EFFECT.ChangeMode"}}">
                                 <select name="changes.{{@index}}.mode" data-dtype="Number" style="pointer-events: none;">
-                                    <option value="0" {{#if (equal 0 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_CUSTOM"}}</option>
-                                    <option value="1" {{#if (equal 1 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_MULTIPLY"}}</option>
-                                    <option value="2" {{#if (equal 2 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_ADD"}}</option>
-                                    <option value="3" {{#if (equal 3 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_DOWNGRADE"}}</option>
-                                    <option value="4" {{#if (equal 4 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_UPGRADE"}}</option>
-                                    <option value="5" {{#if (equal 5 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_OVERRIDE"}}</option>
+                                    <option value="0" {{#if (craftpanel-equal 0 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_CUSTOM"}}</option>
+                                    <option value="1" {{#if (craftpanel-equal 1 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_MULTIPLY"}}</option>
+                                    <option value="2" {{#if (craftpanel-equal 2 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_ADD"}}</option>
+                                    <option value="3" {{#if (craftpanel-equal 3 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_DOWNGRADE"}}</option>
+                                    <option value="4" {{#if (craftpanel-equal 4 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_UPGRADE"}}</option>
+                                    <option value="5" {{#if (craftpanel-equal 5 change.mode)}}selected{{/if}}>{{localize "EFFECT.MODE_OVERRIDE"}}</option>
                                 </select>
                             </div>
                             <div class="value" data-tooltip="{{localize "EFFECT.ChangeValue"}}">
@@ -78,7 +78,7 @@
             <div class="craft-panel-tittle">
                 <h2>{{localize "craftpanel.element"}}</h2>
             </div>
-            <div class="craft-elementitems-panel" style="width:{{exist panelSizes.elementitems.width 300}}px;height:{{exist panelSizes.elementitems.height 420}}px;">
+            <div class="craft-elementitems-panel" style="width:{{craftpanel-exist panelSizes.elementitems.width 300}}px;height:{{craftpanel-exist panelSizes.elementitems.height 420}}px;">
                 {{#each elementItems as |element|}}
                 <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
                     data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"

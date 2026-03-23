@@ -1,6 +1,6 @@
 <div class="craft-panel">
     {{> craft-panel-tittle type="elementitems" tittle="craftpanel.elements"}}
-    <div class="craft-elementitems-panel" style="width:{{exist panelSizes.elementitems.width width}}px;height:{{exist panelSizes.elementitems.height height}}px;">
+    <div class="craft-elementitems-panel" style="width:{{craftpanel-exist panelSizes.elementitems.width width}}px;height:{{craftpanel-exist panelSizes.elementitems.height height}}px;">
         {{#each elementItems as |element|}}
         <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
             data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
