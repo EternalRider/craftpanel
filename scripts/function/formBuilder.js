@@ -525,7 +525,7 @@ export class FormHelper extends foundry.applications.api.HandlebarsApplicationMi
             tabs: this.#getTabs(),
             fields: this.#fields,
             info: this.#info,
-            buttons: [...this.#buttons.filter((b) => b.type !== "submit"), ...this.#buttons.filter((b) => b.type === "submit")],
+            buttons: [...this.#buttons.filter((b) => b.type !== "submit" && b.action !== "close"), ...this.#buttons.filter((b) => b.type === "submit"), ...this.#buttons.filter((b) => b.action === "close")],
         };
     }
 

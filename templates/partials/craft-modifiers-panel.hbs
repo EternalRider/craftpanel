@@ -1,0 +1,30 @@
+<div class="craft-panel">
+    {{> craft-panel-tittle type="modifiers" panelSizes=panelSizes isEdit=isEdit}}
+    {{#if showCost}}
+    <div class="craft-cost-panel" style="width: 100%;">
+        <input style="{{#unless isEdit}}pointer-events: none;{{/unless}}{{#if cost.icon}}background-image: url('{{cost.icon}}');{{/if}}" type="number" name="cost" value="{{cost.value}}" />
+        <span>{{cost.max}}</span>
+    </div>
+    {{/if}}
+    {{#if categories}}{{> craft-category-panel type="modifiers" categories=categories panelSizes=panelSizes width=width}}{{/if}}
+    <div class="craft-modifiers-panel" style="width:{{exist panelSizes.modifiers.width width}}px;height:{{exist panelSizes.modifiers.height height}}px;">
+        {{#each modifiers as |modifier|}}
+        <div class="craft-modifier {{modifier.locked}} {{modifier.choosed}}" {{modifier.locked}} {{#if ../draggable}}draggable="true"{{/if}}
+            style="{{#if modifier.hasEnchanted}}border-color: yellow;{{else}}{{#if modifier.auto}}border-color: red;{{/if}}{{/if}}"
+            data-uuid="{{modifier.uuid}}" data-index="{{modifier.index}}" data-tooltip-class="craft-tooltip" data-tooltip="{{modifier.tooltip}}">
+            <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+            <div class="craft-modifier-desc">
+                <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
+                {{#if modifier.cost}}<div class="craft-modifier-cost {{modifier.costClass}}" draggable="false" style="{{#if ../cost.icon}}background-image: url('{{../cost.icon}}');{{/if}}">{{modifier.costInfo}}</div>{{/if}}
+                <div class="craft-modifier-ingredients">
+                    {{#each modifier.ingredients as |ingredient|}}
+                    <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
+                        <div class="element-num" draggable="false">{{ingredient.num}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        {{/each}}
+    </div>
+</div>

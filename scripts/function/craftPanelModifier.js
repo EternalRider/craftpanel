@@ -371,6 +371,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
         for (const category of modifier_categories) {
             categoryOptions[category.id] = category.name;
         }
+        const aeTypeOptions = foundry.utils.deepClone(CONFIG.ActiveEffect.typeLabels);
+        aeTypeOptions.default = game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`);
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntryPage)
@@ -383,6 +385,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
             .checkbox({ name: `flags.${MODULE_ID}.auto`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.auto-apply`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.auto-apply-hint`) })
             .select({ name: `flags.${MODULE_ID}.asAE`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-hint`), options: { "false": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-not`), "merge": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-merge`), "separate": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.as-ae-separate`) } })
             .text({ name: `flags.${MODULE_ID}.aeName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-name`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-name-hint`) })
+            .select({ name: `flags.${MODULE_ID}.aeType`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-type`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.ae-type-hint`), options: aeTypeOptions, value: "default" })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
             .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
@@ -451,8 +454,8 @@ export class CraftPanelModifier extends HandlebarsApplication {
         const update = {
             flags: {
                 [MODULE_ID]: {
-                    ingredients: JSON.parse(JSON.stringify(this.ingredients)),
-                    changes: JSON.parse(JSON.stringify(this.changes)),
+                    ingredients: foundry.utils.deepClone(this.ingredients),
+                    changes: foundry.utils.deepClone(this.changes),
                 },
             },
         }

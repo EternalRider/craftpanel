@@ -1,0 +1,22 @@
+<div class="craft-panel">
+    {{> craft-panel-tittle type="recipes" panelSizes=panelSizes isEdit=isEdit}}
+    {{#if categories}}{{> craft-category-panel type="recipes" categories=categories panelSizes=panelSizes width=width}}{{/if}}
+    <div class="craft-recipes-panel scroll-log-panel" data-panel="recipes" style="width:{{exist panelSizes.recipes.width width}}px;height:{{exist panelSizes.recipes.height height}}px;">
+        {{#each recipes as |recipe|}}
+        <div class="craft-recipe {{recipe.choosed}}" {{#if ../draggable}}draggable="true"{{/if}}
+        data-uuid="{{recipe.uuid}}" data-index="{{recipe.index}}" data-tooltip-class="craft-tooltip" data-tooltip="{{recipe.tooltip}}">
+            <div class="craft-recipe-img" style="background-image: url('{{recipe.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+            <div class="craft-recipe-desc">
+                <h3 class="craft-recipe-tittle">{{recipe.name}}</h3>
+                <div class="craft-recipe-ingredients">
+                    {{#each recipe.ingredients as |ingredient|}}
+                    <div class="craft-recipe-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
+                        <div class="element-num" draggable="false">{{ingredient.num}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        {{/each}}
+    </div>
+</div>

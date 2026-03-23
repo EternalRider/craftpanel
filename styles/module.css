@@ -15,12 +15,16 @@
 }
 /* 基础 */
 .craft .window-content {
-    /* max-width: 80vw;
-    max-height: 95vh; */
+    padding: 0;
+}
+.craft .standard-form {
+    gap: 10px;
+    padding: 10px;
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
 }
+
 .craft .craft-content {
     display: flex;
     flex-direction: row;
@@ -43,7 +47,7 @@
     text-align: center;
     margin: 5px;
     border-bottom: none;
-    height: 1.75rem;
+    height: 25px;
     color: white;
 }
 .craft .craft-content .craft-panel-tittle > i {
@@ -146,6 +150,24 @@
     gap: 10px;
     height: 100px;
 }
+/* 主面板-调和插槽-保留材料切换 */
+.craft .craft-slot-panel .craft-slot-keep-toggle {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 12px;
+    z-index: 2;
+}
+.craft .craft-slot-panel .craft-slot-keep-toggle input {
+    margin: 0;
+}
 /* 图块-调和插槽 */
 .craft .craft-content .craft-main-panel .craft-slot {
     position: relative;
@@ -206,12 +228,14 @@
 .craft-panel-enchant .craft-main-panel .craft-slot.choosed,
 .craft-panel-forge .craft-main-panel .craft-slot.choosed {
     transform: scale(1.1);
-    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 10px var(--item-color, #191005), 0 0 15px var(--item-color, #191005);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa);
+    border: 3px ridge var(--item-color, #aaaaaa);
     margin: 0 20px;
 }
 .craft-panel-enchant .craft-main-panel .craft-slot.choosed:hover,
 .craft-panel-forge .craft-main-panel .craft-slot.choosed:hover {
     transform: scale(1.2);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa);
 }
 /* 图块-元素 */
 .craft-tooltip .tooltip-element,

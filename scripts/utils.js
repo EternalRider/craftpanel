@@ -1,6 +1,7 @@
 // import * as CONST from './constants.js'
 export const MODULE_ID = 'craftpanel';
 export class HandlebarsApplication extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) { };
+export const AsyncFunction = async function () { }.constructor;
 import { FormBuilder } from "./function/formBuilder.js";
 
 /**
@@ -12,6 +13,24 @@ export function debug(...args) {
     args.forEach(arg => console.log(arg));
     console.log(`---------------${MODULE_ID}--------------`);
   }
+}
+
+/**
+ * Compare dotted version strings like "3.0.0"
+ * @returns {number} 1 if a>b, -1 if a<b, 0 if equal
+ */
+export function compareVersions(a, b) {
+  const normalize = (v) => v?.toString().split(".").map(n => parseInt(n, 10) || 0) ?? [0];
+  const va = normalize(a);
+  const vb = normalize(b);
+  const max = Math.max(va.length, vb.length);
+  for (let i = 0; i < max; i++) {
+    const left = va[i] ?? 0;
+    const right = vb[i] ?? 0;
+    if (left > right) return 1;
+    if (left < right) return -1;
+  }
+  return 0;
 }
 /**
  * 向当前用户弹出消息提示，类型可以为info、warn或error（默认）
@@ -32,6 +51,40 @@ export async function notice(type, message) {
       break;
   }
   return message; // 返回通知内容
+}
+/**
+ * 更新逻辑，例如迁移旧设置到新设置
+ * @param {string} currentVersion 当前版本
+ * @param {string} newVersion 新版本
+ */
+export async function updateHandler(currentVersion, newVersion) {
+  const handlers = {
+    "3.0.0": async () => {
+      // 这里是从2.1.2更新到3.0的处理逻辑，例如迁移旧设置到新设置
+      const craftPanels = game.journal.filter(j => j.getFlag(MODULE_ID, "isCraftPanel"));
+      let result = [];
+      const categoryFlags = ["material-categories", "recipe-categories", "modifier-categories"];
+      for (let panel of craftPanels) {
+        for (let flag of categoryFlags) {
+          let categories = panel.getFlag(MODULE_ID, flag);
+          if (categories) {
+            let newFlag = flag.replace(/-categories$/, "s-categories");
+            result.push(await panel.setFlag(MODULE_ID, newFlag, categories));
+            result.push(await panel.unsetFlag(MODULE_ID, flag));
+          }
+        }
+        result.push(await panel.setFlag(MODULE_ID, "owner-check", "return game.user.isGM;"));
+      }
+      debug("fixCraftingCategories", result);
+    }
+  }
+  notice("info", game.i18n.format(`${MODULE_ID}.notification.updating`, { currentVersion, newVersion }));
+  for (let version in handlers) {
+    if (compareVersions(currentVersion, version) < 0 && compareVersions(newVersion, version) >= 0) {
+      await handlers[version]();
+    }
+  }
+  notice("info", game.i18n.format(`${MODULE_ID}.notification.updateComplete`, { newVersion }));
 }
 
 /**
@@ -165,6 +218,29 @@ export async function chatMessage(content, options = {}, others = {}) {
 }
 
 /**
+ * 播放音频，根据是否具有Sequence模块来选择不同的播放方式
+ * @param {Object} data - 包含音频信息的对象，至少应包含src属性
+ * @param {string} [data.src] - 音频文件的路径
+ * @param {string} [data.channel] - 可选的音频频道，默认为"interface"
+ * @param {number} [data.volume] - 可选的音量，默认为1
+ * @param {boolean} [locally=true] - 是否仅在本地播放音频，默认为true
+ * @returns {void} - 无返回值
+ */
+export function playAudio(data, locally = true) {
+  if (game.modules.get("sequencer")?.active) {
+    new Sequence()
+      .sound()
+      .file(data.src)
+      .audioChannel(data?.channel ?? "interface")
+      .locally(locally)
+      .volume(data.volume ?? 1)
+      .play();
+  } else {
+    AudioHelper.play({ src: data.src, channel: data?.channel ?? "interface", volume: data.volume ?? 1 }, !locally);
+  }
+}
+
+/**
  * 异步获取或创建指定名称和类型的文件夹
  * 
  * 该函数首先会检查游戏中的文件夹是否已经存在指定名称和类型的文件夹如果存在，则直接返回该文件夹
@@ -234,44 +310,16 @@ export async function wait(ms) {
  * @param {string} name 效果名称，默认"特殊效果"
  * @param {string} icon 图标路径，默认"icons/svg/mystery-man.svg"
  * @param {change[]} changes 各项实际修改，默认空数组
- * @param {number} duration 持续时间，默认5
- * @param {0|1|2|3} expiration 效果结束时点，回合开始时为1，回合结束时为3，自动结束不弹窗则减去1（0，2），默认3
- * @param {effectmacro} effectmacro 动态效果宏，当动态效果创建、删除、开关等等时刻触发，默认空对象
- * @param {effectcontent} effectcontent 动态效果的描述，适用于Visual Active Effects这个mod，默认空对象
- * @param {string} statusId 状态id，用于标记状态，默认undefined
+ * @param {string} type 动态效果类型
+ * @param {string} description 动态效果的描述，默认空字符串
  * @returns {activeEffectData} 动态效果，用于addActiveEffect
  */
-export function buildActiveEffect(name = "特殊效果", icon = "icons/svg/mystery-man.svg", changes = [], duration = 5, expiration = 3, effectmacro = {}, effectcontent = {}, statusId = undefined, type = "base") {
-  if (duration == 0 && expiration != null) {
-    expiration = null;
-  }
-  let activeEffect = {
-    name: name, icon: icon, changes: changes, duration: { rounds: duration }, flags: { swade: { expiration: expiration }, effectmacro: effectmacro },
-    system: {}, type: type
+export function buildActiveEffect(name = "特殊效果", icon = "icons/svg/mystery-man.svg", changes = [], type, description = "") {
+  const defaultAEType = game.settings.get(MODULE_ID, "defaultAEType") || "base";
+  if (type === undefined) type = defaultAEType;
+  const activeEffect = {
+    name: name, icon: icon, changes: changes, description: description, type: type
   };
-  if (typeof effectcontent == "string") {
-    activeEffect.description = effectcontent;
-  } else if (effectcontent?.intro != undefined) {
-    activeEffect.description = effectcontent.intro;
-  } else if (effectcontent?.content != undefined) {
-    activeEffect.description = effectcontent.content;
-  }
-  if (effectcontent?.inclusion != undefined || effectcontent?.alwayShow != undefined) {
-    let inclusion = effectcontent.inclusion ?? 0;
-    if (effectcontent.alwayShow) {
-      inclusion = 1;
-    } else if (effectcontent.alwayShow === false) {
-      inclusion = -1;
-    }
-    activeEffect["flags"]["visual-active-effects"] = { data: { inclusion: inclusion } };
-  }
-  if (statusId) {
-    // activeEffect["flags"]["core"] = { statusId: statusId };
-    if (!Array.isArray(statusId)) {
-      statusId = [statusId];
-    }
-    activeEffect["statuses"] = statusId;
-  }
   return activeEffect;
 }
 

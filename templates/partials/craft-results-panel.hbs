@@ -1,0 +1,16 @@
+<div class="craft-panel">
+    {{> craft-panel-tittle type="results" panelSizes=panelSizes isEdit=isEdit}}
+    <div class="craft-results-panel main-child-panel" style="width:{{exist panelSizes.results.width width}}px;height:{{exist panelSizes.results.height height}}px;position: relative;">
+        {{#each results as |result|}}
+        <div {{#if result.draggable}}draggable="true"{{/if}} data-tooltip-class="craft-tooltip" data-tooltip="{{result.tooltip}}"
+            class="craft-slot {{result.empty}} {{result.choosed}} {{#if result.overrideStyle}}{{result.overrideStyleClass}}{{else}}round{{/if}}"
+            data-uuid="{{result.uuid}}" data-index="{{result.slotIndex}}" data-type="result"
+            style="{{#if result.size}}width: {{result.size}}px;height: {{result.size}}px;{{/if}} 
+            {{#if result.position.unlock}}position: absolute; top: {{result.position.y}}px; left: {{result.position.x}}px;{{/if}} 
+            {{#if result.itemColor}}--item-color: {{result.itemColor}};{{/if}} {{#if result.img}}background-image: url('{{result.img}}');{{/if}} 
+            {{#if result.empty}}filter: sepia(1) brightness(0.6) hue-rotate({{result.hue}}deg);{{/if}}">
+            {{#if result.quantity}}<div class="element-num" draggable="false">{{result.quantity}}</div>{{/if}}
+        </div>
+        {{/each}}
+    </div>
+</div>

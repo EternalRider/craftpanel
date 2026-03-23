@@ -426,8 +426,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         const update = {
             flags: {
                 [MODULE_ID]: {
-                    ingredients: JSON.parse(JSON.stringify(this.ingredients)),
-                    results: JSON.parse(JSON.stringify(this.results)),
+                    ingredients: foundry.utils.deepClone(this.ingredients),
+                    results: foundry.utils.deepClone(this.results),
                 },
             },
         }

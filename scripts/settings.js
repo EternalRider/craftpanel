@@ -1,4 +1,5 @@
 /* globals game, FormApplication, $ */
+import { updateHandler, compareVersions } from './utils.js';
 
 // import * as CONST from './constants.js'
 const MODULE_ID = 'craftpanel';
@@ -6,6 +7,18 @@ const MODULE_ID = 'craftpanel';
 // export const settingVariables = [
 
 // ];
+
+/**
+ * 更新设置
+ * @param {string} newVersion 
+ */
+export function updateSettings(newVersion) {
+    const currentVersion = game.settings.get(MODULE_ID, 'version') ?? "0";
+    if (compareVersions(currentVersion, newVersion) < 0) {
+        updateHandler(currentVersion, newVersion);
+        game.settings.set(MODULE_ID, 'version', newVersion);
+    }
+}
 
 export function register_settings() {
     game.settings.register(MODULE_ID, 'quantityPath', {
@@ -32,6 +45,15 @@ export function register_settings() {
         scope: 'world',
         config: true,
     });
+    game.settings.register(MODULE_ID, 'defaultAEType', {
+        name: game.i18n.localize(`${MODULE_ID}.settings.defaultAEType`),
+        hint: game.i18n.localize(`${MODULE_ID}.settings.defaultAEType-hint`),
+        type: String,
+        default: "base",
+        scope: 'world',
+        config: true,
+        choices: CONFIG.ActiveEffect.typeLabels
+    });
 
     // 用户自定义物品颜色脚本
     game.settings.register(MODULE_ID, 'customItemColorScript', {
@@ -51,6 +73,13 @@ export function register_settings() {
         default: false,
         scope: 'world',
         config: true,
+    });
+
+    game.settings.register(MODULE_ID, 'version', {
+        type: String,
+        default: "0",
+        scope: 'world',
+        config: false,
     });
 }
 

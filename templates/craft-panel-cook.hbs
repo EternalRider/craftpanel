@@ -1,140 +1,21 @@
 <div class="standard-form">
     <div class="craft-content">
-        <div class="craft-panel">
-            <div class="craft-panel-tittle">
-                <h2>{{#if panelSizes.modifiers.name}}{{panelSizes.modifiers.name}}{{else}}{{localize "craftpanel.modifier"}}{{/if}}</h2>
-                {{#if isEdit}}<i class="fas fa-cog" data-name="modifiers" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
-            </div>
-            <div class="craft-cost-panel" style="width: 100%;">
-                <input style="{{#unless isEdit}}pointer-events: none;{{/unless}}{{#if cost.icon}}background-image: url('{{cost.icon}}');{{/if}}" type="number" name="cost" value="{{cost.value}}" />
-                <span>{{cost.max}}</span>
-            </div>
-            <div class="craft-category-panel" style="width:{{exist panelSizes.modifiers.width 300}}px;">
-                {{#each modifier_categories as |category|}}
-                <img src="{{category.icon}}" alt="{{category.name}}" class="craft-category-icon {{#if category.choosed}}selected{{/if}}" data-category="{{category.id}}" data-type="modifier" data-tooltip="{{category.name}}">
-                {{/each}}
-            </div>
-            <div class="craft-modifiers-panel" style="width:{{exist panelSizes.modifiers.width 300}}px;height:{{exist panelSizes.modifiers.height 470}}px;">
-                {{#each modifiers as |modifier|}}
-                <div class="craft-modifier {{modifier.locked}} {{modifier.choosed}}" {{modifier.locked}}
-                    style="{{#if modifier.auto}}border-color: red;{{/if}}"
-                    data-uuid="{{modifier.uuid}}" data-index="{{modifier.index}}" data-tooltip-class="craft-tooltip" data-tooltip="{{modifier.tooltip}}">
-                    <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
-                    <div class="craft-modifier-desc">
-                        <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
-                        {{#if modifier.cost}}<div class="craft-modifier-cost {{modifier.costClass}}" draggable="false" style="{{#if ../cost.icon}}background-image: url('{{../cost.icon}}');{{/if}}">{{modifier.costInfo}}</div>{{/if}}
-                        <div class="craft-modifier-ingredients">
-                            {{#each modifier.ingredients as |ingredient|}}
-                            <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
-                                <div class="element-num" draggable="false">{{ingredient.num}}</div>
-                            </div>
-                            {{/each}}
-                        </div>
-                    </div>
-                </div>
-                {{/each}}
-            </div>
-        </div>
+        {{> craft-modifiers-panel width=300 height=470 showCost="true" cost=cost modifiers=modifiers categories=categories panelSizes=panelSizes isEdit=isEdit}}
         <div class="craft-main-panel">
-            <div class="craft-panel">
-                <div class="craft-panel-tittle">
-                    <h2>{{#if panelSizes.slots.name}}{{panelSizes.slots.name}}{{else}}{{localize "craftpanel.craft-panel-cook.slot"}}{{/if}}</h2>
-                    {{#if isEdit}}<i class="fas fa-cog" data-name="slots" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
-                </div>
-                <div class="craft-slot-panel main-child-panel" style="width:{{exist panelSizes.slots.width 600}}px;height:{{exist panelSizes.slots.height 200}}px;position: relative;">
-                    {{#each slots as |slot|}}
-                    <div {{#if slot.draggable}}draggable="true"{{/if}} data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
-                        class="craft-slot {{slot.empty}} {{slot.actualShowType}} {{#if slot.overrideStyle}}{{slot.overrideStyleClass}}{{else}}{{#if ../useCircleStyle}}round{{/if}}{{/if}}" 
-                        data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}" data-type="slot"
-                        style="width: {{slot.size}}px;height: {{slot.size}}px; {{#if slot.position.unlock}}position: absolute; top: {{slot.position.y}}px; left: {{slot.position.x}}px;{{/if}} {{#if slot.itemColor}}--item-color: {{slot.itemColor}};{{/if}} background-image: url('{{#if slot.item.img}}{{slot.item.img}}{{else}}{{slot.image}}{{/if}}'); {{#if slot.empty}}filter: sepia(1) brightness(0.6) hue-rotate({{slot.hue}}deg);{{/if}}">
-                        <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if slot.empty}}hidden="true" {{/if}} draggable="false">
-                            {{#each slot.elements as |element|}}
-                            <div class="slot-element-circle-container">
-                                {{#each (range 0 element.num)}}
-                                <i class="slot-element-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></i>
-                                {{/each}}
-                            </div>
-                            {{/each}}
-                        </div>
-                        <i draggable="false" class="fa-solid fa-lock slot-locked" style="line-height: {{slot.size}}px; font-size: {{slot.lockSize}}px;{{#unless slot.isLocked}}display:none;{{/unless}}"></i>
-                    </div>
-                    {{/each}}
-                </div>
-            </div>
-            <div class="craft-panel">
-                <div class="craft-panel-tittle">
-                    <h2>{{#if panelSizes.elements.name}}{{panelSizes.elements.name}}{{else}}{{localize "craftpanel.element"}}{{/if}}</h2>
-                    {{#if isEdit}}<i class="fas fa-cog" data-name="elements" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
-                </div>
-                <div class="craft-elements-panel main-child-panel" style="width:{{exist panelSizes.elements.width 600}}px;height:{{exist panelSizes.elements.height 70}}px;">
-                    {{#each elements as |element|}}
-                    <div {{#if ../isEdit}}draggable="true"{{/if}} data-tooltip="{{element.name}}" class="element-slot elements {{element.shapeClass}}"
-                        data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-index="{{element.index}}"
-                        style="{{#if element.color}}--item-color: {{element.color}};{{/if}} {{#if element.size}}--element-size: {{element.size}}px;{{/if}}
-                        {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
-                        <div class="element-num" draggable="false">{{element.num}}</div>
-                    </div>
-                    {{/each}}
-                </div>
-            </div>
-            <div class="craft-panel">
-                <div class="craft-panel-tittle">
-                    <h2>{{#if panelSizes.results.name}}{{panelSizes.results.name}}{{else}}{{localize "craftpanel.result"}}{{/if}}</h2>
-                    {{#if isEdit}}<i class="fas fa-cog" data-name="results" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
-                </div>
-                <div class="craft-results-panel main-child-panel" style="width:{{exist panelSizes.results.width 600}}px;height:{{exist panelSizes.results.height 200}}px;">
-                    {{#each results as |result|}}
-                    <div data-tooltip-class="craft-tooltip" data-tooltip="{{result.tooltip}}"
-                        class="craft-slot {{#if result.overrideStyle}}{{result.overrideStyleClass}}{{else}}{{#if ../useCircleStyle}}round{{/if}}{{/if}}"
-                        data-uuid="{{result.uuid}}" data-index="{{result.slotIndex}}" data-type="result"
-                        style="width: {{result.size}}px;height: {{result.size}}px; {{#if result.itemColor}}--item-color: {{result.itemColor}};{{/if}} {{#if result.img}}background-image: url('{{result.img}}');{{/if}}">
-                        <div class="element-num" draggable="false">{{result.quantity}}</div>
-                    </div>
-                    {{/each}}
-                </div>
-            </div>
+            {{> craft-slot-panel width=600 height=200 slots=slots panelSizes=panelSizes isEdit=isEdit keepMaterials=keepMaterials}}
+            {{> craft-elements-panel width=600 height=75 elements=elements panelSizes=panelSizes isEdit=isEdit}}
+            {{> craft-results-panel width=600 height=200 results=results panelSizes=panelSizes isEdit=isEdit}}
         </div>
-        <div class="craft-panel">
-            <div class="craft-panel-tittle">
-                <h2>{{#if panelSizes.materials.name}}{{panelSizes.materials.name}}{{else}}{{localize "craftpanel.material"}}{{/if}}</h2>
-                {{#if isEdit}}<i class="fas fa-cog" data-name="materials" data-tooltip="{{localize "craftpanel.change-panel-size"}}"></i>{{/if}}
-            </div>
-            <div class="craft-category-panel" style="width:{{exist panelSizes.materials.width 300}}px;">
-                {{#each material_categories as |category|}}
-                <img src="{{category.icon}}" alt="{{category.name}}" class="craft-category-icon {{#if category.choosed}}selected{{/if}}" data-category="{{category.id}}" data-type="material" data-tooltip="{{category.name}}">
-                {{/each}}
-            </div>
-            <div class="craft-materials-panel" style="width:{{exist panelSizes.materials.width 300}}px;height:{{exist panelSizes.materials.height 540}}px;">
-                {{#each materials as |slot|}}
-                <div draggable="true" data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
-                    class="element-slot materials" data-uuid="{{slot.uuid}}"
-                    style="{{#if slot.itemColor}}--item-color: {{slot.itemColor}};{{/if}} {{#if slot.item.img}}background-image: url('{{slot.item.img}}');{{/if}} ">
-                    <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if slot.empty}}hidden="true" {{/if}} draggable="false">
-                        {{#each slot.elements as |element|}}
-                        <div class="slot-element-circle-container">
-                            {{#each (range 0 element.num)}}
-                            <i class="slot-element-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></i>
-                            {{/each}}
-                        </div>
-                        {{/each}}
-                    </div>
-                    <div class="craft-slot-quantity" {{#unless slot.showQuantity}}hidden="true"{{/unless}} draggable="false">
-                        {{slot.quantity}}
-                    </div>
-                </div>
-                {{/each}}
-            </div>
-        </div>
+        {{> craft-materials-panel width=300 height=540 materials=materials categories=categories panelSizes=panelSizes isEdit=isEdit}}
     </div>
 
     <footer class="form-footer">
         {{#if isEdit}}
-        <button type="button" name="new-modifier" data-action="new-modifier"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-cook.new-modifier"}}</button>
-        <button type="button" name="new-slot" data-action="new-slot"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-cook.new-slot"}}</button>
+        <button type="button" name="new-modifier" data-action="new-modifier"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-forge.new-modifier"}}</button>
+        <button type="button" name="new-slot" data-action="new-slot"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel.new-slot"}}</button>
         <button type="button" name="configure-panel" data-action="configure-panel"><i class="fas fa-cog"></i> {{localize "craftpanel.configure"}}</button>
         {{else}}
         <button type="button" name="craft" data-action="craft"><i class="fa-solid fa-utensils"></i>{{localize "craftpanel.craft"}}</button>
-        <button type="button" name="recipe" data-action="recipe"><i class="fas fa-list-check"></i>{{localize "craftpanel.recipe"}}</button>
         {{/if}}
         <button type="button" name="close" data-action="close"><i class="fas fa-times"></i>{{localize "Close"}}</button>
     </footer>

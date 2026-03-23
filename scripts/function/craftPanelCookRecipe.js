@@ -154,7 +154,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
                 slotIndex: slotItem.key,
                 name: material.name,
                 img: material.img,
-                quantity: 1,
+                num: slotItem.quantity ?? 1,
                 // size: Math.min(this.panelSizes.ingredients.width, this.panelSizes.ingredients.height) * 0.75,
             });
         }

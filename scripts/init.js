@@ -1,6 +1,7 @@
 const MODULE_ID = 'craftpanel';
 import * as api from './api.js';
-import { register_settings } from './settings.js';
+import { register_settings, updateSettings } from './settings.js';
+import { CraftPanel } from './function/craftPanel.js';
 // import CraftSocket from './socket.js';
 
 Hooks.once('init', function () {
@@ -32,6 +33,12 @@ Hooks.on('ready', () => {
     Handlebars.registerHelper('exist', function (a, b) {
         return a ?? b;
     });
+    Handlebars.registerHelper('concat', function (a, b) {
+        return a + b;
+    });
+    CraftPanel.registerPartial();
+
+    updateSettings(game.modules.get(MODULE_ID).version);
 
     console.log('Craftpanel | Ready');
 });
@@ -73,3 +80,4 @@ Hooks.on("renderItemDirectory", (app, html) => {
     }
     buttonContainer.appendChild(button);
 })
+

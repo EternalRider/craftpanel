@@ -214,6 +214,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         return {
             requirements: ["script"],
             "requirements-script": "let element = item.getFlag('craftpanel', 'element'); return Array.isArray(element) && element.length > 0;",
+            "owner-check": "return game.user.isGM;",
             showResult: "question mark",
             unlockRecipe: true,
         };
@@ -222,6 +223,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         return {
             requirements: ["script"],
             "requirements-script": "let element = item.getFlag('craftpanel', 'element'); return Array.isArray(element) && element.length > 0;",
+            "owner-check": "return game.user.isGM;",
             baseCost: 0,
             resultLimit: 1,
         };
@@ -230,6 +232,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         return {
             requirements: ["script"],
             "requirements-script": "let element = item.getFlag('craftpanel', 'element'); return Array.isArray(element) && element.length > 0;",
+            "owner-check": "return game.user.isGM;",
             baseCost: 0,
         };
     }
@@ -237,6 +240,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         return {
             requirements: ["script"],
             "requirements-script": "let element = item.getFlag('craftpanel', 'element'); return Array.isArray(element) && element.length > 0;",
+            "owner-check": "return game.user.isGM;",
             baseCost: 0,
         };
     }

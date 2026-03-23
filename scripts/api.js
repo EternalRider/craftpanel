@@ -29,7 +29,7 @@ export async function selectCraftPanel() {
     //const fb = new Portal.FormBuilder()
     const fb = new FormBuilder()
         .title(game.i18n.localize(`${MODULE_ID}.select-craft-panel`))
-        .select({ name: "craftPanel", label: game.i18n.localize(`${MODULE_ID}.craft-panel`), options: selectOptions });
+        .select({ name: "craftPanel", label: game.i18n.localize(`${MODULE_ID}.craft-panel.title`), options: selectOptions });
     const data = await fb.render();
     if (!data) return;
     let craftPanel = await fromUuid(data.craftPanel);

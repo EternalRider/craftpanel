@@ -1,47 +1,10 @@
 <div class="standard-form">
     <div class="craft-content">
-        <div class="craft-panel">
-            <div class="craft-panel-tittle">
-                <h2>{{localize "craftpanel.modifier"}}</h2>
-            </div>
-            <div class="craft-modifiers-panel" style="width:{{exist panelSizes.modifiers.width 300}}px;height:{{exist panelSizes.modifiers.height 420}}px;">
-                {{#each modifiers as |modifier|}}
-                <div draggable="true" class="craft-modifier {{modifier.choosed}}" data-uuid="{{modifier.uuid}}" data-index="{{modifier.index}}">
-                    <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
-                    <div class="craft-modifier-desc">
-                        <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
-                        {{#if modifier.cost}}<div class="craft-modifier-cost {{modifier.costClass}}" draggable="false">{{modifier.costInfo}}</div>{{/if}}
-                        <div class="craft-modifier-ingredients">
-                            {{#each modifier.ingredients as |ingredient|}}
-                            <div class="craft-modifier-ingredient" style="background-image: url('{{ingredient.img}}');" data-tooltip="{{ingredient.name}}">
-                                <div class="element-num" draggable="false">{{ingredient.num}}</div>
-                            </div>
-                            {{/each}}
-                        </div>
-                    </div>
-                </div>
-                {{/each}}
-            </div>
-        </div>
+        {{> craft-modifiers-panel width=300 height=420 draggable="true" cost=cost modifiers=modifiers categories=categories panelSizes=panelSizes isEdit=isEdit}}
         <div class="craft-main-panel" style="width: 300px;">
+            {{> craft-ingredients-panel width=300 height=200 ingredients=ingredients panelSizes=panelSizes}}
             <div class="craft-panel">
-                <div class="craft-panel-tittle">
-                    <h2>{{localize "craftpanel.ingredient"}}</h2>
-                </div>
-                <div class="craft-ingredients-panel main-child-panel" style="width:{{exist panelSizes.ingredients.width 300}}px;height:{{exist panelSizes.ingredients.height 200}}px;">
-                    {{#each ingredients as |element|}}
-                    <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
-                        data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="true"
-                        style="{{#if element.itemColor}}--item-color: {{slot.itemColor}};{{/if}} {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
-                        <div class="element-num" draggable="false">{{element.num}}</div>
-                    </div>
-                    {{/each}}
-                </div>
-            </div>
-            <div class="craft-panel">
-                <div class="craft-panel-tittle">
-                    <h2>{{localize "craftpanel.modifier"}}</h2>
-                </div>
+                {{> craft-panel-tittle tittle="craftpanel.modifier"}}
                 <div class="craft-changes-panel main-child-panel" style="width:{{exist panelSizes.changes.width 300}}px;height:{{exist panelSizes.changes.height 170}}px;">
                     {{!-- <header class="effect-change effects-header flexrow" style="">
                         <div class="key">{{localize "EFFECT.ChangeKey"}}</div>
@@ -74,24 +37,11 @@
                 </div>
             </div>
         </div>
-        <div class="craft-panel">
-            <div class="craft-panel-tittle">
-                <h2>{{localize "craftpanel.element"}}</h2>
-            </div>
-            <div class="craft-elementitems-panel" style="width:{{exist panelSizes.elementitems.width 300}}px;height:{{exist panelSizes.elementitems.height 420}}px;">
-                {{#each elementItems as |element|}}
-                <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
-                    data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
-                    style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
-                    <div class="element-color-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></div>
-                </div>
-                {{/each}}
-            </div>
-        </div>
+        {{> craft-elementitems-panel width=300 height=420 elementItems=elementItems panelSizes=panelSizes}}
     </div>
 
     <footer class="form-footer">
-        <button type="button" name="edit" data-action="edit"><i class="fas fa-edit"></i>{{localize "craftpanel.edit"}}</button>
+        <button type="button" name="edit" data-action="edit"><i class="fas fa-save"></i> {{localize "craftpanel.save"}}</button>
         <button type="button" name="permissions" data-action="permissions"><i class="fas fa-user-lock"></i> {{localize "craftpanel.permissions"}}</button>
         <button type="button" name="configure" data-action="configure"><i class="fas fa-cog"></i> {{localize "craftpanel.configure"}}</button>
         <button type="button" name="close" data-action="close"><i class="fas fa-times"></i>{{localize "Close"}}</button>
