@@ -53,7 +53,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         return {
             content: {
                 template: `modules/${MODULE_ID}/templates/${this.APP_ID}.hbs`,
-                classes: [""],
+                classes: [],
             },
         };
     }

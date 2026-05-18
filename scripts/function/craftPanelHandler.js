@@ -145,7 +145,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
      */
     static get DEFAULT_OPTIONS() {
         return {
-            classes: [this.APP_ID, "swpt-craft"],
+            classes: [this.APP_ID, "craft"],
             tag: "div",
             window: {
                 frame: true,
@@ -360,7 +360,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         const list = [{
             id: "all",
             name: game.i18n.localize(`${MODULE_ID}.all`),
-            icon: "modules/swpt/img/svgs/stack.svg",
+            icon: "modules/craftpanel/img/svgs/stack.svg",
             choosed: this.category[type] === "all",
             readonly: true,
         }];
@@ -378,7 +378,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
             list.push({
                 id: "add",
                 name: game.i18n.localize(`${MODULE_ID}.craft-panel.new-category`),
-                icon: "modules/swpt/img/svgs/health-normal.svg",
+                icon: "modules/craftpanel/img/svgs/health-normal.svg",
                 choosed: false,
                 isAdd: true,
             });
@@ -397,7 +397,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         const list = [{
             id: "all",
             name: game.i18n.localize(`${MODULE_ID}.all`),
-            icon: "modules/swpt/img/svgs/stack.svg",
+            icon: "modules/craftpanel/img/svgs/stack.svg",
             choosed: this.category.handlers === "all",
             readonly: true,
         }];
