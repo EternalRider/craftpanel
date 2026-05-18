@@ -7,7 +7,7 @@
                 <div class="craft-slot-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.slots.width 300}}px;height:{{craftpanel-exist panelSizes.slots.height 200}}px;">
                     {{#each slots as |slot|}}
                     <div draggable="true" data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
-                        class="element-slot materials" data-index="{{slot.slotIndex}}" data-uuid="{{slot.uuid}}" data-inslot="true"
+                        class="element-slot materials" data-index="{{slot.index}}" data-uuid="{{slot.uuid}}" data-inslot="true"
                         style="{{#if slot.itemColor}}box-shadow: inset 0 0 10px {{slot.itemColor}}; border-color: {{slot.itemColor}};{{/if}} {{#if slot.item.img}}background-image: url('{{slot.item.img}}');{{/if}} ">
                         <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}} draggable="false">
                             {{#each slot.elements as |element|}}

@@ -4,6 +4,7 @@ import { CraftPanelElement } from "./craftPanelElement.js";
 import { CraftPanelForge } from "./craftPanelForge.js";
 import { CraftPanelCook } from "./craftPanelCook.js";
 import { CraftPanelEnchant } from "./craftPanelEnchant.js";
+import { CraftPanelHandler } from "./craftPanelHandler.js";
 import { FormBuilder } from "./formBuilder.js";
 
 export class CraftPanelManager extends HandlebarsApplication {
@@ -52,7 +53,7 @@ export class CraftPanelManager extends HandlebarsApplication {
         return {
             content: {
                 template: `modules/${MODULE_ID}/templates/${this.APP_ID}.hbs`,
-                classes: ["scrollable"],
+                classes: [""],
             },
         };
     }
@@ -105,6 +106,8 @@ export class CraftPanelManager extends HandlebarsApplication {
             defaultData = CraftPanelManager.DEFAULT_FORGE_DATA;
         } else if (data.panelType === "enchant") {
             defaultData = CraftPanelManager.DEFAULT_ENCHANT_DATA;
+        } else if (data.panelType === "handler") {
+            defaultData = CraftPanelManager.DEFAULT_HANDLER_DATA;
         }
         const flagdata = { [MODULE_ID]: { isCraftPanel: true, type: data.panelType, ...defaultData } };
         debug("CraftPanelManager create-new : flagdata", flagdata);
@@ -147,6 +150,13 @@ export class CraftPanelManager extends HandlebarsApplication {
             else {
                 new CraftPanelEnchant(craftPanel, "craft", options).render(true);
             }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "handler") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelHandler));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelHandler(craftPanel, "craft").render(true);
+                this.close();
+            }
         }
     }
 
@@ -158,23 +168,45 @@ export class CraftPanelManager extends HandlebarsApplication {
         if (craftPanel.getFlag(MODULE_ID, "type") === "blend") {
             const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelBlend) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else new CraftPanelBlend(craftPanel, "edit").render(true);
+            else {
+                new CraftPanelBlend(craftPanel, "edit").render(true);
+                this.close();
+            }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "element") {
             const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelElement) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else new CraftPanelElement(craftPanel).render(true);
+            else {
+                new CraftPanelElement(craftPanel).render(true);
+                this.close();
+            }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "cook") {
             const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCook) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else new CraftPanelCook(craftPanel, "edit").render(true);
+            else {
+                new CraftPanelCook(craftPanel, "edit").render(true);
+                this.close();
+            }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "forge") {
             const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelForge) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else new CraftPanelForge(craftPanel, "edit").render(true);
+            else {
+                new CraftPanelForge(craftPanel, "edit").render(true);
+                this.close();
+            }
         } else if (craftPanel.getFlag(MODULE_ID, "type") === "enchant") {
             const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelEnchant) && (w.journalEntry.id === craftPanel.id));
             if (openWindow) openWindow.close();
-            else new CraftPanelEnchant(craftPanel, "edit").render(true);
+            else {
+                new CraftPanelEnchant(craftPanel, "edit").render(true);
+                this.close();
+            }
+        } else if (craftPanel.getFlag(MODULE_ID, "type") === "handler") {
+            const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelHandler) && (w.journalEntry.id === craftPanel.id));
+            if (openWindow) openWindow.close();
+            else {
+                new CraftPanelHandler(craftPanel, "edit").render(true);
+                this.close();
+            }
         }
     }
 
@@ -208,6 +240,7 @@ export class CraftPanelManager extends HandlebarsApplication {
             "forge": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.type-forge`),
             "cook": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.type-cook`),
             "enchant": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.type-enchant`),
+            "handler": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.type-handler`),
         };
     }
     static get DEFAULT_BLEND_DATA() {
@@ -249,6 +282,16 @@ export class CraftPanelManager extends HandlebarsApplication {
             noCraft: true,
             "requirements": ["folder", "script"],
             "requirements-folder": "材料",
+        };
+    }
+    static get DEFAULT_HANDLER_DATA() {
+        return {
+            "default-handler-icon": "icons/sundries/scrolls/scroll-bound-blue-red.webp",
+            "handler-empty-text-actors": game.i18n.localize(`${MODULE_ID}.craft-panel-handler.empty-actors-default`),
+            "handler-empty-text-handlers": game.i18n.localize(`${MODULE_ID}.craft-panel-handler.empty-handlers-default`),
+            "handler-empty-text-templates": game.i18n.localize(`${MODULE_ID}.craft-panel-handler.empty-templates-default`),
+            "actor-requirements": ["player-character"],
+            "actor-requirements-player-character": true,
         };
     }
 }

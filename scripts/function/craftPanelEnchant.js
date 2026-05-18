@@ -119,7 +119,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
         event.stopPropagation();
         let data;
         try {
-            data = JSON.parse(event.dataTransfer.getData("text/plain"));
+            data = JSON.parse(event.originalEvent.dataTransfer.getData("text/plain"));
         } catch (e) {
             return;
         }
@@ -136,7 +136,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
         event.stopPropagation();
         let data;
         try {
-            data = JSON.parse(event.dataTransfer.getData("text/plain"));
+            data = JSON.parse(event.originalEvent.dataTransfer.getData("text/plain"));
         } catch (e) {
             return;
         }
@@ -149,7 +149,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
             await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [{
                 name: item.name,
                 src: item.img,
-                "text.content": item?.system?.description ?? item?.description ?? null,
+                "text.content": foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? null,
                 flags: {
                     [MODULE_ID]: {
                         type: "result",
@@ -250,7 +250,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
                 name: item.name,
                 img: item.img,
                 // elements: item.getFlag(MODULE_ID, "element") ?? [],
-                description: item.system?.description ?? item.description ?? "",
+                description: foundry.utils.getProperty(item, this.descriptionPath) ?? item.description ?? "",
                 itemColor: item ? getItemColor(item) ?? "" : "",
                 enchantments: item.getFlag(MODULE_ID, "enchantments") ?? [],
             }
@@ -384,10 +384,10 @@ export class CraftPanelEnchant extends CraftPanelForge {
             r.item.img = r.img;
 
             //添加描述
-            if (r.item?.system?.description) {
-                r.item.system.description = r.description;
+            if (foundry.utils.getProperty(r.item, this.descriptionPath)) {
+                foundry.utils.setProperty(r.item, this.descriptionPath, r.description);
                 for (let je of this.selectedModifiers) {
-                    r.item.system.description += `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`;
+                    foundry.utils.setProperty(r.item, this.descriptionPath, foundry.utils.getProperty(r.item, this.descriptionPath) + `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`);
                 }
             }
             //保存调整信息
@@ -405,7 +405,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
         });
         //应用调整
         if (this.selectedModifiers.length > 0) {
-            await this.applyModifier(this.selectedModifiers, results);
+            await this.applyModifier(this.selectedModifiers, materials, results);
         }
         return {
             data: this,

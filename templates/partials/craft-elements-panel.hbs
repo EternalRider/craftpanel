@@ -3,7 +3,7 @@
     <div class="craft-elements-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.elements.width width}}px;height:{{craftpanel-exist panelSizes.elements.height height}}px;">
         {{#each elements as |element|}}
         <div {{#if ../isEdit}}draggable="true"{{/if}} data-tooltip="{{element.name}}" class="element-slot elements {{element.shapeClass}}"
-            data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-index="{{element.index}}"
+            data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-index="{{element.index}}" data-inslot="true"
             style="{{#if element.color}}--item-color: {{element.color}};{{/if}} {{#if element.size}}--element-size: {{element.size}}px;{{/if}}
             {{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
             <div class="element-num" draggable="false">{{element.num}}</div>

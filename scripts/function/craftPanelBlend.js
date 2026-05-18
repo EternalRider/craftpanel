@@ -88,7 +88,7 @@ export class CraftPanelBlend extends CraftPanel {
         super._onFirstRender(context, options);
         debug(`${this.APP_ID} _onFirstRender : context options`, context, options);
         const html = $(this.element);
-        html.on("drop", ".craft-recipes-panel", this._onDropRecipesPanel.bind(this));
+        html.on("drop", ".craft-content.edit .craft-recipes-panel", this._onDropRecipesPanel.bind(this));
         html.on("click", ".craft-content.edit .craft-recipe", this._onClickRecipe.bind(this));
         html.on("contextmenu", ".craft-content.edit .craft-recipe", this._onContextMenuRecipe.bind(this));
     }
@@ -128,7 +128,7 @@ export class CraftPanelBlend extends CraftPanel {
             {
                 name: item.name,
                 src: item.img,
-                "text.content": item.system?.description ?? item.description ?? "",
+                "text.content": foundry.utils.getProperty(item, this.descriptionPath) ?? item.description ?? "",
                 flags: {
                     [MODULE_ID]: {
                         type: "recipe",
@@ -167,7 +167,7 @@ export class CraftPanelBlend extends CraftPanel {
                         const item = await fromUuid(re.uuid);
                         const itemColor = re.type == "Item" ? getItemColor(item) ?? "" : "";
                         const elements = item.getFlag(MODULE_ID, "element") ?? [];
-                        const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+                        const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
                         this.results.push({
                             name: item?.name ?? re.name,
                             img: item?.img ?? re.img,
@@ -473,6 +473,15 @@ export class CraftPanelBlend extends CraftPanel {
                     this.canceled = true;
                 }
             }
+            //获取配方的handler配置
+            let craftAsHandler = this.selectedRecipe.getFlag(MODULE_ID, "craftAsHandler");
+            let handlerTemplate = this.selectedRecipe.getFlag(MODULE_ID, "handlerTemplate");
+            if (handlerTemplate) this.handlerTemplate = handlerTemplate;
+            if (craftAsHandler == 'yes') {
+                this.craftAsHandler = true;
+            } else if (craftAsHandler == 'no') {
+                this.craftAsHandler = false;
+            }
             //执行配方的脚本
             const craftScript = this.selectedRecipe.getFlag(MODULE_ID, "craftScript");
             if (craftScript && craftScript.trim() != "") {
@@ -514,24 +523,24 @@ export class CraftPanelBlend extends CraftPanel {
             results.forEach(r => {
                 let item = this.actor.items.find(i => i.name == r.item.name);
                 if (item) {
-                    if (item.system.quantity) {
+                    if (foundry.utils.getProperty(item, this.quantityPath) != undefined) {
                         updates[this.actor.id] ??= { parent: this.actor, items: [] };
                         updates[this.actor.id].items.push({
                             _id: item.id,
-                            [`system.quantity`]: item.system.quantity + r.quantity
+                            [this.quantityPath]: foundry.utils.getProperty(item, this.quantityPath) + r.quantity
                         });
                     }
                 } else {
-                    if (r.item?.system?.quantity != undefined) {
-                        r.item.system.quantity = r.quantity;
+                    if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
+                        foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
                     }
                     products.push(r.item);
                 }
             });
         } else {
             results.forEach(r => {
-                if (r.item?.system?.quantity != undefined) {
-                    r.item.system.quantity = r.quantity;
+                if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
+                    foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
                 }
                 products.push(r.item);
             });

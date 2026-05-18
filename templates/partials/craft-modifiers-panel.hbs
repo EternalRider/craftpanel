@@ -7,7 +7,7 @@
     </div>
     {{/if}}
     {{#if categories}}{{> craft-category-panel type="modifiers" categories=categories panelSizes=panelSizes width=width}}{{/if}}
-    <div class="craft-modifiers-panel" style="width:{{craftpanel-exist panelSizes.modifiers.width width}}px;height:{{craftpanel-exist panelSizes.modifiers.height height}}px;">
+    <div class="craft-modifiers-panel scroll-log-panel" data-panel="modifiers" style="width:{{craftpanel-exist panelSizes.modifiers.width width}}px;height:{{craftpanel-exist panelSizes.modifiers.height height}}px;">
         {{#each modifiers as |modifier|}}
         <div class="craft-modifier {{modifier.locked}} {{modifier.choosed}}" {{modifier.locked}} {{#if ../draggable}}draggable="true"{{/if}}
             style="{{#if modifier.hasEnchanted}}border-color: yellow;{{else}}{{#if modifier.auto}}border-color: red;{{/if}}{{/if}}"

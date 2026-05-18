@@ -26,6 +26,9 @@ export class CraftPanel extends HandlebarsApplication {
         this.keepMaterials = options.keepMaterials ?? (game.user?.getFlag(MODULE_ID, "keepMaterials") ?? false);
         this.bindItems = {}; //绑定物品数据，key为槽位index，value为物品数据（包含name、img、quantity等）
 
+        this.quantityPath = game.settings.get(MODULE_ID, 'quantityPath');
+        this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
+
         this.categories = {
             materials: [],
         };
@@ -48,6 +51,10 @@ export class CraftPanel extends HandlebarsApplication {
 
         this.panelSizes = this.journalEntry.getFlag(MODULE_ID, "panelSizes");
         this.audio = this.journalEntry.getFlag(MODULE_ID, "audio") ?? {};
+        this.craftAsHandler = this.journalEntry.getFlag(MODULE_ID, "craftAsHandler") ?? false;
+        this.handlerTemplate = this.journalEntry.getFlag(MODULE_ID, "handlerTemplate") ? fromUuidSync(this.journalEntry.getFlag(MODULE_ID, "handlerTemplate")) : null;
+        this.overrideHandlerName = this.journalEntry.getFlag(MODULE_ID, "overrideHandlerName") ?? true;
+        this.overrideHandlerIcon = this.journalEntry.getFlag(MODULE_ID, "overrideHandlerIcon") ?? true;
 
         craftPanels ??= [];
         craftPanels.push(this);
@@ -280,6 +287,10 @@ export class CraftPanel extends HandlebarsApplication {
                     }
                 }
             });
+            this.craftAsHandler = this.journalEntry.getFlag(MODULE_ID, "craftAsHandler") ?? false;
+            this.handlerTemplate = this.journalEntry.getFlag(MODULE_ID, "handlerTemplate") ? await fromUuid(this.journalEntry.getFlag(MODULE_ID, "handlerTemplate")) : null;
+            this.overrideHandlerName = this.journalEntry.getFlag(MODULE_ID, "overrideHandlerName") ?? true;
+            this.overrideHandlerIcon = this.journalEntry.getFlag(MODULE_ID, "overrideHandlerIcon") ?? true;
         }
         debug(`${this.APP_ID} getData : slots`, this.slots);
 
@@ -333,6 +344,7 @@ export class CraftPanel extends HandlebarsApplication {
             const panelEl = html.querySelector(`.scroll-log-panel[data-panel="${panel}"]`);
             if (panelEl) {
                 panelEl.scrollTop = this.scrollPositions[panel];
+                panelEl.addEventListener("scrollend", this._onScrollLogPanel.bind(this));
             }
         }
 
@@ -357,8 +369,6 @@ export class CraftPanel extends HandlebarsApplication {
         this._bindElementsPanelEvents(html);
         // 绑定分类图标的点击事件
         html.on("click", ".craft-category-icon", this._onClickCategory.bind(this));
-        //滚动事件，记录滚动位置
-        html.on("scrollend", ".scroll-log-panel", this._onScrollLogPanel.bind(this));
         // 绑定保留材料的切换事件
         html.on("change", "input[name='keep-materials']", this._onToggleKeepMaterials.bind(this));
         // 绑定槽位面板和槽位的事件
@@ -975,7 +985,7 @@ export class CraftPanel extends HandlebarsApplication {
                 }
             } else {
                 const elements = item.getFlag(MODULE_ID, "element") ?? [];
-                const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+                const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
                 if (ingredientSettings?.multiQuantity && ingredientSettings.min > 0) {
                     quantity = ingredientSettings.min;
                     if (ingredientSettings.elementByQuantity ?? false) {
@@ -1303,7 +1313,7 @@ export class CraftPanel extends HandlebarsApplication {
                 /** @type {CraftElement[]} */
                 const elements = item.getFlag(MODULE_ID, "element") ?? [];
                 const itemColor = item ? getItemColor(item) ?? "" : "";
-                const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+                const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
                 // const quantity = this.countQuantity(item);
                 const showQuantity = (this.actor ?? false) && (typeof quantity === "number");
                 let totalElements = 0;
@@ -1432,7 +1442,7 @@ export class CraftPanel extends HandlebarsApplication {
     }
     countQuantity(item, bindItem = false) {
         debug(`${this.APP_ID} countQuantity : bindItem`, bindItem);
-        let quantity = item?.system?.quantity;
+        let quantity = foundry.utils.getProperty(item, this.quantityPath);
         if (quantity === undefined) {
             return undefined;
         }
@@ -1802,6 +1812,17 @@ export class CraftPanel extends HandlebarsApplication {
                 ]
             },
             {
+                id: "handler",
+                icon: "fas fa-briefcase",
+                label: game.i18n.localize(`${MODULE_ID}.craft-panel.configure-handler-tab`),
+                options: [
+                    { ftype: "checkbox", name: `flags.${MODULE_ID}.craftAsHandler`, label: game.i18n.localize(`${MODULE_ID}.craft-panel.craft-as-handler`), hint: game.i18n.localize(`${MODULE_ID}.craft-panel.craft-as-handler-hint`) },
+                    { ftype: "uuid", name: `flags.${MODULE_ID}.handlerTemplate`, label: game.i18n.localize(`${MODULE_ID}.craft-panel.handler-template`), hint: game.i18n.localize(`${MODULE_ID}.craft-panel.handler-template-hint`), type: "JournalEntryPage" },
+                    { ftype: "checkbox", name: `flags.${MODULE_ID}.overrideHandlerName`, label: game.i18n.localize(`${MODULE_ID}.craft-panel.override-handler-name`), hint: game.i18n.localize(`${MODULE_ID}.craft-panel.override-handler-name-hint`), value: true },
+                    { ftype: "checkbox", name: `flags.${MODULE_ID}.overrideHandlerIcon`, label: game.i18n.localize(`${MODULE_ID}.craft-panel.override-handler-icon`), hint: game.i18n.localize(`${MODULE_ID}.craft-panel.override-handler-icon-hint`), value: true }
+                ]
+            },
+            {
                 id: "requirements",
                 icon: "fas fa-list-check",
                 label: game.i18n.localize(`${MODULE_ID}.craft-panel.configure-requirements-tab`),
@@ -1905,18 +1926,18 @@ export class CraftPanel extends HandlebarsApplication {
                 }
 
             } else if (m.isConsumed) {
-                if (item?.system?.quantity === undefined) {
+                if (foundry.utils.getProperty(item, this.quantityPath) === undefined) {
                     toDelete[parent.id] ??= { parent: parent, items: [] };
                     toDelete[parent.id].items.push(item.id);
                     // toDelete.push({ _id: item.id, parent: item.parent });
                 } else {
-                    let newQuantity = parseFloat(item?.system?.quantity) - quantity;
+                    let newQuantity = parseFloat(foundry.utils.getProperty(item, this.quantityPath)) - quantity;
                     let findItem = false;
                     //处理当合成结果既是材料又是产品，同时还开启了合并名称时的特殊情况
                     if (this.mergeByName && updates[this.actor.id] && (parent.id == this.actor.id)) {
                         findItem = updates[this.actor.id].items.find(i => i._id == item.id);
                         if (findItem) {
-                            newQuantity = parseFloat(findItem[`system.quantity`]) - quantity;
+                            newQuantity = parseFloat(findItem[this.quantityPath]) - quantity;
                         }
                     }
                     if (newQuantity < 0) {
@@ -1931,12 +1952,12 @@ export class CraftPanel extends HandlebarsApplication {
                         }
                     } else {
                         if (findItem) {
-                            findItem[`system.quantity`] = newQuantity;
+                            findItem[this.quantityPath] = newQuantity;
                         } else {
                             updates[parent.id] ??= { parent: parent, items: [] };
                             updates[parent.id].items.push({
                                 _id: item.id,
-                                [`system.quantity`]: newQuantity
+                                [this.quantityPath]: newQuantity
                             });
                         }
                     }
@@ -2057,9 +2078,22 @@ export class CraftPanel extends HandlebarsApplication {
             // const toDelete = {};
             // const products = [];
             const { updates, toDelete, products } = await this.finalizeCraftResult(materials, results);
+            const { craftAsHandler, handlerTemplate } = await this._resolveHandlerCraftOptions(craftScriptParameter);
 
             if (!this.canceled) {
-                await this.actor.createEmbeddedDocuments("Item", products);
+                if (craftAsHandler && handlerTemplate) {
+                    const created = await this._createHandlerFromCraftResult(this.actor, handlerTemplate, products);
+                    if (!created) {
+                        this.canceled = true;
+                    }
+                } else {
+                    await this.actor.createEmbeddedDocuments("Item", products);
+                }
+
+                if (this.canceled) {
+                    return false;
+                }
+
                 await Promise.all(Object.values(updates).map(async el => {
                     await el.parent.updateEmbeddedDocuments("Item", el.items);
                 }));
@@ -2118,6 +2152,113 @@ export class CraftPanel extends HandlebarsApplication {
         this.needRefresh = true;
         await this.render(true);
         return results;
+    }
+
+    /**
+     * 解析本次合成应使用的“生成为处理”配置（脚本参数优先）。
+     * @param {object} craftScriptParameter 合成脚本参数对象。
+     * @returns {Promise<{craftAsHandler:boolean,handlerTemplate:JournalEntryPage|null}>}
+     */
+    async _resolveHandlerCraftOptions(craftScriptParameter) {
+        const hasCraftAsHandlerOverride = craftScriptParameter && Object.prototype.hasOwnProperty.call(craftScriptParameter, "craftAsHandler");
+        const hasHandlerTemplateOverride = craftScriptParameter && Object.prototype.hasOwnProperty.call(craftScriptParameter, "handlerTemplate");
+        const craftAsHandler = hasCraftAsHandlerOverride ? craftScriptParameter.craftAsHandler : (this.craftAsHandler ?? false);
+        let handlerTemplate = hasHandlerTemplateOverride ? craftScriptParameter.handlerTemplate : (this.handlerTemplate ?? null);
+        if (typeof handlerTemplate === "string") {
+            handlerTemplate = await fromUuid(handlerTemplate);
+        } else if (handlerTemplate?.uuid && !handlerTemplate?.getFlag) {
+            handlerTemplate = await fromUuid(handlerTemplate.uuid);
+        }
+        return { craftAsHandler: !!craftAsHandler, handlerTemplate: handlerTemplate ?? null };
+    }
+    /**
+     * 将待创建物品数据转换为处理结果数据。
+     * @param {object} itemData 物品数据。
+     * @returns {object}
+     */
+    _toHandlerResultData(itemData) {
+        const data = foundry.utils.deepClone(itemData?.toObject?.() ?? itemData ?? {});
+        delete data._id;
+
+        const hasQuantity = foundry.utils.getProperty(data, this.quantityPath) !== undefined || data.quantity !== undefined;
+        if (hasQuantity) {
+            const quantity = Number(foundry.utils.getProperty(data, this.quantityPath) ?? data.quantity ?? 1);
+            data.quantity = Number.isFinite(quantity) ? quantity : 1;
+            foundry.utils.setProperty(data, this.quantityPath, data.quantity);
+            data.hasQuantity = true;
+        } else {
+            delete data.quantity;
+            data.hasQuantity = false;
+        }
+
+        data.name = data.name ?? game.i18n.localize(`${MODULE_ID}.craft-panel.unknown-result`);
+        data.img = data.img ?? "icons/svg/item-bag.svg";
+        return data;
+    }
+    /**
+     * 将合成结果写入角色处理对象列表。
+     * @param {Actor} actor 目标角色。
+     * @param {JournalEntryPage} handlerTemplate 处理模板页面。
+     * @param {object[]} products 原本要直接创建的物品数据。
+     * @returns {Promise<boolean>} 是否创建成功。
+     */
+    async _createHandlerFromCraftResult(actor, handlerTemplate, products) {
+        if (!actor || !handlerTemplate) return false;
+        const panelId = handlerTemplate.parent?.id;
+        if (!panelId) return false;
+
+        const allHandlers = foundry.utils.deepClone(actor.getFlag(MODULE_ID, "craftHandlers") ?? []);
+        const panelHandlers = allHandlers.filter((h) => h.panelId === panelId);
+        const parallelLimit = handlerTemplate.parent?.getFlag?.(MODULE_ID, "parallelLimit") ?? 0;
+        if (parallelLimit > 0) {
+            const unfinished = panelHandlers.filter((h) => !h.completed).length;
+            if (unfinished >= parallelLimit) {
+                ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.notification.parallel-limit-reached`));
+                return false;
+            }
+        }
+
+        const useOverrideName = this.overrideHandlerName ?? true;
+        const useOverrideIcon = this.overrideHandlerIcon ?? true;
+        const templateTags = handlerTemplate.getFlag(MODULE_ID, "tags") ?? [];
+        const tags = Array.isArray(templateTags)
+            ? templateTags.map((t) => String(t ?? "").trim()).filter(Boolean)
+            : String(templateTags ?? "").split(/[，,]/).map((t) => t.trim()).filter(Boolean);
+        const categories = (handlerTemplate.getFlag(MODULE_ID, "categories") ?? [])
+            .map((c) => ({ name: String(c?.name ?? "").trim(), icon: c?.icon || "icons/svg/daze.svg" }))
+            .filter((c) => c.name);
+        const steps = foundry.utils.deepClone(handlerTemplate.getFlag(MODULE_ID, "steps") ?? []).map((s, i) => ({
+            ...s,
+            id: s?.id ?? foundry.utils.randomID(),
+            current: 0,
+            lastRoll: null,
+            status: "pending",
+            index: i,
+        }));
+        const templateResults = foundry.utils.deepClone(handlerTemplate.getFlag(MODULE_ID, "results") ?? []).map(r => this._toHandlerResultData(r));
+
+        panelHandlers.push({
+            id: foundry.utils.randomID(),
+            panelId,
+            name: useOverrideName ? `${this.journalEntry.name}: ${products.map((p) => p.name).join(", ")}` : handlerTemplate.name,
+            img: useOverrideIcon ? (products[0]?.img || this.journalEntry.src || handlerTemplate.src || "icons/svg/daze.svg") : (handlerTemplate.src || this.journalEntry.src || "icons/svg/daze.svg"),
+            description: handlerTemplate.getFlag(MODULE_ID, "description") ?? "",
+            tags,
+            categories,
+            templateUuid: handlerTemplate.uuid,
+            script: handlerTemplate.getFlag(MODULE_ID, "completeScript") ?? "",
+            results: templateResults.concat(products.map((p) => this._toHandlerResultData(p))),
+            steps,
+            createdAt: Date.now(),
+            completed: false,
+            failed: false,
+        });
+
+        const otherPanelHandlers = allHandlers.filter((h) => h.panelId !== panelId);
+        const finalHandlers = otherPanelHandlers.concat(panelHandlers);
+        if (!finalHandlers.length) await actor.unsetFlag(MODULE_ID, "craftHandlers");
+        else await actor.setFlag(MODULE_ID, "craftHandlers", finalHandlers);
+        return true;
     }
 
     /**

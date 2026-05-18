@@ -119,8 +119,8 @@ export class CraftPanelElement extends HandlebarsApplication {
         return {
             elementItems: this.elementItems,
             materials: this.materials,
-            slots: this.slots.map((el, i) => { el.slotIndex = i; return el; }),
-            elements: this.elements.map((el, i) => { el.slotIndex = i; return el; }),
+            slots: this.slots.map((el, i) => { el.index = i; return el; }),
+            elements: this.elements.map((el, i) => { el.index = i; return el; }),
             panelSizes: this.panelSizes,
         }
     }

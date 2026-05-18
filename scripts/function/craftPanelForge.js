@@ -32,6 +32,7 @@ export class CraftPanelForge extends CraftPanel {
         if (this.results.length == 1) {
             this.choosedResults = [this.results[0].uuid];
         }
+        this.weightPath = game.settings.get(MODULE_ID, 'weightPath');
 
         if (game.user.isGM) {
             this.options.actions["new-modifier"] = this.newModifier.bind(this);
@@ -88,7 +89,7 @@ export class CraftPanelForge extends CraftPanel {
             const results = await Promise.all(this.results.map(async (el, i) => {
                 const item = await fromUuid(el.uuid);
                 const itemColor = item ? getItemColor(item) ?? "" : "";
-                let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${el.description ?? item?.system?.description ?? item?.description ?? ""}</div>`);
+                let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${el.description ?? foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div>`);
                 const overrideStyle = (el.shape ?? "default") !== "default";
                 const overrideStyleClass = el.shape == "circle" ? "round" : "";
                 const choosed = this.choosedResults.includes(el.uuid) ? "choosed" : "";
@@ -129,7 +130,7 @@ export class CraftPanelForge extends CraftPanel {
         super._onFirstRender(context, options);
         debug(`${this.APP_ID} _onFirstRender : context options`, context, options);
         const html = $(this.element);
-        html.on("drop", ".craft-modifiers-panel", this._onDropModifierPanel.bind(this));
+        html.on("drop", ".craft-content.edit .craft-modifiers-panel", this._onDropModifierPanel.bind(this));
         html.on("click", ".craft-modifier", this._onClickModifier.bind(this));
         html.on("contextmenu", ".craft-content.edit .craft-modifier", this._onContextMenuModifier.bind(this));
         html.on("drop", ".craft-results-panel", this._onDropResultPanel.bind(this));
@@ -149,7 +150,7 @@ export class CraftPanelForge extends CraftPanel {
             return;
         }
         debug(`${this.APP_ID} _onDropResultPanel : data`, data);
-
+        if (!this.isEdit) return;
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         if (type !== "Item" && type !== "RollTable") return;
@@ -161,7 +162,7 @@ export class CraftPanelForge extends CraftPanel {
                 this.results.push({
                     uuid: item.uuid,
                     quantity: 1,
-                    weight: item.system?.weight ?? 0,
+                    weight: foundry.utils.getProperty(item, this.weightPath) ?? 0,
                     autoQuantity: false,
                     autoWeight: false,
                     originWeight: true,
@@ -169,7 +170,7 @@ export class CraftPanelForge extends CraftPanel {
                     images: [{ name: item.img, src: item.img }],
                     name: item.name,
                     type: type,
-                    description: item?.system?.description ?? item?.description ?? "",
+                    description: foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? "",
                     size: Math.min(this.panelSizes.results.width, this.panelSizes.results.height) * 0.6,
                     shape: "default",
                 });
@@ -203,7 +204,7 @@ export class CraftPanelForge extends CraftPanel {
             {
                 name: item.name,
                 src: item.img,
-                "text.content": item.system?.description ?? item.description ?? "",
+                "text.content": foundry.utils.getProperty(item, this.descriptionPath) ?? item.description ?? "",
                 flags: {
                     [MODULE_ID]: {
                         type: "modifier",
@@ -702,8 +703,8 @@ export class CraftPanelForge extends CraftPanel {
         //消耗的材料的总重量（用于自动计算数量和重量）
         let totalWeight = 0;
         for (let m of materials) {
-            if (m.item?.system?.weight != undefined && m.isConsumed) {
-                totalWeight += Number(m.item.system.weight) * Number(m.quantity);
+            if (foundry.utils.getProperty(m.item, this.weightPath) != undefined && m.isConsumed) {
+                totalWeight += Number(foundry.utils.getProperty(m.item, this.weightPath)) * Number(m.quantity);
             }
         }
         //生成的产物的总数量（用于自动计算重量时）
@@ -717,35 +718,38 @@ export class CraftPanelForge extends CraftPanel {
             totalQuantity = 1;
         }
         results.forEach(r => {
-            if (r.item?.system?.quantity != undefined && r.quantity != undefined) {
-                r.item.system.quantity = r.quantity;
+            if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined && r.quantity != undefined) {
+                let quantity = r.quantity;
                 if (r.autoQuantity ?? false) {
-                    r.item.system.quantity = Math.floor(totalWeight / ((r.weight ?? 1) == 0 ? 1 : (r.weight ?? 1)));
-                    if (r.item.system.quantity < 1) {
-                        r.item.system.quantity = 1;
+                    quantity = Math.floor(totalWeight / ((r.weight ?? 1) == 0 ? 1 : (r.weight ?? 1)));
+                    if (quantity < 1) {
+                        quantity = 1;
                     }
                 }
+                foundry.utils.setProperty(r.item, this.quantityPath, quantity);
             }
-            if (r.item?.system?.weight != undefined && r.weight != undefined && !r.originWeight) {
-                r.item.system.weight = r.weight;
+            if (foundry.utils.getProperty(r.item, this.weightPath) != undefined && r.weight != undefined && !r.originWeight) {
+                let weight = r.weight;
                 if (r.autoWeight ?? false) {
-                    r.item.system.weight = totalWeight / totalQuantity;
+                    weight = totalWeight / totalQuantity;
                 }
+                foundry.utils.setProperty(r.item, this.weightPath, weight);
             }
             r.item.name = r.name;
             r.item.img = r.img;
 
             //添加描述
-            if (r.item?.system?.description) {
-                r.item.system.description = r.description;
-                r.item.system.description += `<h2>${game.i18n.localize(MODULE_ID + ".element")}</h2><p>`;
+            if (foundry.utils.getProperty(r.item, this.descriptionPath)) {
+                let description = r.description;
+                description += `<h2>${game.i18n.localize(MODULE_ID + ".element")}</h2><p>`;
                 for (let el of this.elements) {
-                    r.item.system.description += `${el.name} ${el.num}; </div>`;
+                    description += `${el.name} ${el.num}; </div>`;
                 }
-                r.item.system.description += `</p>`;
+                description += `</p>`;
                 for (let je of this.selectedModifiers) {
-                    r.item.system.description += `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`;
+                    description += `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`;
                 }
+                foundry.utils.setProperty(r.item, this.descriptionPath, description);
             }
             //保存调整信息
             r.item.flags ??= {};
@@ -760,7 +764,7 @@ export class CraftPanelForge extends CraftPanel {
         });
         //应用调整
         if (this.selectedModifiers.length > 0) {
-            await this.applyModifier(this.selectedModifiers, results);
+            await this.applyModifier(this.selectedModifiers, materials, results);
         }
         return {
             data: this,
@@ -797,7 +801,7 @@ export class CraftPanelForge extends CraftPanel {
     }
 
     //应用调整
-    async applyModifier(selectedModifiers, results) {
+    async applyModifier(selectedModifiers, materials, results) {
         debug(`${this.APP_ID} applyModifier : selectedModifiers results`, selectedModifiers, results);
         for (let modifier of selectedModifiers) {
             //执行调整的脚本

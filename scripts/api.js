@@ -99,3 +99,4 @@ export async function chooseImage(images = [], mode = "choose", options = {}) {
     debug("chooseImage", result, app);
     return result;
 }
+

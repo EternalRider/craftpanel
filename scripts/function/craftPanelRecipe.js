@@ -348,6 +348,20 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         for (const category of recipe_categories) {
             categoryOptions[category.id] = category.name;
         }
+        const mergeByNameOptions = {
+            "default": game.i18n.localize(`${MODULE_ID}.default`),
+            "yes": game.i18n.localize(`${MODULE_ID}.yes`),
+            "no": game.i18n.localize(`${MODULE_ID}.no`),
+        };
+        const showResultOptions = {
+            "yes": game.i18n.localize(`${MODULE_ID}.yes`),
+            "no": game.i18n.localize(`${MODULE_ID}.no`),
+        };
+        const craftAsHandlerOptions = {
+            "default": game.i18n.localize(`${MODULE_ID}.default`),
+            "yes": game.i18n.localize(`${MODULE_ID}.yes`),
+            "no": game.i18n.localize(`${MODULE_ID}.no`),
+        };
         debug("CraftPanelRecipe configure : recipe_categories categoryOptions", recipe_categories, categoryOptions);
         //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
@@ -358,8 +372,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             .number({ name: `sort`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-sort`) })
             .multiSelect({ name: `flags.${MODULE_ID}.category`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-category`), options: categoryOptions })
             .number({ name: `flags.${MODULE_ID}.weight`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-weight`), min: 0 })
-            .select({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), options: { "default": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`), "yes": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.yes`), "no": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.no`) } })
-            .select({ name: `flags.${MODULE_ID}.showResult`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result-hint`), options: { "yes": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.yes`), "no": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.no`) } })
+            .select({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), options: mergeByNameOptions })
+            .select({ name: `flags.${MODULE_ID}.showResult`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result-hint`), options: showResultOptions })
+            .select({ name: `flags.${MODULE_ID}.craftAsHandler`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-as-handler`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-as-handler-hint`), options: craftAsHandlerOptions })
+            .uuid({ name: `flags.${MODULE_ID}.handlerTemplate`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.handler-template`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.handler-template-hint`), type: "JournalEntryPage" })
             .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
             .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })

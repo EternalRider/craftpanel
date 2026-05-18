@@ -1,0 +1,224 @@
+<div class="standard-form craft-handler" style="background-image: {{background}}">
+    <div class="craft-content {{#if isEdit}}edit{{/if}}" data-type="craft-panel-handler">
+        <div class="craft-panel craft-handler-actors">
+            {{> craft-panel-tittle type="actors" panelSizes=panelSizes isEdit=isEdit}}
+            {{> craft-category-panel type="actors" categories=categories panelSizes=panelSizes width=300}}
+            <div class="craft-players-panel scroll-log-panel" data-panel="actors" style="width:{{craftpanel-exist panelSizes.actors.width 300}}px;height:{{craftpanel-exist panelSizes.actors.height 540}}px;">
+                {{#if actors.length}}
+                {{#each actors as |actor|}}
+                <div class="craft-actor {{actor.choosed}} {{#unless actor.isOwner}}not-owner{{/unless}}" data-id="{{actor.id}}">
+                    <img class="actor-img" src="{{actor.img}}" alt="{{actor.name}}" />
+                    <h3 class="actor-name">{{actor.name}}</h3>
+                </div>
+                {{/each}}
+                {{else}}
+                <div class="craft-empty-state">{{../emptyTexts.actors}}</div>
+                {{/if}}
+            </div>
+        </div>
+
+        <div class="craft-panel craft-handler-handlers">
+            {{> craft-panel-tittle type="handlers" panelSizes=panelSizes isEdit=isEdit}}
+            {{> craft-category-panel type="handlers" categories=categories panelSizes=panelSizes width=600}}
+            <div class="craft-handlers-panel scroll-log-panel" data-panel="handlers" style="width:{{craftpanel-exist panelSizes.handlers.width 600}}px;height:{{craftpanel-exist panelSizes.handlers.height 540}}px;">
+                {{#if handlers.length}}
+                {{#each handlers as |handler|}}
+                <div class="handler-card {{#if handler.completed}}completed{{/if}}" data-handler-id="{{handler.id}}" draggable="true">
+                    <div class="handler-header">
+                        <div class="handler-main {{#if handler.description}}toggle-description{{/if}}">
+                            <img class="handler-icon" src="{{handler.img}}" alt="{{handler.name}}" />
+                            <div class="handler-main-text">
+                                <div class="handler-title-line">
+                                    <h3>{{handler.name}}</h3>
+                                    {{#each handler.tags as |tag|}}
+                                    <span class="tag-chip">{{tag}}</span>
+                                    {{/each}}
+                                </div>
+                                <div class="handler-status">{{handler.status.completed}} / {{handler.status.total}}</div>
+                            </div>
+                        </div>
+                        <div class="handler-actions">
+                            <button type="button" data-action="edit-handler" data-handler-id="{{handler.id}}" data-tooltip="{{localize 'craftpanel.edit'}}"><i class="fas fa-edit"></i></button>
+                            <button type="button" data-action="delete-handler" data-handler-id="{{handler.id}}" data-tooltip="{{localize 'Delete'}}" {{#unless ../canEditActive}}disabled{{/unless}}><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+
+                    {{#if handler.description}}
+                    <div class="handler-description-wrap collapsed">
+                        <div class="handler-description">{{{handler.description}}}</div>
+                    </div>
+                    {{/if}}
+
+                    <div class="handler-steps">
+                        {{#each handler.steps as |step|}}
+                        <div class="handler-step {{step.status}}" data-step-index="{{step.index}}" data-handler-id="{{handler.id}}">
+                            <div class="step-info">
+                                <span class="step-label">{{step.label}}</span>
+                                <span class="step-type-badge">{{step.typeText}}</span>
+                                {{#if step.isProgress}}
+                                <span class="step-progress">{{step.current}} / {{step.target}}</span>
+                                {{/if}}
+                                {{#if step.isRoll}}
+                                <span class="step-roll">{{step.formula}} {{step.comparisonsText}} {{step.dc}}</span>
+                                {{#if step.lastRoll}}<span class="step-last">{{step.lastRoll}}</span>{{/if}}
+                                {{/if}}
+                                <span class="step-state-badge step-state-{{step.status}}"><i class="fas {{step.statusIcon}}"></i>{{step.statusText}}</span>
+                            </div>
+                            <div class="step-controls">
+                                {{#if step.isProgress}}
+                                <button type="button" data-action="progress-dec" data-handler-id="{{handler.id}}" data-step-index="{{step.index}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.current'}} -1" {{#unless ../../canEditActive}}disabled{{/unless}} {{#if ../completed}}disabled{{/if}}><i class="fas fa-minus"></i></button>
+                                <button type="button" data-action="progress-inc" data-handler-id="{{handler.id}}" data-step-index="{{step.index}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.current'}} +1" {{#unless ../../canEditActive}}disabled{{/unless}} {{#if ../completed}}disabled{{/if}}><i class="fas fa-plus"></i></button>
+                                {{/if}}
+                                {{#if step.isRoll}}
+                                <button type="button" data-action="roll-step" data-handler-id="{{handler.id}}" data-step-index="{{step.index}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.roll-step'}}" {{#unless ../../canEditActive}}disabled{{/unless}} {{#if ../completed}}disabled{{/if}}><i class="fas fa-dice"></i></button>
+                                {{/if}}
+                                {{#if ../../isGM}}
+                                <button type="button" data-action="mark-step-complete" data-handler-id="{{handler.id}}" data-step-index="{{step.index}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.step-status-complete'}}" {{#if ../completed}}disabled{{/if}}><i class="fas fa-check"></i></button>
+                                <button type="button" data-action="mark-step-failed" data-handler-id="{{handler.id}}" data-step-index="{{step.index}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.step-status-failed'}}" {{#if ../completed}}disabled{{/if}}><i class="fas fa-times"></i></button>
+                                {{/if}}
+                            </div>
+                        </div>
+                        {{/each}}
+                    </div>
+
+                    {{#if handler.results.length}}
+                    <div class="handler-results" {{#if ../isEdit}}data-action="handler-drop-result" data-handler-id="{{handler.id}}" data-drop-target="true"{{/if}}>
+                        {{#each handler.results as |res|}}
+                        <div class="handler-result {{#if ../../isEdit}}editable{{/if}} {{#if ../completed}}result-faded{{/if}}" {{#if ../../isEdit}}data-action="edit-result" data-result-scope="handler" data-handler-id="{{../id}}" data-result-index="{{@index}}" data-tooltip="{{res.name}}{{#if res.hasQuantity}} x{{res.quantity}}{{/if}}"{{/if}}>
+                            <img src="{{res.img}}" data-tooltip="{{res.name}}" />
+                            {{#if res.hasQuantity}}<span class="qty">{{res.quantity}}</span>{{/if}}
+                        </div>
+                        {{/each}}
+                    </div>
+                    {{/if}}
+
+                    <div class="handler-footer">
+                        {{#if ../isGM}}
+                        <button type="button" data-action="reset-handler" data-handler-id="{{handler.id}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.reset'}}"><i class="fas fa-rotate-left"></i> {{localize "craftpanel.craft-panel-handler.reset"}}</button>
+                        <button type="button" data-action="restore-handler" data-handler-id="{{handler.id}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.restore'}}"><i class="fas fa-undo"></i> {{localize "craftpanel.craft-panel-handler.restore"}}</button>
+                        {{/if}}
+                        <button type="button" data-action="complete-handler" data-handler-id="{{handler.id}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.complete'}}" {{#if handler.completed}}disabled{{/if}} {{#unless ../canEditActive}}disabled{{/unless}} {{#unless handler.status.done}}disabled{{/unless}}>
+                            <i class="fas fa-flag-checkered"></i>
+                            {{#if handler.completed}}
+                            {{localize "craftpanel.craft-panel-handler.completed"}}
+                            {{else}}
+                            {{localize "craftpanel.craft-panel-handler.complete"}}
+                            {{/if}}
+                        </button>
+                    </div>
+                </div>
+                {{/each}}
+                {{else}}
+                <div class="craft-empty-state">{{../emptyTexts.handlers}}</div>
+                {{/if}}
+            </div>
+        </div>
+
+        <div class="craft-panel craft-handler-templates">
+            {{> craft-panel-tittle type="templates" panelSizes=panelSizes isEdit=isEdit}}
+            {{> craft-category-panel type="templates" categories=categories panelSizes=panelSizes width=300}}
+            {{#if isEdit}}
+            <div class="craft-templates-panel scroll-log-panel" data-panel="templates" style="width:{{craftpanel-exist panelSizes.templates.width 300}}px;height:{{craftpanel-exist panelSizes.templates.height 540}}px;">
+                {{#if handlerTemplates.length}}
+                {{#each handlerTemplates as |tpl|}}
+                <div class="handler-template" data-template-uuid="{{tpl.uuid}}" draggable="true">
+                    <div class="template-header">
+                        <div class="template-main" {{#if tpl.description}}data-tooltip="{{{tpl.description}}}"{{/if}}>
+                            <img class="handler-icon" src="{{tpl.img}}" alt="{{tpl.name}}" />
+                            <div class="template-main-text">
+                                <div class="template-name-line">
+                                    <div class="template-name">{{tpl.name}}</div>
+                                    {{#each tpl.tags as |tag|}}
+                                    <span class="tag-chip">{{tag}}</span>
+                                    {{/each}}
+                                </div>
+                                <div class="template-meta"><span>{{tpl.status.completed}} / {{tpl.status.total}}</span></div>
+                            </div>
+                        </div>
+                        <div class="handler-actions">
+                            <button type="button" data-action="edit-template" data-template-uuid="{{tpl.uuid}}" data-tooltip="{{localize 'craftpanel.edit'}}"><i class="fas fa-edit"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="template-results" data-action="template-drop-result" data-template-uuid="{{tpl.uuid}}" data-drop-target="true">
+                        {{#each tpl.results as |res|}}
+                        <div class="template-result editable" data-action="edit-result" data-result-scope="template" data-template-uuid="{{../uuid}}" data-result-index="{{res.index}}" data-tooltip="{{res.name}}{{#if res.hasQuantity}} x{{res.quantity}}{{/if}}">
+                            <img src="{{res.img}}" data-tooltip="{{res.name}}" />
+                            {{#if res.hasQuantity}}<span class="qty">{{res.quantity}}</span>{{/if}}
+                        </div>
+                        {{/each}}
+                        <div class="template-result hint" data-tooltip="{{localize "craftpanel.craft-panel-handler.drop-item-here"}}"><i class="fas fa-plus"></i></div>
+                    </div>
+
+                    <div class="template-steps">
+                        {{#each tpl.steps as |step|}}
+                        <div class="template-step" data-step-index="{{step.index}}">
+                            <div class="step-main">
+                                <span class="step-label">{{step.label}}</span>
+                                <span class="step-type-badge">{{step.typeText}}</span>
+                                {{#if step.isProgress}}
+                                <span class="step-target">{{step.current}} / {{step.target}}</span>
+                                {{/if}}
+                                {{#if step.isRoll}}
+                                <span class="step-dc">{{step.formula}} {{step.comparisonsText}} {{step.dc}}</span>
+                                {{/if}}
+                            </div>
+                            <div class="step-actions">
+                                <button type="button" data-action="edit-step" data-template-uuid="{{tpl.uuid}}" data-step-index="{{step.index}}" data-tooltip="{{localize 'craftpanel.edit'}}"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </div>
+                        {{/each}}
+                    </div>
+
+                    <div class="template-footer">
+                        <button type="button" data-action="add-step" data-template-uuid="{{tpl.uuid}}" data-tooltip="{{localize 'craftpanel.craft-panel-handler.add-step'}}"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-handler.add-step"}}</button>
+                    </div>
+                </div>
+                {{/each}}
+                {{else}}
+                <div class="craft-empty-state">{{../emptyTexts.templates}}</div>
+                {{/if}}
+            </div>
+            {{else}}
+            <div class="craft-templates-panel scroll-log-panel" data-panel="templates" style="width:{{craftpanel-exist panelSizes.templates.width 300}}px;height:{{craftpanel-exist panelSizes.templates.height 540}}px;">
+                {{#if handlerTemplates.length}}
+                {{#each handlerTemplates as |tpl|}}
+                <div class="handler-template" data-template-uuid="{{tpl.uuid}}">
+                    <div class="template-header">
+                        <div class="template-main" {{#if tpl.description}}data-tooltip="{{{tpl.description}}}"{{/if}}>
+                            <img class="handler-icon" src="{{tpl.img}}" alt="{{tpl.name}}" />
+                            <div class="template-main-text">
+                                <div class="template-name-line">
+                                    <div class="template-name">{{tpl.name}}</div>
+                                    {{#each tpl.tags as |tag|}}
+                                    <span class="tag-chip">{{tag}}</span>
+                                    {{/each}}
+                                </div>
+                                <div class="template-meta"><span>{{tpl.status.completed}} / {{tpl.status.total}}</span></div>
+                            </div>
+                        </div>
+                        <button type="button" data-action="create-handler" data-template-uuid="{{tpl.uuid}}" data-tooltip="{{localize 'craftpanel.create'}}" {{#unless ../canEditActive}}disabled{{/unless}}><i class="fas fa-copy"></i> {{localize "craftpanel.create"}}</button>
+                    </div>
+                    <div class="template-steps compact">
+                        {{#each tpl.steps as |step|}}
+                        <span class="template-chip">{{step.label}}</span>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/each}}
+                {{else}}
+                <div class="craft-empty-state">{{../emptyTexts.templates}}</div>
+                {{/if}}
+            </div>
+            {{/if}}
+        </div>
+    </div>
+
+    <footer class="form-footer">
+        {{#if isEdit}}
+        <button type="button" data-action="add-template" data-tooltip="{{localize 'craftpanel.craft-panel-handler.new-handler-template'}}"><i class="fas fa-plus"></i> {{localize "craftpanel.craft-panel-handler.new-handler-template"}}</button>
+        <button type="button" data-action="configure-panel" data-tooltip="{{localize 'craftpanel.configure'}}"><i class="fas fa-cog"></i> {{localize "craftpanel.configure"}}</button>
+        {{/if}}
+        <button type="button" data-action="close" data-tooltip="{{localize 'Close'}}"><i class="fas fa-times"></i> {{localize "Close"}}</button>
+    </footer>
+</div>
