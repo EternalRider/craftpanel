@@ -147,11 +147,9 @@ export class CraftPanelBlend extends CraftPanel {
     async refreshResults() {
         debug(`${this.APP_ID} refreshResults`);
         this.results = [];
-        // swpt.debug("CraftPanelBlend.refreshResults", this.elements.map(el => el.num), this.slotItems);
         const showResult = this.journalEntry.getFlag(MODULE_ID, "showResult");
         if ((showResult === "show" || showResult === "question mark" || showResult == "by unlock") && this.checkSlot()) {
             let recipes = await this.matchRecipe();
-            // swpt.debug("CraftPanelBlend.refreshResults", recipes);
             if (recipes.length > 0) {
                 if ((recipes.length > 1) || (showResult === "question mark") || (showResult === "by unlock" && (this.recipesCanShow.find(r => r.id == recipes[0].id) === undefined))) {
                     this.results.push({
@@ -183,7 +181,6 @@ export class CraftPanelBlend extends CraftPanel {
                 }
             }
         }
-        // swpt.debug("CraftPanelBlend.refreshResults", this.results[0]);
     }
     //刷新材料面板
     async refreshPanel() {

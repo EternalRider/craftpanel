@@ -346,13 +346,16 @@
 }
 /* 图块-材料-元素点行容器 */
 .craft .craft-content .craft-slot-elements .slot-element-circle-container {
-    width: 60px;
-    height: 10px;
+    width: 100%;
+    height: min-content;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: row;
-    overflow: hidden;
+    display: grid;
+    align-content: start;
+    justify-content: start;
+    justify-items: start;
+    align-items: start;
+    grid-template-columns: repeat(auto-fill, 9px);
 }
 /* 图块-材料-元素点 */
 .craft .craft-content .slot-element-circle-container .slot-element-circle {
