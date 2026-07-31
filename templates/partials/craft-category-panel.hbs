@@ -1,3 +1,4 @@
+{{!-- 分类筛选面板：显示分类图标，点击切换当前分类 --}}
 <div class="craft-category-panel" style="width:{{craftpanel-exist panelSizes.[type].width width}}px;">
     {{#each (lookup categories type) as |category|}}
     <img src="{{category.icon}}" alt="{{category.name}}" class="craft-category-icon {{#if category.choosed}}selected{{/if}}" 

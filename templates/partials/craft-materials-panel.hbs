@@ -1,11 +1,15 @@
+{{!-- 材料面板：显示玩家可用的材料库存，支持分类筛选和拖拽到槽位 --}}
 <div class="craft-panel">
     {{> craft-panel-tittle type="materials" panelSizes=panelSizes isEdit=isEdit}}
+    {{!-- 分类筛选 --}}
     {{#if categories}}{{> craft-category-panel type="materials" categories=categories panelSizes=panelSizes width=width}}{{/if}}
+    {{!-- 材料网格 --}}
     <div class="craft-materials-panel scroll-log-panel" data-panel="materials" style="width:{{craftpanel-exist panelSizes.materials.width width}}px;height:{{craftpanel-exist panelSizes.materials.height height}}px;">
         {{#each materials as |slot|}}
         <div draggable="true" data-tooltip-class="craft-tooltip" data-tooltip="{{slot.tooltip}}"
             class="element-slot materials" data-uuid="{{slot.uuid}}"
             style="{{#if slot.itemColor}}--item-color: {{slot.itemColor}};{{/if}} {{#if slot.item.img}}background-image: url('{{slot.item.img}}');{{/if}} ">
+            {{!-- 材料上的元素点 --}}
             <div class="craft-slot-elements" {{#unless slot.showElements}}hidden="true" {{/unless}}{{#if slot.empty}}hidden="true" {{/if}} draggable="false">
                 {{#each slot.elements as |element|}}
                 <div class="slot-element-circle-container">
@@ -15,6 +19,7 @@
                 </div>
                 {{/each}}
             </div>
+            {{!-- 材料数量 --}}
             <div class="craft-slot-quantity" {{#unless slot.showQuantity}}hidden="true"{{/unless}} draggable="false">
                 {{slot.quantity}}
             </div>

@@ -1,18 +1,24 @@
+{{!-- 调整列表面板：显示可用的合成调整器，包含成本面板和分类筛选 --}}
 <div class="craft-panel">
     {{> craft-panel-tittle type="modifiers" panelSizes=panelSizes isEdit=isEdit}}
+    {{!-- 成本显示面板 --}}
     {{#if showCost}}
     <div class="craft-cost-panel" style="width: 100%;">
         <input style="{{#unless isEdit}}pointer-events: none;{{/unless}}{{#if cost.icon}}background-image: url('{{cost.icon}}');{{/if}}" type="number" name="cost" value="{{cost.value}}" />
         <span>{{cost.max}}</span>
     </div>
     {{/if}}
+    {{!-- 分类筛选图标 --}}
     {{#if categories}}{{> craft-category-panel type="modifiers" categories=categories panelSizes=panelSizes width=width}}{{/if}}
+    {{!-- 调整器列表 --}}
     <div class="craft-modifiers-panel scroll-log-panel" data-panel="modifiers" style="width:{{craftpanel-exist panelSizes.modifiers.width width}}px;height:{{craftpanel-exist panelSizes.modifiers.height height}}px;">
         {{#each modifiers as |modifier|}}
         <div class="craft-modifier {{modifier.locked}} {{modifier.choosed}}" {{modifier.locked}} {{#if ../draggable}}draggable="true"{{/if}}
             style="{{#if modifier.hasEnchanted}}border-color: yellow;{{else}}{{#if modifier.auto}}border-color: red;{{/if}}{{/if}}"
             data-uuid="{{modifier.uuid}}" data-index="{{modifier.index}}" data-tooltip-class="craft-tooltip" data-tooltip="{{modifier.tooltip}}">
+            {{!-- 调整器图标 --}}
             <div class="craft-modifier-img" style="background-image: url('{{modifier.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+            {{!-- 调整器描述区：名称 + 成本 + 材料需求 --}}
             <div class="craft-modifier-desc">
                 <h3 class="craft-modifier-tittle">{{modifier.name}}</h3>
                 {{#if modifier.cost}}<div class="craft-modifier-cost {{modifier.costClass}}" draggable="false" style="{{#if ../cost.icon}}background-image: url('{{../cost.icon}}');{{/if}}">{{modifier.costInfo}}</div>{{/if}}

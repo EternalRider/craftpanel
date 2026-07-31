@@ -1,11 +1,16 @@
+{{!-- 配方列表面板：显示可用的合成配方，支持分类筛选和拖拽排序 --}}
 <div class="craft-panel">
     {{> craft-panel-tittle type="recipes" panelSizes=panelSizes isEdit=isEdit}}
+    {{!-- 分类筛选图标 --}}
     {{#if categories}}{{> craft-category-panel type="recipes" categories=categories panelSizes=panelSizes width=width}}{{/if}}
+    {{!-- 配方列表 --}}
     <div class="craft-recipes-panel scroll-log-panel" data-panel="recipes" style="width:{{craftpanel-exist panelSizes.recipes.width width}}px;height:{{craftpanel-exist panelSizes.recipes.height height}}px;">
         {{#each recipes as |recipe|}}
         <div class="craft-recipe {{recipe.choosed}}" {{#if ../draggable}}draggable="true"{{/if}}
         data-uuid="{{recipe.uuid}}" data-index="{{recipe.index}}" data-tooltip-class="craft-tooltip" data-tooltip="{{recipe.tooltip}}">
+            {{!-- 配方图标 --}}
             <div class="craft-recipe-img" style="background-image: url('{{recipe.image}}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+            {{!-- 配方描述区：名称 + 材料需求 --}}
             <div class="craft-recipe-desc">
                 <h3 class="craft-recipe-tittle">{{recipe.name}}</h3>
                 <div class="craft-recipe-ingredients">

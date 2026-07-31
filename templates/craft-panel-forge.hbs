@@ -1,3 +1,4 @@
+{{!-- 锻造面板：左侧调整器列表(含成本) + 中间槽位/结果/元素 + 右侧材料库存 --}}
 <div class="standard-form" style="background-image: {{background}}">
     <div class="craft-content {{#if isEdit}}edit{{/if}}" data-type="craft-panel-forge">
         {{> craft-modifiers-panel width=300 height=470 showCost="true" cost=cost modifiers=modifiers categories=categories panelSizes=panelSizes isEdit=isEdit}}

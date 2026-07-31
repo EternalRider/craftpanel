@@ -1,3 +1,4 @@
+{{!-- 元素物品面板：显示元素类型的物品列表，带颜色属性标识 --}}
 <div class="craft-panel">
     {{> craft-panel-tittle type="elementitems" tittle="craftpanel.elements"}}
     <div class="craft-elementitems-panel" style="width:{{craftpanel-exist panelSizes.elementitems.width width}}px;height:{{craftpanel-exist panelSizes.elementitems.height height}}px;">
@@ -5,6 +6,7 @@
         <div draggable="true" data-tooltip="{{element.name}}" class="element-slot elements"
             data-index="{{element.slotIndex}}" data-uuid="{{element.uuid}}" data-id="{{element.id}}" data-inslot="false"
             style="{{#if element.img}}background-image: url('{{element.img}}');{{/if}} ">
+            {{!-- 元素颜色/形状指示器 --}}
             <i class="element-color-circle fa-solid fa-{{element.shape}}" draggable="false" style="color: {{element.color}};"></i>
         </div>
         {{/each}}

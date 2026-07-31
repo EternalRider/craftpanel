@@ -1,16 +1,13 @@
+{{!-- 调整器编辑面板：编辑调整器的配方、材料和效果变化 --}}
 <div class="standard-form">
     <div class="craft-content">
         {{> craft-modifiers-panel width=300 height=420 draggable="true" cost=cost modifiers=modifiers categories=categories panelSizes=panelSizes isEdit=isEdit}}
         <div class="craft-main-panel" style="width: 300px;">
             {{> craft-ingredients-panel width=300 height=200 ingredients=ingredients panelSizes=panelSizes}}
+            {{!-- 效果变化面板：显示调整器带来的属性变化 --}}
             <div class="craft-panel">
-                {{> craft-panel-tittle tittle="craftpanel.modifier"}}
+                {{> craft-panel-tittle tittle="craftpanel.modifiers"}}
                 <div class="craft-changes-panel main-child-panel" style="width:{{craftpanel-exist panelSizes.changes.width 300}}px;height:{{craftpanel-exist panelSizes.changes.height 170}}px;">
-                    {{!-- <header class="effect-change effects-header flexrow" style="">
-                        <div class="key">{{localize "EFFECT.ChangeKey"}}</div>
-                        <div class="mode">{{localize "EFFECT.ChangeMode"}}</div>
-                        <div class="value">{{localize "EFFECT.ChangeValue"}}</div>
-                    </header> --}}
                     <ol class="changes-list" style="margin: 1px; padding: 0px;">
                         {{#each changes as |change|}}
                         <li class="effect-change flexrow" data-index="{{@index}}">
