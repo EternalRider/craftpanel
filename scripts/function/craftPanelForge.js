@@ -789,12 +789,12 @@ export class CraftPanelForge extends CraftPanel {
             totalQuantity = 1;
         }
         results.forEach(r => {
-            if (r.foundry.utils.getProperty(item, this.quantityPath) != undefined && r.quantity != undefined) {
-                r.foundry.utils.getProperty(item, this.quantityPath) = r.quantity;
+            if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined && r.quantity != undefined) {
+                foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
                 if (r.autoQuantity ?? false) {
-                    r.foundry.utils.getProperty(item, this.quantityPath) = Math.floor(totalWeight / ((r.weight ?? 1) == 0 ? 1 : (r.weight ?? 1)));
-                    if (r.foundry.utils.getProperty(item, this.quantityPath) < 1) {
-                        r.foundry.utils.getProperty(item, this.quantityPath) = 1;
+                    foundry.utils.setProperty(r.item, this.quantityPath, Math.floor(totalWeight / ((r.weight ?? 1) == 0 ? 1 : (r.weight ?? 1))));
+                    if (foundry.utils.getProperty(r.item, this.quantityPath) < 1) {
+                        foundry.utils.setProperty(r.item, this.quantityPath, 1);
                     }
                 }
             }

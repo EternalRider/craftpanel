@@ -541,7 +541,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
             r.item.img = r.img;
 
             //添加描述
-            if (r.foundry.utils.getProperty(item, this.descriptionPath)) {
+            if (foundry.utils.getProperty(r.item, this.descriptionPath)) {
                 foundry.utils.setProperty(r.item, this.descriptionPath, r.description);
                 for (let je of this.selectedModifiers) {
                     foundry.utils.setProperty(r.item, this.descriptionPath, (foundry.utils.getProperty(r.item, this.descriptionPath) ?? "") + `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`;

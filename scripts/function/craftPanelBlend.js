@@ -583,16 +583,16 @@ export class CraftPanelBlend extends CraftPanel {
                         });
                     }
                 } else {
-                    if (r.foundry.utils.getProperty(item, this.quantityPath) != undefined) {
-                        r.foundry.utils.getProperty(item, this.quantityPath) = r.quantity;
+                    if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
+                        foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
                     }
                     products.push(r.item);
                 }
             });
         } else {
             results.forEach(r => {
-                if (r.foundry.utils.getProperty(item, this.quantityPath) != undefined) {
-                    r.foundry.utils.getProperty(item, this.quantityPath) = r.quantity;
+                if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
+                    foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
                 }
                 products.push(r.item);
             });

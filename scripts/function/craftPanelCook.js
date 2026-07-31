@@ -64,7 +64,7 @@ export class CraftPanelCook extends CraftPanelForge {
                     return {
                         name: re.name,
                         img: re.img,
-                        quantity: re.foundry.utils.getProperty(item, this.quantityPath),
+                        quantity: foundry.utils.getProperty(re.item, this.quantityPath) ?? re.item?.quantity ?? 1,
                         description: re.description
                     }
                 }),
