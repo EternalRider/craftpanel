@@ -1,7 +1,19 @@
 import { HandlebarsApplication, getItemColor, MODULE_ID, debug } from "../utils.js";
 import { FormBuilder } from "./formBuilder.js";
 
+/**
+ * 调整器编辑子面板。
+ * 提供调整器的详细编辑功能，包括成分需求、效果变更、排序等。
+ * @extends HandlebarsApplication
+ */
 export class CraftPanelModifier extends HandlebarsApplication {
+    /**
+     * 构造调整器编辑子面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     * @param {JournalEntryPage|string} journalEntryPage 调整器对应的页面或其 UUID
+     * @param {object} options 额外选项
+     * @param {string} [options.focusModifierUuid] 需要聚焦滚动的调整器 UUID
+     */
     constructor(journalEntry, journalEntryPage, options = {}) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
@@ -53,9 +65,12 @@ export class CraftPanelModifier extends HandlebarsApplication {
 
         craftPanels ??= [];
         craftPanels.push(this);
-        debug("CraftPanelModifier constructor : this journalEntry, journalEntryPage", this, journalEntry, journalEntryPage);
     }
 
+    /**
+     * 默认窗口配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID, "craft"],
@@ -71,7 +86,6 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 contentTag: "section",
                 contentClasses: [],
             },
-            actions: {},
             form: {
                 handler: undefined,
                 submitOnChange: false,
@@ -85,6 +99,10 @@ export class CraftPanelModifier extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 视图片段配置。
+     * @returns {object}
+     */
     static get PARTS() {
         return {
             content: {
@@ -94,6 +112,10 @@ export class CraftPanelModifier extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 由类名推导应用 ID。
+     * @returns {string}
+     */
     static get APP_ID() {
         return this.name
             .split(/(?=[A-Z])/)
@@ -101,14 +123,26 @@ export class CraftPanelModifier extends HandlebarsApplication {
             .toLowerCase();
     }
 
+    /**
+     * 当前实例的应用 ID。
+     * @returns {string}
+     */
     get APP_ID() {
         return this.constructor.APP_ID;
     }
 
+    /**
+     * 窗口标题。
+     * @returns {string}
+     */
     get title() {
         return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`);
     }
 
+    /**
+     * 面板关闭时从全局 craftPanels 数组中移除自身，并通知父面板刷新。
+     * @param {object} options 关闭选项
+     */
     _onClose(options) {
         super._onClose(options);
         craftPanels ??= [];
@@ -120,16 +154,16 @@ export class CraftPanelModifier extends HandlebarsApplication {
     }
 
     /**
-     * 准备界面所需的各项数据
-     * @returns {}
+     * 组装渲染上下文：获取调整器列表、成分列表和变更列表。
+     * @param {object} options 渲染选项
+     * @returns {Promise<{elementItems: Array, modifiers: Array, ingredients: Array, changes: Array, panelSizes: object}>}
      */
     async _prepareContext(options) {
         if (this.needRefresh) {
             await this.refreshPanel();
         }
         const modifiersJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "modifier").sort((a, b) => (a.sort - b.sort));
-        debug("CraftPanelModifier _prepareContext : modifiersJE", modifiersJE);
-        const modifiers = modifiersJE.map((je, i) => {
+        const modifiers = await Promise.all(modifiersJE.map(async (je, i) => {
             const ingredients = (je.getFlag(MODULE_ID, "ingredients") ?? []).map((el) => {
                 let num = el.min;
                 if (el.useMin && el.useMax) {
@@ -142,6 +176,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
                     ...el,
                 };
             });
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div>`);
             let cost = je.getFlag(MODULE_ID, "cost") ?? 0;
             let costInfo = "";
             let costClass = "";
@@ -161,13 +196,13 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 index: i,
                 uuid: je.uuid,
                 ingredients: ingredients,
+                tooltip,
                 choosed: je.id == this.journalEntryPage.id ? "choosed" : "",
                 cost,
                 costInfo,
                 costClass,
             };
-        });
-        debug("CraftPanelModifier _prepareContext : modifiers", modifiers);
+        }));
         this.ingredients.sort((a, b) => {
             if (a.type == "element" && b.type == "material") return 1;
             if (a.type == "material" && b.type == "element") return -1;
@@ -191,18 +226,17 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 ...el,
             };
         });
-        debug("CraftPanelModifier _prepareContext : ingredients", ingredients);
         // const changes = await Promise.all(this.changes.map(async (el, i) => {
-        // const item = await fromUuid(el.uuid);
-        // const itemColor = item ? getItemColor(item) ?? "" : "";
-        // return {
-        //     slotIndex: i,
-        //     uuid: el.uuid,
-        //     quantity: el.quantity,
-        //     name: item?.name ?? el.name,
-        //     img: item?.img ?? el.img,
-        //     itemColor: itemColor,
-        // };
+            // const item = await fromUuid(el.uuid);
+            // const itemColor = item ? getItemColor(item) ?? "" : "";
+            // return {
+            //     slotIndex: i,
+            //     uuid: el.uuid,
+            //     quantity: el.quantity,
+            //     name: item?.name ?? el.name,
+            //     img: item?.img ?? el.img,
+            //     itemColor: itemColor,
+            // };
         // }));
 
 
@@ -215,13 +249,14 @@ export class CraftPanelModifier extends HandlebarsApplication {
         }
     }
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 渲染后绑定交互事件：元素拖放、调整器切换/排序、变更编辑、滚动位置恢复等。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onRender(context, options) {
         super._onRender(context, options);
         const html = this.element;
-        debug("CraftPanelModifier _onRender : context", context);
+
         // 恢复滚动条位置
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
         html.querySelector(".craft-modifiers-panel").scrollTop = this.scrollPositions.modifiers;
@@ -362,9 +397,11 @@ export class CraftPanelModifier extends HandlebarsApplication {
         //滚动事件，记录滚动位置
         html.querySelector(".craft-elementitems-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elementItems = event.target.scrollTop; });
         html.querySelector(".craft-modifiers-panel").addEventListener("scrollend", (event) => { this.scrollPositions.modifiers = event.target.scrollTop; });
-        debug("CraftPanelModifier _onRender : html", html);
     }
 
+    /**
+     * 打开调整器配置对话框：名称、图标、排序、成本、分类、AE 设置、脚本等。
+     */
     async configure() {
         const modifier_categories = this.journalEntry.getFlag(MODULE_ID, "modifiers-categories") ?? [];
         const categoryOptions = {};
@@ -373,7 +410,6 @@ export class CraftPanelModifier extends HandlebarsApplication {
         }
         const aeTypeOptions = foundry.utils.deepClone(CONFIG.ActiveEffect.typeLabels);
         aeTypeOptions.default = game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.default`);
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntryPage)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-modifier`) + ": " + this.journalEntryPage.name)
@@ -406,7 +442,6 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 icon: "fas fa-trash",
             });
         const data = await fb.render();
-        debug("CraftPanelModifier configure : data", data);
         if (!data) return;
         if (data.flags[MODULE_ID].asAE == "false") {
             data.flags[MODULE_ID].asAE = false;
@@ -415,9 +450,13 @@ export class CraftPanelModifier extends HandlebarsApplication {
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 编辑成分的数量范围（最小值/最大值）。
+     * @param {number} index 成分在列表中的索引
+     */
     async editNum(index) {
         const ingredient = this.ingredients[index];
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(ingredient)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
@@ -428,28 +467,35 @@ export class CraftPanelModifier extends HandlebarsApplication {
             .info(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num-info`));
 
         const data = await fb.render();
-        debug("CraftPanelModifier editNum : data", data);
         if (!data) return;
+        // debug("editNum", data);
         this.ingredients[index].min = data.min;
         this.ingredients[index].useMin = data.useMin;
         this.ingredients[index].max = data.max;
         this.ingredients[index].useMax = data.useMax;
         await this.render(true);
     }
+
+    /**
+     * 编辑变更的数量。
+     * @param {number} index 变更在列表中的索引
+     */
     async editResultNum(index) {
         const result = this.changes[index];
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(result)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "quantity", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
 
         const data = await fb.render();
-        debug("CraftPanelModifier editResultNum : data", data);
         if (!data) return;
         this.changes[index].quantity = data.quantity;
         await this.render(true);
     }
+
+    /**
+     * 保存当前编辑的成分和变更数据到 journalEntryPage。
+     */
     async editModifier() {
         const update = {
             flags: {
@@ -459,12 +505,15 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 },
             },
         }
-        debug("CraftPanelModifier editModifier : update", update);
         await this.journalEntryPage.update(update);
         this.needRefresh = true;
         await this.render(true);
     }
 
+    /**
+     * 处理物品拖放到成分面板的事件：根据类型添加为元素或材料成分。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropSlotPanel(event) {
         event.stopPropagation();
         let data;
@@ -473,7 +522,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelModifier _onDropSlotPanel : data", data);
+
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         let element = data?.element;
@@ -493,6 +542,11 @@ export class CraftPanelModifier extends HandlebarsApplication {
             this.addElement(element, data.uuid);
         }
     }
+
+    /**
+     * 处理物品拖放到变更面板的事件（预留接口）。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropChangePanel(event) {
         event.stopPropagation();
         let data;
@@ -501,7 +555,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelModifier _onDropChangePanel : data", data);
+
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         if (type !== "Item" && type !== "ActiveEffect") return;
@@ -509,6 +563,11 @@ export class CraftPanelModifier extends HandlebarsApplication {
 
         }
     }
+
+    /**
+     * 处理调整器拖放排序事件。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropModifiersPanel(event) {
         event.stopPropagation();
         let data;
@@ -517,7 +576,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelModifier _onDropModifiersPanel : data", data);
+        // debug("CraftPanelBlend._onDropModifiersPanel", event, data, event.currentTarget, event.currentTarget.dataset.index, event.currentTarget.dataset.uuid);
         if (data.type !== "CraftModifier") return;
         if (data.parent !== this.journalEntry.uuid) return;
         let targetUuid = event.currentTarget.dataset.uuid;
@@ -535,8 +594,12 @@ export class CraftPanelModifier extends HandlebarsApplication {
         await this.render(true);
     }
 
+    /**
+     * 添加元素到成分列表，已有则增加数量。
+     * @param {CraftElement} element 元素数据
+     * @param {string} uuid 元素物品的 UUID
+     */
     async addElement(element, uuid) {
-        debug("CraftPanelModifier addElement : element uuid", element, uuid);
         if (element == undefined) {
             let item = await fromUuid(uuid);
             element = item.getFlag(MODULE_ID, "elementConfig");
@@ -563,11 +626,15 @@ export class CraftPanelModifier extends HandlebarsApplication {
             };
             this.ingredients.push(el);
         }
-        debug("CraftPanelModifier addElement : this.ingredients", this.ingredients);
         await this.render(true);
     }
+
+    /**
+     * 减少元素数量，数量归零时移除。
+     * @param {CraftElement} element 元素数据
+     * @param {string} uuid 元素物品的 UUID
+     */
     async removeElement(element, uuid) {
-        debug("CraftPanelModifier removeElement : element uuid", element, uuid);
         if (element == undefined) {
             let item = await fromUuid(uuid);
             element = item.getFlag(MODULE_ID, "elementConfig");
@@ -583,11 +650,14 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 el.max--;
             }
         }
-        debug("CraftPanelModifier removeElement : this.ingredients", this.ingredients);
         await this.render(true);
     }
+
+    /**
+     * 添加材料到成分列表，已有则增加数量。
+     * @param {Item} item 材料物品
+     */
     async addMaterial(item) {
-        debug("CraftPanelModifier addMaterial : item", item);
         if (!item) return;
         let el = this.ingredients.find((el) => (el.type == "material") && (el.name == item.name));
         if (el) {
@@ -611,21 +681,30 @@ export class CraftPanelModifier extends HandlebarsApplication {
             };
             this.ingredients.push(el);
         }
-        debug("CraftPanelModifier addMaterial : this.ingredients", this.ingredients);
         await this.render(true);
     }
 
+    /**
+     * 移除指定索引的成分。
+     * @param {number} index 成分索引
+     */
     async removeIngredient(index) {
-        debug("CraftPanelModifier removeIngredient : index this.ingredients", index, this.ingredients);
         this.ingredients.splice(index, 1);
         await this.render(true);
     }
+
+    /**
+     * 移除指定索引的变更。
+     * @param {number} index 变更索引
+     */
     async removeResult(index) {
-        debug("CraftPanelModifier removeResult : index this.changes", index, this.changes);
         this.changes.splice(index, 1);
         await this.render(true);
     }
 
+    /**
+     * 刷新面板：重新获取所有元素物品列表。
+     */
     async refreshPanel() {
         const elementItems_items = [];
         for (const item of game.items.contents) {
@@ -633,7 +712,6 @@ export class CraftPanelModifier extends HandlebarsApplication {
                 elementItems_items.push(item);
             }
         }
-        debug("CraftPanelModifier refreshPanel : elementItems_items", elementItems_items);
         this.elementItems = elementItems_items.map((item, i) => {
             const element = item.getFlag(MODULE_ID, "elementConfig");
             return {
@@ -648,36 +726,39 @@ export class CraftPanelModifier extends HandlebarsApplication {
             };
         });
         this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });
-        debug("CraftPanelModifier refreshPanel : this.elementItems", this.elementItems);
         this.needRefresh = false;
     }
 
+    /**
+     * 添加新的效果变更条目。
+     */
     async addChange() {
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.add-change`) + ": " + this.journalEntryPage.name)
             .text({ name: "key", label: game.i18n.localize("EFFECT.ChangeKey") })
             .select({ name: "mode", label: game.i18n.localize("EFFECT.ChangeMode"), options: EFFECTCHANGEMOD, value: 2 })
             .text({ name: "value", label: game.i18n.localize("EFFECT.ChangeValue") })
-
+        
         const data = await fb.render();
-        debug("CraftPanelModifier addChange : data", data);
         if (!data) return;
         this.changes.push(data);
         await this.render(true);
     }
+
+    /**
+     * 编辑效果变更条目。
+     * @param {number} index 变更在列表中的索引
+     */
     async editChange(index) {
         const change = this.changes[index];
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(change)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-change`))
             .text({ name: "key", label: game.i18n.localize("EFFECT.ChangeKey") })
             .select({ name: "mode", label: game.i18n.localize("EFFECT.ChangeMode"), options: EFFECTCHANGEMOD })
             .text({ name: "value", label: game.i18n.localize("EFFECT.ChangeValue") })
-
+        
         const data = await fb.render();
-        debug("CraftPanelModifier editChange : data", data);
         if (!data) return;
         this.changes[index] = data;
         await this.render(true);
@@ -687,10 +768,10 @@ export class CraftPanelModifier extends HandlebarsApplication {
 const EFFECTCHANGEMOD = {
     0: "EFFECT.MODE_CUSTOM",
     1: "EFFECT.MODE_MULTIPLY",
-    2: "EFFECT.MODE_ADD",
-    3: "EFFECT.MODE_DOWNGRADE",
-    4: "EFFECT.MODE_UPGRADE",
-    5: "EFFECT.MODE_OVERRIDE",
+    2 : "EFFECT.MODE_ADD",
+    3 : "EFFECT.MODE_DOWNGRADE",
+    4 : "EFFECT.MODE_UPGRADE",
+    5 : "EFFECT.MODE_OVERRIDE",
 }
 /**
  * @typedef {Object} CraftElement

@@ -1,6 +1,26 @@
 import { HandlebarsApplication, debug, MODULE_ID } from "../utils.js";
 
+/**
+ * 配方解锁权限等级。
+ * @type {{canShow: number, canUse: number, none: number}}
+ */
+const DEFAULT_OWNERSHIP = {
+    "canShow": 2,
+    "canUse": 1,
+    "none": 0,
+}
+
+/**
+ * 用户配方管理面板（GM 专用）。
+ * 允许 GM 通过拖拽方式为各玩家解锁或移除合成配方。
+ * 左侧显示玩家列表，右侧显示该面板下所有配方（已解锁的会被标记）。
+ * @extends HandlebarsApplication
+ */
 export class CraftPanelUserRecipe extends HandlebarsApplication {
+    /**
+     * 构造用户配方管理面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     */
     constructor(journalEntry) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
@@ -30,6 +50,10 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         debug("CraftPanelUserRecipe constructor : this journalEntry craftPanels", this, journalEntry, craftPanels);
     }
 
+    /**
+     * 默认窗口与表单配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID, "craft"],
@@ -45,7 +69,6 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
                 contentTag: "section",
                 contentClasses: [],
             },
-            actions: {},
             form: {
                 handler: undefined,
                 submitOnChange: false,
@@ -59,6 +82,10 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 视图片段配置。
+     * @returns {object}
+     */
     static get PARTS() {
         return {
             content: {
@@ -68,6 +95,10 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 由类名推导应用 ID。
+     * @returns {string}
+     */
     static get APP_ID() {
         return this.name
             .split(/(?=[A-Z])/)
@@ -75,14 +106,26 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
             .toLowerCase();
     }
 
+    /**
+     * 当前实例的应用 ID。
+     * @returns {string}
+     */
     get APP_ID() {
         return this.constructor.APP_ID;
     }
 
+    /**
+     * 窗口标题。
+     * @returns {string}
+     */
     get title() {
         return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`);
     }
 
+    /**
+     * 面板关闭时从全局 craftPanels 数组中移除自身。
+     * @param {object} options 关闭选项
+     */
     _onClose(options) {
         super._onClose(options);
         craftPanels ??= [];
@@ -90,8 +133,9 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
     }
 
     /**
-     * 准备界面所需的各项数据
-     * @returns {}
+     * 组装渲染上下文：获取配方列表、非 GM 用户列表及当前用户的已解锁配方。
+     * @param {object} options 渲染选项
+     * @returns {Promise<{players: Array, recipes: Array, panelSizes: object}>}
      */
     async _prepareContext(options) {
         const recipesJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "recipe").sort((a, b) => (a.sort - b.sort));
@@ -140,9 +184,11 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
             panelSizes: this.panelSizes,
         }
     }
+
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 渲染完成后绑定交互事件：玩家切换、配方拖拽、滚动记录等。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onRender(context, options) {
         super._onRender(context, options);
@@ -177,7 +223,6 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
                 );
             });
             recipe.addEventListener("dragend", this._onDragEnd.bind(this));
-            // recipe.addEventListener("drop", this._onDropRecipesPanel.bind(this));
         });
         html.querySelector(".craft-recipes-panel").addEventListener("drop", this._onDropRecipesPanel.bind(this));
         //滚动事件，记录滚动位置
@@ -185,6 +230,11 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         html.querySelector(".craft-recipes-panel").addEventListener("scrollend", (event) => { this.scrollPositions.recipes = event.target.scrollTop; });
         debug("CraftPanelUserRecipe _onRender : html", html);
     }
+
+    /**
+     * 处理配方拖放到配方面板的事件：将配方添加到当前用户的已解锁列表。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropRecipesPanel(event) {
         event.stopPropagation();
         let data;
@@ -204,6 +254,11 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         }
         await this.render(true);
     }
+
+    /**
+     * 处理拖拽结束事件：如果拖放到面板外，则从已解锁列表中移除该配方。
+     * @param {DragEvent} event 拖拽结束事件
+     */
     async _onDragEnd(event) {
         // 拖拽至其他区域，删除已解锁配置
         event.stopPropagation();
@@ -216,6 +271,12 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
         this.dropOccurred = false;
         await this.render(true);
     }
+
+    /**
+     * 保存当前用户的已解锁配方到 flag 中。
+     * 如果列表为空则清除 flag。
+     * @param {Event} event 点击事件
+     */
     async edit(event) {
         event.stopPropagation();
         if (this.unlockedRecipes.length >= 1) {
@@ -231,7 +292,7 @@ export class CraftPanelUserRecipe extends HandlebarsApplication {
 
 /**
  * @typedef {Object} CraftElement
- * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。
+ * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现"虚假"属性。
  * @property {string} name - 元素的名称，为对应物品的名称。仅用于显示。
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。

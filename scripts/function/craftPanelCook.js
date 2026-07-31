@@ -1,12 +1,23 @@
 import { AsyncFunction, getItemColor, MODULE_ID, debug } from "../utils.js";
 import { CraftPanelForge } from "./craftPanelForge.js";
-import { FormBuilder } from "../function/formBuilder.js";
+import { FormBuilder } from "./formBuilder.js";
 import { CraftPanelCookRecipe } from "./craftPanelCookRecipe.js";
 
+/**
+ * 烹饪面板。
+ * 继承自 CraftPanelForge，在锻造系统基础上增加了配方保存/恢复功能。
+ * 合成成功后会自动保存当前配方到用户 flag 中，方便下次快速填充。
+ * @extends CraftPanelForge
+ */
 export class CraftPanelCook extends CraftPanelForge {
+    /**
+     * 构造烹饪面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     * @param {"edit"|"craft"} mode 面板模式
+     * @param {object} options 额外初始化参数
+     */
     constructor(journalEntry, mode = "edit", options = {}) {
         super(journalEntry, mode, options);
-        debug(`${this.APP_ID} constructor : journalEntry mode options`, journalEntry, mode, options);
 
         if (game.user.isGM) {
             this.options.actions["config-user-unlocked"] = this.configUserUnlocked.bind(this);
@@ -19,6 +30,10 @@ export class CraftPanelCook extends CraftPanelForge {
         this.options.actions.recipe = this.fillByRecipe.bind(this);
     }
 
+    /**
+     * 默认窗口配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID],
@@ -33,8 +48,13 @@ export class CraftPanelCook extends CraftPanelForge {
         };
     }
 
+    /**
+     * 合成后处理：将本次合成的配方保存到用户 flag 中。
+     * 如果存在相同面板且产物相同的配方则覆盖，否则追加。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表
+     */
     async postCraft(materials, results) {
-        debug(`${this.APP_ID} postCraft : canceled`, this.canceled);
         if (!this.canceled) {
             //保存的配方
             /**@type {Recipe} */
@@ -44,7 +64,7 @@ export class CraftPanelCook extends CraftPanelForge {
                     return {
                         name: re.name,
                         img: re.img,
-                        quantity: foundry.utils.getProperty(re.item, this.quantityPath) ?? re.item?.quantity ?? 1,
+                        quantity: re.foundry.utils.getProperty(item, this.quantityPath),
                         description: re.description
                     }
                 }),
@@ -98,8 +118,11 @@ export class CraftPanelCook extends CraftPanelForge {
         await super.postCraft(materials, results);
     }
 
+    /**
+     * 打开配方选择子面板（当前用户）。
+     * @param {Event} event 点击事件
+     */
     async fillByRecipe(event) {
-        debug(`${this.APP_ID} fillByRecipe`);
         event.preventDefault();
         //配置用户解锁的配方
         const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelCookRecipe));
@@ -111,8 +134,13 @@ export class CraftPanelCook extends CraftPanelForge {
             newWindow.render(true);
         };
     }
+
+    /**
+     * GM 配置指定玩家的已保存配方。
+     * 弹出用户选择对话框，然后打开该用户的配方子面板。
+     * @param {Event} event 点击事件
+     */
     async configUserUnlocked(event) {
-        debug(`${this.APP_ID} configUserUnlocked`);
         event.preventDefault();
         //GM配置玩家解锁的配方
         //弹窗选择用户
@@ -136,12 +164,13 @@ export class CraftPanelCook extends CraftPanelForge {
             newWindow.render(true);
         };
     }
+
     /**
-     * 配方子页面选择了配方后返回函数，将配方的内容进行填充
+     * 配方子页面选择了配方后返回函数，将配方的内容进行填充。
+     * 依次填充结果、材料和调整项。
      * @param {Recipe} recipe 填充的配方数据
      */
     async fillByRecipe_Back(recipe) {
-        debug(`${this.APP_ID} fillByRecipe_Back : recipe`, recipe);
         //清空槽位
         this.slotItems = {};
         //清空选择的调整
@@ -217,7 +246,7 @@ export class CraftPanelCook extends CraftPanelForge {
 
 /**
  * @typedef {Object} CraftElement
- * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。
+ * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现"虚假"属性。
  * @property {string} name - 元素的名称，为对应物品的名称。仅用于显示。
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。

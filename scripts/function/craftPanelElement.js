@@ -1,7 +1,17 @@
 import { HandlebarsApplication, getItemColor, confirmDialog, debug, MODULE_ID } from "../utils.js";
 import { FormBuilder } from "./formBuilder.js";
 
+/**
+ * 元素管理面板。
+ * 提供元素物品的管理功能，支持将物品设置为元素、编辑元素属性、
+ * 将材料物品拖入槽位提取元素等操作。
+ * @extends HandlebarsApplication
+ */
 export class CraftPanelElement extends HandlebarsApplication {
+    /**
+     * 构造元素管理面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     */
     constructor(journalEntry) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
@@ -11,8 +21,6 @@ export class CraftPanelElement extends HandlebarsApplication {
         this.materials = [];
         this.elementItems = [];
         this.needRefresh = true;
-
-        this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
 
         this.scrollPositions = {
             elementItems: 0,
@@ -44,9 +52,12 @@ export class CraftPanelElement extends HandlebarsApplication {
 
         craftPanels ??= [];
         craftPanels.push(this);
-        debug("CraftPanelElement constructor : journalEntry", journalEntry);
     }
 
+    /**
+     * 默认窗口配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID, "craft"],
@@ -62,7 +73,6 @@ export class CraftPanelElement extends HandlebarsApplication {
                 contentTag: "section",
                 contentClasses: [],
             },
-            actions: {},
             form: {
                 handler: undefined,
                 submitOnChange: false,
@@ -76,6 +86,10 @@ export class CraftPanelElement extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 视图片段配置。
+     * @returns {object}
+     */
     static get PARTS() {
         return {
             content: {
@@ -85,6 +99,10 @@ export class CraftPanelElement extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 由类名推导应用 ID。
+     * @returns {string}
+     */
     static get APP_ID() {
         return this.name
             .split(/(?=[A-Z])/)
@@ -92,14 +110,26 @@ export class CraftPanelElement extends HandlebarsApplication {
             .toLowerCase();
     }
 
+    /**
+     * 当前实例的应用 ID。
+     * @returns {string}
+     */
     get APP_ID() {
         return this.constructor.APP_ID;
     }
 
+    /**
+     * 窗口标题。
+     * @returns {string}
+     */
     get title() {
-        return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`);
+        return this.journalEntry.name;
     }
 
+    /**
+     * 面板关闭时从全局 craftPanels 数组中移除自身。
+     * @param {object} options 关闭选项
+     */
     _onClose(options) {
         super._onClose(options);
         craftPanels ??= [];
@@ -107,8 +137,9 @@ export class CraftPanelElement extends HandlebarsApplication {
     }
 
     /**
-     * 准备界面所需的各项数据
-     * @returns {}
+     * 组装渲染上下文：获取元素物品、材料、槽位和元素列表。
+     * @param {object} options 渲染选项
+     * @returns {Promise<{elementItems: Array, materials: Array, slots: Array, elements: Array, panelSizes: object}>}
      */
     async _prepareContext(options) {
         // const elementConfig = game.settings.get(MODULE_ID, 'elementConfig');
@@ -125,13 +156,14 @@ export class CraftPanelElement extends HandlebarsApplication {
         }
     }
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 渲染后绑定交互事件：元素拖放、材料点击、滚动位置恢复等。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onRender(context, options) {
         super._onRender(context, options);
         const html = this.element;
-        debug("CraftPanelElement _onRender : context", context);
+        // debug("CraftPanelElement._onRender", context, options, html, this);
 
         // 恢复滚动条位置
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
@@ -166,7 +198,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                     this.removeMaterial(el.dataset.index);
                 } else {
                     const item = await fromUuid(el.dataset.uuid);
-                    this.addMaterial(item);
+                    await this.addMaterial(item);
                 }
             });
             el.addEventListener("dblclick", async (event) => {
@@ -215,7 +247,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                 } else {
                     const item = await fromUuid(el.dataset.uuid);
                     let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
-                    if (confirm) {
+                    if (confirm === "确定") {
                         await item.update({ [`flags.${MODULE_ID}.-=elementConfig`]: null, [`flags.${MODULE_ID}.-=isElement`]: null });
                         this.needRefresh = true;
                         await this.render(true);
@@ -230,11 +262,12 @@ export class CraftPanelElement extends HandlebarsApplication {
         html.querySelector(".craft-materials-panel").addEventListener("scrollend", (event) => { this.scrollPositions.materials = event.target.scrollTop; });
         html.querySelector(".craft-elements-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elements = event.target.scrollTop; });
         html.querySelector(".craft-elementitems-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elementItems = event.target.scrollTop; });
-        debug("CraftPanelElement _onRender : html", html);
     }
 
+    /**
+     * 打开面板配置对话框，配置名称、默认分类、显示分类、筛选条件等。
+     */
     async configure() {
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntry)
             .title(game.i18n.localize(`${MODULE_ID}.configure`) + ": " + this.journalEntry.name)
@@ -249,21 +282,22 @@ export class CraftPanelElement extends HandlebarsApplication {
             .script({ name: `flags.${MODULE_ID}.requirements-script`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.requirements-script-hint`) });
 
         const data = await fb.render();
-        debug("CraftPanelElement configure : data", data);
         if (!data) return;
         // await game.settings.set(MODULE_ID, 'elementConfig', data);
         await this.journalEntry.update(data);
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 编辑元素属性：ID、名称、图标、分类、颜色、权重、形状等。
+     * @param {string} uuid 元素物品的 UUID
+     */
     async editElement(uuid) {
         const item = await fromUuid(uuid);
-        debug("CraftPanelElement editElement : item", item);
         /** @type {CraftElement} */
         const element = item.getFlag(MODULE_ID, "elementConfig");
-        debug("CraftPanelElement editElement : element", element);
         let shape_alter = element?.shape_alter ?? "";
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(element)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-element`))
@@ -279,7 +313,7 @@ export class CraftPanelElement extends HandlebarsApplication {
                 label: game.i18n.localize(`Delete`),
                 callback: async () => {
                     let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
-                    if (confirm) {
+                    if (confirm === "确定") {
                         fb.form().close();
                         await item.update({ [`flags.${MODULE_ID}.-=elementConfig`]: null, [`flags.${MODULE_ID}.-=isElement`]: null });
                         this.needRefresh = true;
@@ -290,7 +324,6 @@ export class CraftPanelElement extends HandlebarsApplication {
             });
 
         const data = await fb.render();
-        debug("CraftPanelElement editElement : data", data);
         if (!data) return;
         if (data.shape_alter != "") {
             shape_alter = data.shape_alter;
@@ -300,23 +333,30 @@ export class CraftPanelElement extends HandlebarsApplication {
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 编辑元素数量。
+     * @param {number} index 元素在列表中的索引
+     */
     async editNum(index) {
         const element = this.elements[index];
-        debug("CraftPanelElement editNum : element", element);
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(element)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-element`))
             .number({ name: "num", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
 
         const data = await fb.render();
-        debug("CraftPanelElement editNum : data", data);
         if (!data) return;
+        // debug("editNum", data);
         this.elements[index].num = data.num;
         this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         await this.render(true);
     }
 
+    /**
+     * 处理物品拖放到元素面板的事件：将物品注册为元素。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropElementPanel(event) {
         event.stopPropagation();
         let data;
@@ -325,10 +365,9 @@ export class CraftPanelElement extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelElement _onDropElementPanel : data", data);
+
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
-        debug("CraftPanelElement _onDropElementPanel : type item", type, item);
         if (type === "Item" && item) {
             const update = {};
             update[`flags.${MODULE_ID}.isElement`] = true;
@@ -342,13 +381,16 @@ export class CraftPanelElement extends HandlebarsApplication {
                 weight: 10,
             }
             update[`flags.${MODULE_ID}.elementConfig`] = element;
-            debug("CraftPanelElement _onDropElementPanel : update", update);
             await item.update(update);
             this.needRefresh = true;
             await this.render(true);
         };
     }
 
+    /**
+     * 处理物品拖放到槽位/元素面板的事件：根据类型添加为元素或材料。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropSlotPanel(event) {
         event.stopPropagation();
         let data;
@@ -357,36 +399,38 @@ export class CraftPanelElement extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelElement _onDropSlotPanel : data", data);
+
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         let element = data?.element;
-        debug("CraftPanelElement _onDropSlotPanel : type item element", type, item, element);
         if (type == "Item") {
             if (item == undefined) return;
             if (item.getFlag(MODULE_ID, "isElement") === true) {
                 element = item.getFlag(MODULE_ID, "elementConfig");
-                this.addElement(element, data.uuid);
+                await this.addElement(element, data.uuid);
             } else {
-                this.addMaterial(item);
+                await this.addMaterial(item);
             }
         } else if (type == "CraftElement") {
             if (item != undefined && element == undefined) {
                 element = item.getFlag(MODULE_ID, "elementConfig");
             }
             if (element == undefined) return;
-            this.addElement(element, data.uuid);
+            await this.addElement(element, data.uuid);
         }
     }
 
+    /**
+     * 添加元素到元素列表，已有则数量+1，否则新增。
+     * @param {CraftElement} element 元素数据
+     * @param {string} uuid 元素物品的 UUID
+     */
     async addElement(element, uuid) {
-        debug("CraftPanelElement addElement : element uuid", element, uuid);
         if (element == undefined) {
             let item = await fromUuid(uuid);
             element = item.getFlag(MODULE_ID, "elementConfig");
         }
         let el = this.elements.find((el) => el.id == element.id);
-        debug("CraftPanelElement addElement : element el", element, el);
         if (el) {
             el.num++;
         } else {
@@ -398,9 +442,14 @@ export class CraftPanelElement extends HandlebarsApplication {
             this.elements.push(el);
         }
         this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
-        debug("CraftPanelElement addElement : this.elements", this.elements);
         await this.render(true);
     }
+
+    /**
+     * 减少元素数量，数量归零时移除。
+     * @param {CraftElement} element 元素数据
+     * @param {string} uuid 元素物品的 UUID
+     */
     async minusElement(element, uuid) {
         if (element == undefined) {
             let item = await fromUuid(uuid);
@@ -411,20 +460,23 @@ export class CraftPanelElement extends HandlebarsApplication {
             el.num--;
         }
         if (el.num <= 0) {
-            this.elements.splice(this.elements.indexOf(element), 1);
+            this.elements.splice(this.elements.indexOf(el), 1);
         }
         this.elements.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.num - a.num });
         await this.render(true);
     }
 
+    /**
+     * 添加材料物品到槽位，提取其元素信息并生成工具提示。
+     * 第一个材料放入时会自动将其所有元素添加到元素列表。
+     * @param {Item} item 要添加的材料物品
+     */
     async addMaterial(item) {
-        debug("CraftPanelElement addMaterial : item", item);
         if (!item) return;
         if (this.slots.find((el) => el.uuid == item.uuid)) return;
         const elements = item.getFlag(MODULE_ID, "element") ?? [];
         const itemColor = item ? getItemColor(item) ?? "" : "";
-        debug("CraftPanelElement addMaterial : elements itemColor", elements, itemColor);
-        const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+        const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
         let el = {
             item: item,
             uuid: item.uuid,
@@ -433,22 +485,25 @@ export class CraftPanelElement extends HandlebarsApplication {
             tooltip,
             showElements: Array.isArray(elements) && elements.filter(el => el.color != "").length > 0,
         };
-        debug("CraftPanelElement addMaterial : el", el);
         this.slots.push(el);
         //放入第一个时默认放入它的所有元素
         if (this.slots.length == 1) {
             for (const element of elements) {
-                this.addElement(element);
+                await this.addElement(element);
             }
         }
         await this.render(true);
     }
+
+    /**
+     * 刷新材料列表：重新获取每个材料的元素信息和工具提示。
+     */
     async refreshMaterials() {
         this.slots = await Promise.all(this.slots.map(async (slot, i) => {
             const item = await fromUuid(slot.uuid);
             const elements = item.getFlag(MODULE_ID, "element") ?? [];
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
             return {
                 slotIndex: i,
                 item: item,
@@ -459,27 +514,27 @@ export class CraftPanelElement extends HandlebarsApplication {
                 showElements: Array.isArray(elements) && elements.filter(el => el.color != "").length > 0,
             };
         }));
-        debug("CraftPanelElement refreshMaterials : this.slots", this.slots);
     }
+
+    /**
+     * 刷新整个面板：根据配置要求筛选元素物品和材料物品。
+     */
     async refreshPanel() {
         const requirements = {};
         this.journalEntry.getFlag(MODULE_ID, "requirements").forEach(key => {
             if (key == "folder") {
                 requirements.folder = this.journalEntry.getFlag(MODULE_ID, "requirements-folder").replaceAll(/，/g, ",").split(/[,;]/).map((folder) => folder.trim());
             } else if (key == "script") {
-                const AsyncFunction = async function () { }.constructor;
                 const fn = new AsyncFunction("item", this.journalEntry.getFlag(MODULE_ID, "requirements-script"));
                 requirements.script = fn;
             } else {
                 requirements[key] = this.journalEntry.getFlag(MODULE_ID, `requirements-${key}`);
             }
         });
-        debug("CraftPanelElement _prepareContext : requirements", requirements);
         const elementItems_items = [];
         const materials_items = [];
         let showClasses = this.journalEntry.getFlag(MODULE_ID, "showClass") ?? "";
         showClasses = showClasses.split(/[,;，]/).map((className) => className.trim());
-        debug("CraftPanelElement _prepareContext : showClasses", showClasses);
         for (const item of game.items.contents) {
             if (item.getFlag(MODULE_ID, "isElement") === true) {
                 elementItems_items.push(item);
@@ -487,7 +542,6 @@ export class CraftPanelElement extends HandlebarsApplication {
                 materials_items.push(item);
             }
         }
-        debug("CraftPanelElement _prepareContext : elementItems_items materials_items", elementItems_items, materials_items);
         this.elementItems = elementItems_items.map((item, i) => {
             const element = item.getFlag(MODULE_ID, "elementConfig");
             return {
@@ -505,11 +559,10 @@ export class CraftPanelElement extends HandlebarsApplication {
             this.elementItems = this.elementItems.filter((el) => showClasses.includes(el.class));
         }
         this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });
-        debug("CraftPanelElement _prepareContext : this.elementItems", this.elementItems);
         this.materials = await Promise.all(materials_items.map(async (item, i) => {
             const elements = item.getFlag(MODULE_ID, "element") ?? [];
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${item.img}'><h2>${item.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div><div class="tooltip-elements">${elements.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.num}</div></div>` }).join('')}</div>`);
             let totalElements = 0;
             if (showClasses[0] != "") {
                 totalElements = elements.filter(el => showClasses.includes(el.class)).reduce((a, b) => a + b.num, 0);
@@ -527,15 +580,23 @@ export class CraftPanelElement extends HandlebarsApplication {
                 showElements: Array.isArray(elements) && elements.filter(el => el.color != "").length > 0,
             };
         }));
-        this.materials.sort((a, b) => { return b.totalElements - a.totalElements });
-        debug("CraftPanelElement _prepareContext : this.materials", this.materials);
+        this.materials.sort((a, b) => { return b.rankNum != a.rankNum ? b.rankNum - a.rankNum : b.totalElements - a.totalElements });
         this.needRefresh = false;
     }
 
+    /**
+     * 移除指定索引的元素。
+     * @param {number} index 元素索引
+     */
     async removeElement(index) {
         this.elements.splice(index, 1);
         await this.render(true);
     }
+
+    /**
+     * 移除指定索引的材料，如果材料全部移除则清空元素列表。
+     * @param {number} index 材料槽位索引
+     */
     async removeMaterial(index) {
         this.slots.splice(index, 1);
         if (this.slots.length == 0) {
@@ -544,6 +605,9 @@ export class CraftPanelElement extends HandlebarsApplication {
         await this.render(true);
     }
 
+    /**
+     * 将当前元素列表写入所有材料的 flag 中，并刷新材料显示。
+     */
     async editMaterialsElement() {
         let element = this.elements.map((el) => {
             return {
@@ -557,11 +621,11 @@ export class CraftPanelElement extends HandlebarsApplication {
                 shape: el.shape,
             }
         });
-        debug("CraftPanelElement editMaterialsElement : element", element);
+
         let materials = this.slots.map((el) => {
             return el.item;
         });
-        debug("CraftPanelElement editMaterialsElement : materials", materials);
+
         await Promise.all(materials.map(async (item) => {
             await item.setFlag(MODULE_ID, "element", element);
         }));
@@ -570,6 +634,10 @@ export class CraftPanelElement extends HandlebarsApplication {
         await this.render(true);
     }
 
+    /**
+     * 元素形状样式选项。
+     * @returns {object}
+     */
     static get SHAPE_STYLE() {
         return {
             "circle": `${MODULE_ID}.${this.APP_ID}.shape-circle`,
@@ -597,6 +665,11 @@ export class CraftPanelElement extends HandlebarsApplication {
             "bottle-droplet": `${MODULE_ID}.${this.APP_ID}.shape-bottle-droplet`,
         };
     }
+
+    /**
+     * 筛选条件类型选项。
+     * @returns {object}
+     */
     static get REQUIREMENTS_TYPE_OPTIONS() {
         return {
             "folder": `${MODULE_ID}.${this.APP_ID}.requirements-folder`,

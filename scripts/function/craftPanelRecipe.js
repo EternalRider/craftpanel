@@ -1,13 +1,26 @@
 import { HandlebarsApplication, getItemColor, debug, MODULE_ID } from "../utils.js";
 import { FormBuilder } from "./formBuilder.js";
 
+/**
+ * 配方编辑子面板。
+ * 提供配方的详细编辑功能，包括成分需求、结果物品、分类、解锁条件等。
+ * @extends HandlebarsApplication
+ */
 export class CraftPanelRecipe extends HandlebarsApplication {
+    /**
+     * 构造配方编辑子面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     * @param {JournalEntryPage|string} journalEntryPage 配方对应的页面或其 UUID
+     * @param {object} options 额外选项
+     * @param {string} [options.focusRecipeUuid] 需要聚焦滚动的配方 UUID
+     */
     constructor(journalEntry, journalEntryPage, options = {}) {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
         if (typeof journalEntryPage === "string") journalEntryPage = fromUuidSync(journalEntryPage);
         // this.ingredients = [];
         // this.results = [];
+        this.elementItems = [];
         this.journalEntry = journalEntry;
         this.journalEntryPage = journalEntryPage;
         // this.ingredients = journalEntryPage.getFlag(MODULE_ID, "ingredients") ?? [];
@@ -15,13 +28,12 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         this.ingredients = journalEntryPage.getFlag(MODULE_ID, "ingredients") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "ingredients"))) : [];
         this.results = journalEntryPage.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(journalEntryPage.getFlag(MODULE_ID, "results"))) : [];
 
-        this.descriptionPath = game.settings.get(MODULE_ID, 'descriptionPath');
-
         this.needRefresh = true;
         this.scrollPositions = {
             elementItems: 0,
             recipes: 0,
         };
+        // Optionally passed by parent panel to request a one-time scroll to a recipe
         this.focusRecipeUuid = options?.focusRecipeUuid ?? null;
         this._scrollScheduled = false;
 
@@ -53,9 +65,12 @@ export class CraftPanelRecipe extends HandlebarsApplication {
 
         craftPanels ??= [];
         craftPanels.push(this);
-        debug("CraftPanelRecipe constructor : this journalEntry journalEntryPage this.ingredients this.results craftPanels", this, journalEntry, journalEntryPage, this.ingredients, this.results, craftPanels);
     }
 
+    /**
+     * 默认窗口配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID, "craft"],
@@ -71,7 +86,6 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 contentTag: "section",
                 contentClasses: [],
             },
-            actions: {},
             form: {
                 handler: undefined,
                 submitOnChange: false,
@@ -85,6 +99,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 视图片段配置。
+     * @returns {object}
+     */
     static get PARTS() {
         return {
             content: {
@@ -94,6 +112,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 由类名推导应用 ID。
+     * @returns {string}
+     */
     static get APP_ID() {
         return this.name
             .split(/(?=[A-Z])/)
@@ -101,14 +123,26 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             .toLowerCase();
     }
 
+    /**
+     * 当前实例的应用 ID。
+     * @returns {string}
+     */
     get APP_ID() {
         return this.constructor.APP_ID;
     }
 
+    /**
+     * 窗口标题。
+     * @returns {string}
+     */
     get title() {
         return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`);
     }
 
+    /**
+     * 面板关闭时从全局 craftPanels 数组中移除自身，并通知父面板刷新。
+     * @param {object} options 关闭选项
+     */
     _onClose(options) {
         super._onClose(options);
         craftPanels ??= [];
@@ -120,16 +154,16 @@ export class CraftPanelRecipe extends HandlebarsApplication {
     }
 
     /**
-     * 准备界面所需的各项数据
-     * @returns {}
+     * 组装渲染上下文：获取配方列表、成分列表和结果列表。
+     * @param {object} options 渲染选项
+     * @returns {Promise<{elementItems: Array, recipes: Array, ingredients: Array, results: Array, panelSizes: object}>}
      */
     async _prepareContext(options) {
         if (this.needRefresh) {
             await this.refreshPanel();
         }
         const recipesJE = this.journalEntry.pages.filter(p => p.flags[MODULE_ID]?.type === "recipe").sort((a, b) => (a.sort - b.sort));
-        debug("CraftPanelRecipe _prepareContext : recipesJE", recipesJE);
-        const recipes = recipesJE.map((je, i) => {
+        const recipes = await Promise.all(recipesJE.map(async (je, i) => {
             const ingredients = (je.getFlag(MODULE_ID, "ingredients") ?? []).map((el) => {
                 let num = el.min;
                 if (el.useMin && el.useMax) {
@@ -142,6 +176,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                     ...el,
                 };
             });
+            const results = je.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(je.getFlag(MODULE_ID, "results"))) : [];
+            const tooltip = await TextEditor.enrichHTML(`<figure><img src='${je.src}'><h2>${je.name}</h2></figure><div class="description">${je.text.content ?? ""}</div><div class="tooltip-elements">${results.map(el => { return `<div class="tooltip-element" style="background-image: url('${el.img}');"><div class="tooltip-element-num">${el.quantity}</div></div>` }).join('')}</div>`);
             return {
                 id: je.id,
                 name: je.name,
@@ -149,10 +185,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 index: i,
                 uuid: je.uuid,
                 ingredients: ingredients,
+                tooltip,
                 choosed: je.id == this.journalEntryPage.id ? "choosed" : ""
             };
-        });
-        debug("CraftPanelRecipe _prepareContext : recipes", recipes);
+        }));
         this.ingredients.sort((a, b) => {
             if (a.type == "element" && b.type == "material") return 1;
             if (a.type == "material" && b.type == "element") return -1;
@@ -176,11 +212,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 ...el,
             };
         });
-        debug("CraftPanelRecipe _prepareContext : ingredients", ingredients);
         const results = await Promise.all(this.results.map(async (el, i) => {
             const item = await fromUuid(el.uuid);
             const itemColor = item ? getItemColor(item) ?? "" : "";
-            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${foundry.utils.getProperty(item, this.descriptionPath) ?? item?.system?.description ?? item?.description ?? ""}</div>`);
+            let tooltip = await TextEditor.enrichHTML(`<figure><img src='${el.img ?? item?.img}'><h2>${el.name ?? item?.name}</h2></figure><div class="description">${el.description ?? foundry.utils.getProperty(item, this.descriptionPath) ?? item?.description ?? ""}</div>`);
             return {
                 slotIndex: i,
                 uuid: el.uuid,
@@ -191,7 +226,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 tooltip,
             };
         }));
-        debug("CraftPanelRecipe _prepareContext : results", results);
+
         return {
             elementItems: this.elementItems,
             recipes,
@@ -201,13 +236,13 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         }
     }
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 渲染后绑定交互事件：元素拖放、配方切换/排序、结果编辑、滚动位置恢复等。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onRender(context, options) {
         super._onRender(context, options);
         const html = this.element;
-        debug("CraftPanelRecipe _onRender : context", context);
 
         // 恢复滚动条位置
         html.querySelector(".craft-elementitems-panel").scrollTop = this.scrollPositions.elementItems;
@@ -216,6 +251,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         if (this.focusRecipeUuid && !this._scrollScheduled) {
             this._scrollScheduled = true;
             const uuidToFocus = this.focusRecipeUuid;
+            // 使用 requestAnimationFrame + setTimeout 延迟微小时间，确保 DOM 渲染与图片加载完成
             requestAnimationFrame(() => {
                 setTimeout(() => {
                     try {
@@ -227,7 +263,8 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                             const top = panel.scrollTop + (rect.top - contRect.top) - (panel.clientHeight / 2) + (rect.height / 2);
                             panel.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
                         }
-                    } catch (e) { /* ignore */ }
+                    } catch (e) { /* ignore silently */ }
+                    // clear flags
                     this.focusRecipeUuid = null;
                 }, 80);
             });
@@ -339,9 +376,11 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         //滚动事件，记录滚动位置
         html.querySelector(".craft-elementitems-panel").addEventListener("scrollend", (event) => { this.scrollPositions.elementItems = event.target.scrollTop; });
         html.querySelector(".craft-recipes-panel").addEventListener("scrollend", (event) => { this.scrollPositions.recipes = event.target.scrollTop; });
-        debug("CraftPanelRecipe _onRender : html", html);
     }
 
+    /**
+     * 打开配方配置对话框：名称、图标、排序、分类、权重、解锁条件、脚本等。
+     */
     async configure() {
         const recipe_categories = this.journalEntry.getFlag(MODULE_ID, "recipes-categories") ?? [];
         const categoryOptions = {};
@@ -362,8 +401,6 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             "yes": game.i18n.localize(`${MODULE_ID}.yes`),
             "no": game.i18n.localize(`${MODULE_ID}.no`),
         };
-        debug("CraftPanelRecipe configure : recipe_categories categoryOptions", recipe_categories, categoryOptions);
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(this.journalEntryPage)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-recipe`) + ": " + this.journalEntryPage.name)
@@ -374,9 +411,9 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             .number({ name: `flags.${MODULE_ID}.weight`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.recipe-weight`), min: 0 })
             .select({ name: `flags.${MODULE_ID}.mergeByName`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.merge-by-name`), options: mergeByNameOptions })
             .select({ name: `flags.${MODULE_ID}.showResult`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show-result-hint`), options: showResultOptions })
+            .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
             .select({ name: `flags.${MODULE_ID}.craftAsHandler`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-as-handler`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-as-handler-hint`), options: craftAsHandlerOptions })
             .uuid({ name: `flags.${MODULE_ID}.handlerTemplate`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.handler-template`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.handler-template-hint`), type: "JournalEntryPage" })
-            .checkbox({ name: `flags.${MODULE_ID}.isLocked`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.is-locked-hint`) })
             .script({ name: `flags.${MODULE_ID}.unlockCondition`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.unlock-script-hint`) })
             .script({ name: `flags.${MODULE_ID}.craftScript`, label: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script`), hint: game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.craft-script-hint`) })
             .button({
@@ -396,15 +433,18 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 icon: "fas fa-trash",
             });
         const data = await fb.render();
-        debug("CraftPanelRecipe configure : data", data);
         if (!data) return;
         await this.journalEntryPage.update(data);
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 编辑成分的数量范围（最小值/最大值）。
+     * @param {number} index 成分在列表中的索引
+     */
     async editNum(index) {
         const ingredient = this.ingredients[index];
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(ingredient)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
@@ -415,29 +455,35 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             .info(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num-info`));
 
         const data = await fb.render();
-        debug("CraftPanelRecipe editNum : data", data);
         if (!data) return;
+        // debug("editNum", data);
         this.ingredients[index].min = data.min;
         this.ingredients[index].useMin = data.useMin;
         this.ingredients[index].max = data.max;
         this.ingredients[index].useMax = data.useMax;
-        debug("CraftPanelRecipe editNum : this.ingredients", this.ingredients);
         await this.render(true);
     }
+
+    /**
+     * 编辑结果物品的数量。
+     * @param {number} index 结果在列表中的索引
+     */
     async editResultNum(index) {
         const result = this.results[index];
-        //const fb = new Portal.FormBuilder()
         const fb = new FormBuilder()
             .object(result)
             .title(game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.edit-num`))
             .number({ name: "quantity", label: game.i18n.localize(`${MODULE_ID}.quantity`) })
 
         const data = await fb.render();
-        debug("CraftPanelRecipe editResultNum : data", data);
         if (!data) return;
         this.results[index].quantity = data.quantity;
         await this.render(true);
     }
+
+    /**
+     * 保存当前编辑的成分和结果数据到 journalEntryPage。
+     */
     async editRecipe() {
         const update = {
             flags: {
@@ -447,12 +493,15 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 },
             },
         }
-        debug("CraftPanelRecipe editRecipe : update", update);
         await this.journalEntryPage.update(update);
         this.needRefresh = true;
         await this.render(true);
     }
 
+    /**
+     * 处理物品拖放到成分面板的事件：根据类型添加为元素或材料成分。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropSlotPanel(event) {
         event.stopPropagation();
         let data;
@@ -461,11 +510,10 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelRecipe _onDropSlotPanel : data", data);
+
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         let element = data?.element;
-        debug("CraftPanelRecipe _onDropSlotPanel : type item element", type, item, element);
         if (type == "Item") {
             if (item == undefined) return;
             if (item.getFlag(MODULE_ID, "isElement") === true) {
@@ -482,6 +530,11 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             this.addElement(element, data.uuid);
         }
     }
+
+    /**
+     * 处理物品拖放到结果面板的事件：添加或增加结果数量。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropResultPanel(event) {
         event.stopPropagation();
         let data;
@@ -490,10 +543,9 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelRecipe _onDropResultPanel : data", data);
+
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
-        debug("CraftPanelRecipe _onDropResultPanel : type item", type, item);
         if (type !== "Item" && type !== "RollTable") return;
         if (item) {
             let r = this.results.find((r) => r.uuid == item.uuid);
@@ -505,6 +557,11 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             await this.render(true);
         }
     }
+
+    /**
+     * 处理配方拖放排序事件。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropRecipesPanel(event) {
         event.stopPropagation();
         let data;
@@ -513,7 +570,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         } catch (e) {
             return;
         }
-        debug("CraftPanelRecipe _onDropRecipesPanel : data", data);
+        // debug("CraftPanelBlend._onDropRecipesPanel", event, data, event.currentTarget, event.currentTarget.dataset.index, event.currentTarget.dataset.uuid);
         if (data.type !== "CraftRecipe") return;
         if (data.parent !== this.journalEntry.uuid) return;
         let targetUuid = event.currentTarget.dataset.uuid;
@@ -523,7 +580,6 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         if (targetUuid) {
             sortTarget = await fromUuid(targetUuid);
         }
-        debug("CraftPanelRecipe _onDropRecipesPanel : page targetUuid sortTarget", page, targetUuid, sortTarget);
         await page.sortRelative({
             sortKey: "sort",
             target: sortTarget,
@@ -532,14 +588,17 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         await this.render(true);
     }
 
+    /**
+     * 添加元素到成分列表，已有则增加数量。
+     * @param {CraftElement} element 元素数据
+     * @param {string} uuid 元素物品的 UUID
+     */
     async addElement(element, uuid) {
-        debug("CraftPanelRecipe addElement : element uuid", element, uuid);
         if (element == undefined) {
             let item = await fromUuid(uuid);
             element = item.getFlag(MODULE_ID, "elementConfig");
         }
         let el = this.ingredients.find((el) => (el.type == "element") && (el.id == element.id));
-        debug("CraftPanelRecipe addElement : element el", element, el);
         if (el) {
             if (el.useMin) {
                 el.min++;
@@ -563,6 +622,12 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         }
         await this.render(true);
     }
+
+    /**
+     * 减少元素数量，数量归零时移除。
+     * @param {CraftElement} element 元素数据
+     * @param {string} uuid 元素物品的 UUID
+     */
     async removeElement(element, uuid) {
         if (element == undefined) {
             let item = await fromUuid(uuid);
@@ -582,11 +647,13 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         await this.render(true);
     }
 
+    /**
+     * 添加材料到成分列表，已有则增加数量。
+     * @param {Item} item 材料物品
+     */
     async addMaterial(item) {
-        debug("CraftPanelRecipe addMaterial : item", item);
         if (!item) return;
         let el = this.ingredients.find((el) => (el.type == "material") && (el.name == item.name));
-        debug("CraftPanelRecipe addMaterial : el", el);
         if (el) {
             if (el.useMin) {
                 el.min++;
@@ -611,15 +678,27 @@ export class CraftPanelRecipe extends HandlebarsApplication {
         await this.render(true);
     }
 
+    /**
+     * 移除指定索引的成分。
+     * @param {number} index 成分索引
+     */
     async removeIngredient(index) {
         this.ingredients.splice(index, 1);
         await this.render(true);
     }
+
+    /**
+     * 移除指定索引的结果。
+     * @param {number} index 结果索引
+     */
     async removeResult(index) {
         this.results.splice(index, 1);
         await this.render(true);
     }
 
+    /**
+     * 刷新面板：重新获取所有元素物品列表。
+     */
     async refreshPanel() {
         const elementItems_items = [];
         for (const item of game.items.contents) {
@@ -627,7 +706,6 @@ export class CraftPanelRecipe extends HandlebarsApplication {
                 elementItems_items.push(item);
             }
         }
-        debug("CraftPanelRecipe refreshPanel : elementItems_items", elementItems_items);
         this.elementItems = elementItems_items.map((item, i) => {
             const element = item.getFlag(MODULE_ID, "elementConfig");
             return {
@@ -642,7 +720,6 @@ export class CraftPanelRecipe extends HandlebarsApplication {
             };
         });
         this.elementItems.sort((a, b) => { return b.class != a.class ? b.class.localeCompare(a.class) : b.name.localeCompare(a.name) });
-        debug("CraftPanelRecipe refreshPanel : this.elementItems", this.elementItems);
         this.needRefresh = false;
     }
 }

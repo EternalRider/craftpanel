@@ -1,7 +1,19 @@
 import { HandlebarsApplication, MODULE_ID, debug, confirmDialog } from "../utils.js";
 import { CraftPanelCook } from "./craftPanelCook.js";
 
+/**
+ * 烹饪配方选择子面板。
+ * 显示当前面板的所有已保存配方，支持选择、排序和删除操作。
+ * 选择配方后会将配方数据填充回父面板。
+ * @extends HandlebarsApplication
+ */
 export class CraftPanelCookRecipe extends HandlebarsApplication {
+    /**
+     * 构造烹饪配方子面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     * @param {Recipe[]} storedRecipe 已保存的配方列表
+     * @param {string} mode 面板模式（空字符串或 "edit"）
+     */
     constructor(journalEntry, storedRecipe, mode = "") {
         super();
         if (typeof journalEntry === "string") journalEntry = fromUuidSync(journalEntry);
@@ -46,6 +58,10 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         debug("CraftPanelCookRecipe constructor : this journalEntry storedRecipe this.modifiersJE craftPanels", this, journalEntry, storedRecipe, this.modifiersJE, craftPanels);
     }
 
+    /**
+     * 默认窗口与表单配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID, "craft"],
@@ -61,7 +77,6 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
                 contentTag: "section",
                 contentClasses: [],
             },
-            actions: {},
             form: {
                 handler: undefined,
                 submitOnChange: false,
@@ -75,6 +90,10 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 视图片段配置。
+     * @returns {object}
+     */
     static get PARTS() {
         return {
             content: {
@@ -84,6 +103,10 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         };
     }
 
+    /**
+     * 由类名推导应用 ID。
+     * @returns {string}
+     */
     static get APP_ID() {
         return this.name
             .split(/(?=[A-Z])/)
@@ -91,18 +114,34 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
             .toLowerCase();
     }
 
+    /**
+     * 当前实例的应用 ID。
+     * @returns {string}
+     */
     get APP_ID() {
         return this.constructor.APP_ID;
     }
 
+    /**
+     * 窗口标题。
+     * @returns {string}
+     */
     get title() {
         return game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.title`);
     }
 
+    /**
+     * 是否为编辑模式。
+     * @returns {boolean}
+     */
     get isEdit() {
         return this.mode === "edit";
     }
 
+    /**
+     * 面板关闭时从全局 craftPanels 数组中移除自身。
+     * @param {object} options 关闭选项
+     */
     _onClose(options) {
         super._onClose(options);
         craftPanels ??= [];
@@ -110,8 +149,9 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
     }
 
     /**
-     * 准备界面所需的各项数据
-     * @returns {}
+     * 组装渲染上下文：获取配方列表、当前选中配方的详细信息。
+     * @param {object} options 渲染选项
+     * @returns {Promise<{recipes: Array, elements: Array, ingredients: Array, results: Array, panelSizes: object, isEdit: boolean}>}
      */
     async _prepareContext(options) {
         debug("CraftPanelCookRecipe _prepareContext : this.storedRecipe", this.storedRecipe);
@@ -155,7 +195,6 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
                 name: material.name,
                 img: material.img,
                 num: slotItem.quantity ?? 1,
-                // size: Math.min(this.panelSizes.ingredients.width, this.panelSizes.ingredients.height) * 0.75,
             });
         }
         debug("CraftPanelCookRecipe _prepareContext : ingredients", ingredients);
@@ -168,9 +207,11 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
             isEdit: this.isEdit
         }
     }
+
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 渲染完成后绑定交互事件：配方点击切换、右键删除、拖拽排序、滚动记录等。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onRender(context, options) {
         super._onRender(context, options);
@@ -211,6 +252,11 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         html.querySelector(".craft-recipes-panel").addEventListener("scrollend", (event) => { this.scrollPositions.recipes = event.target.scrollTop; });
         debug("CraftPanelCookRecipe _onRender : html", html);
     }
+
+    /**
+     * 处理配方拖放事件：将配方拖拽到其他配方上调整顺序，或拖到末尾。
+     * @param {DragEvent} event 拖放事件
+     */
     async _onDropRecipesPanel(event) {
         event.stopPropagation();
         let data;
@@ -243,10 +289,14 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
             this.storedRecipe.splice(index, 1);
             this.storedRecipe.push(recipe);
         }
-        // game.user.setFlag(MODULE_ID, "storedRecipe", this.storedRecipe);
         await this.saveRecipes(this.storedRecipe);
         await this.render(true);
     }
+
+    /**
+     * 处理拖拽结束事件：如果拖放到面板外，则删除该配方。
+     * @param {DragEvent} event 拖拽结束事件
+     */
     async _onDragEnd(event) {
         // 拖拽至其他区域，删除已创建的配方
         event.stopPropagation();
@@ -257,6 +307,11 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         }
         this.dropOccurred = false;
     }
+
+    /**
+     * 选择当前高亮的配方，将其填充到父面板中。
+     * @param {Event} event 点击事件
+     */
     async _onClickChoose(event) {
         event.stopPropagation();
         if (!this.parentPanel) {
@@ -265,22 +320,29 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
         } else {
             let recipe = this.storedRecipe[this.choosedIndex];
             this.parentPanel.fillByRecipe_Back(recipe);
-            // this.parentPanel.render(true);
         }
         this.close();
     }
+
+    /**
+     * 弹出确认对话框删除指定配方。
+     * @param {number} index 要删除的配方索引
+     */
     async deleteConfirm(index) {
         if (typeof index != "number") index = this.choosedIndex;
         let confirm = await confirmDialog(`${MODULE_ID}.${this.APP_ID}.delete-confirm-title`, `${MODULE_ID}.${this.APP_ID}.delete-confirm-info`, `${MODULE_ID}.yes`, `${MODULE_ID}.no`);
-        if (confirm) {
+        if (confirm === "确定") {
             this.storedRecipe.splice(index, 1);
             debug("CraftPanelCookRecipe _onDragEnd : this.storedRecipe", this.storedRecipe);
-            // game.user.setFlag(MODULE_ID, "storedRecipe", this.storedRecipe);
             await this.saveRecipes(this.storedRecipe);
             await this.render(true);
         }
     }
 
+    /**
+     * 保存配方列表到用户 flag 中（替换当前面板的所有配方）。
+     * @param {Recipe[]} recipes 要保存的配方列表
+     */
     async saveRecipes(recipes) {
         /**@type {Recipe[]} */
         let allRecipes = game.user.getFlag(MODULE_ID, "storedRecipe") ?? [];
@@ -317,7 +379,7 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
 
 /**
  * @typedef {Object} CraftElement
- * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现“虚假”属性。
+ * @property {string} id - 元素的id，为对应物品的id（非uuid）。用于检测是否为同一元素，可以通过名称与图标相同但id不同的元素实现"虚假"属性。
  * @property {string} name - 元素的名称，为对应物品的名称。仅用于显示。
  * @property {string} img - 元素的图标，为对应物品的图标。仅用于显示。
  * @property {string} type - 需求原料的类型，仅用于配方保存的需求。
@@ -329,4 +391,5 @@ export class CraftPanelCookRecipe extends HandlebarsApplication {
  * @property {number} min - 仅需求元素使用，为元素的最小数量。用于显示合成时最少需要的元素数量。
  * @property {boolean} useMax - 仅需求元素使用，为是否使用最大数量。
  * @property {number} max - 仅需求元素使用，为元素的最大数量。用于显示合成时最多需要的元素数量。
+ * @property {string} shape - 元素的形状，用于显示。默认为圆形circle，还可以配置方形square，以及菱形diamond。
  */

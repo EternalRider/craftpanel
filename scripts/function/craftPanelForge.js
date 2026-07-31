@@ -2,12 +2,24 @@ import { AsyncFunction, getItemColor, MODULE_ID, debug, confirmDialog, buildActi
 import { CraftPanel } from "./craftPanel.js";
 import { CraftPanelModifier } from "./craftPanelModifier.js";
 import { chooseImage } from "../api.js";
-import { FormBuilder } from "../function/formBuilder.js";
+import { FormBuilder } from "./formBuilder.js";
 
+/**
+ * 锻造面板。
+ * 继承自 CraftPanel，提供结果槽位管理、调整器系统和成本系统。
+ * 支持选择多个结果、调整器选择/自动应用、成本点数限制等。
+ * @extends CraftPanel
+ */
 export class CraftPanelForge extends CraftPanel {
+    /**
+     * 构造锻造面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     * @param {"edit"|"craft"} mode 面板模式
+     * @param {object} options 额外初始化参数
+     */
     constructor(journalEntry, mode = "edit", options = {}) {
         super(journalEntry, mode, options);
-        debug(`${this.APP_ID} constructor : journalEntry mode options`, journalEntry, mode, options);
+        this.weightPath = game.settings.get(MODULE_ID, 'weightPath');
 
         // this.results = journalEntry.getFlag(MODULE_ID, "results") ? JSON.parse(JSON.stringify(journalEntry.getFlag(MODULE_ID, "results"))) : [];
         const results = journalEntry.getFlag(MODULE_ID, "results");
@@ -32,13 +44,16 @@ export class CraftPanelForge extends CraftPanel {
         if (this.results.length == 1) {
             this.choosedResults = [this.results[0].uuid];
         }
-        this.weightPath = game.settings.get(MODULE_ID, 'weightPath');
 
         if (game.user.isGM) {
             this.options.actions["new-modifier"] = this.newModifier.bind(this);
         }
     }
 
+    /**
+     * 默认窗口配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID],
@@ -53,6 +68,10 @@ export class CraftPanelForge extends CraftPanel {
         };
     }
 
+    /**
+     * 默认面板尺寸配置。
+     * @returns {object}
+     */
     get DEFAULT_PANEL_SIZES() {
         return {
             modifiers: {
@@ -78,9 +97,12 @@ export class CraftPanelForge extends CraftPanel {
         };
     }
 
-    //准备界面所需的各项数据
+    /**
+     * 组装渲染数据：刷新调整器列表，处理结果槽位显示和分类筛选。
+     * @param {object} options 渲染选项
+     * @returns {Promise<object>} 渲染数据
+     */
     async getData(options) {
-        debug(`${this.APP_ID} getData`);
         const data = await super.getData(options);
         await this.refreshModifiers();
 
@@ -109,6 +131,7 @@ export class CraftPanelForge extends CraftPanel {
             }));
             data.results = results;
         }
+        // debug("CraftPanelForge.getData", this.slots, modifiers);
 
         let modifiers = this.modifiers;
         this.category.modifiers = this.categories.modifiers.find(c => c.choosed)?.id;
@@ -123,12 +146,12 @@ export class CraftPanelForge extends CraftPanel {
     }
 
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 首次渲染时绑定调整器、结果、成本面板的拖放和交互事件。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onFirstRender(context, options) {
         super._onFirstRender(context, options);
-        debug(`${this.APP_ID} _onFirstRender : context options`, context, options);
         const html = $(this.element);
         html.on("drop", ".craft-content.edit .craft-modifiers-panel", this._onDropModifierPanel.bind(this));
         html.on("click", ".craft-modifier", this._onClickModifier.bind(this));
@@ -140,8 +163,11 @@ export class CraftPanelForge extends CraftPanel {
         html.on("contextmenu", ".craft-results-panel .craft-slot", this._onContextMenuResult.bind(this));
     }
 
+    /**
+     * 处理物品拖放到结果面板的事件：添加或增加结果数量。
+     * @param {Event} event 拖放事件
+     */
     async _onDropResultPanel(event) {
-        debug(`${this.APP_ID} _onDropResultPanel`);
         event.stopPropagation();
         let data;
         try {
@@ -149,7 +175,6 @@ export class CraftPanelForge extends CraftPanel {
         } catch (e) {
             return;
         }
-        debug(`${this.APP_ID} _onDropResultPanel : data`, data);
         if (!this.isEdit) return;
         const type = data.type;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
@@ -179,8 +204,12 @@ export class CraftPanelForge extends CraftPanel {
             await this.render(true);
         }
     }
+
+    /**
+     * 处理物品或效果拖放到调整器面板的事件：创建新调整页面。
+     * @param {Event} event 拖放事件
+     */
     async _onDropModifierPanel(event) {
-        debug(`${this.APP_ID} _onDropModifierPanel`);
         event.preventDefault();
         let data;
         try {
@@ -188,8 +217,7 @@ export class CraftPanelForge extends CraftPanel {
         } catch (e) {
             return;
         }
-        debug(`${this.APP_ID} _onDropModifierPanel : data`, data);
-
+        // debug("CraftPanelForge.craft-modifiers-panel.drop", data);
         if (data.type !== "Item" && data.type !== "ActiveEffect") return;
         const item = await fromUuid(data.uuid);
         let changes = [];
@@ -217,8 +245,12 @@ export class CraftPanelForge extends CraftPanel {
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 处理调整器的点击事件：编辑模式下打开编辑，使用模式下切换选择。
+     * @param {Event} event 点击事件
+     */
     async _onClickModifier(event) {
-        debug(`${this.APP_ID} _onClickModifier : isEdit`, this.isEdit);
         event.preventDefault();
         const modifierJEUuid = event.currentTarget.dataset.uuid;
         if (this.isEdit) {
@@ -227,8 +259,12 @@ export class CraftPanelForge extends CraftPanel {
             await this.chooseModifier(modifierJEUuid);
         }
     }
+
+    /**
+     * 处理调整器的右键事件：弹出删除确认对话框。
+     * @param {Event} event 右键事件
+     */
     async _onContextMenuModifier(event) {
-        debug(`${this.APP_ID} _onContextMenuModifier`);
         event.preventDefault();
         const modifierJEUuid = event.currentTarget.dataset.uuid;
         const modifierJE = await fromUuid(modifierJEUuid);
@@ -236,8 +272,12 @@ export class CraftPanelForge extends CraftPanel {
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 处理物品拖放到成本面板的事件：设置成本图标和关联元素。
+     * @param {Event} event 拖放事件
+     */
     async _onDropCostPanel(event) {
-        debug(`${this.APP_ID} _onDropCostPanel`);
         event.preventDefault();
         let data;
         try {
@@ -245,11 +285,10 @@ export class CraftPanelForge extends CraftPanel {
         } catch (e) {
             return;
         }
-        debug(`${this.APP_ID} _onDropCostPanel : data`, data);
         if (data.type !== "Item" && data.type !== "CraftElement") return;
         const item = (data?.uuid ?? false) ? await fromUuid(data.uuid) : false;
         let element = data?.element;
-        if (type == "Item") {
+        if (data.type == "Item") {
             if (item == undefined) return;
             if (item.getFlag(MODULE_ID, "isElement") === true) {
                 element = item.getFlag(MODULE_ID, "elementConfig");
@@ -261,7 +300,7 @@ export class CraftPanelForge extends CraftPanel {
                 this.cost.icon = item.img;
                 await this.journalEntry.setFlag(MODULE_ID, "costIcon", item.img);
             }
-        } else if (type == "CraftElement") {
+        } else if (data.type == "CraftElement") {
             if (item != undefined && element == undefined) {
                 element = item.getFlag(MODULE_ID, "elementConfig");
             }
@@ -273,8 +312,12 @@ export class CraftPanelForge extends CraftPanel {
         }
         await this.render(true);
     }
+
+    /**
+     * 处理成本输入框的变更事件。
+     * @param {Event} event 变更事件
+     */
     async _onChangeCost(event) {
-        debug(`${this.APP_ID} _onChangeCost : name value`, event.target?.name, event.target?.value);
         const value = event.target.value;
         const name = event.target.name;
         if (name === "cost") {
@@ -284,8 +327,12 @@ export class CraftPanelForge extends CraftPanel {
             await this.render(true);
         }
     }
+
+    /**
+     * 处理结果槽位的点击事件：编辑模式下编辑结果属性，使用模式下选择/取消选择结果。
+     * @param {Event} event 点击事件
+     */
     async _onClickResult(event) {
-        debug(`${this.APP_ID} _onClickResult : isEdit`, this.isEdit);
         event.preventDefault();
         const index = event.currentTarget.dataset.index;
         const result = this.results[index];
@@ -346,8 +393,12 @@ export class CraftPanelForge extends CraftPanel {
             await this.render(true);
         }
     }
+
+    /**
+     * 处理结果槽位的右键事件：编辑模式下删除结果，使用模式下取消选择。
+     * @param {Event} event 右键事件
+     */
     async _onContextMenuResult(event) {
-        debug(`${this.APP_ID} _onContextMenuResult : isEdit`, this.isEdit);
         event.preventDefault();
         const index = event.currentTarget.dataset.index;
         if (this.isEdit) {
@@ -363,9 +414,10 @@ export class CraftPanelForge extends CraftPanel {
             await this.render(true);
         }
     }
-    //刷新可用点数
+    /**
+     * 刷新可用点数：重新计算基础成本和元素成本，执行成本脚本。
+     */
     async refreshResults() {
-        debug(`${this.APP_ID} refreshResults`);
         if (this.needRefresh) {
             this.baseCost = this.journalEntry.getFlag(MODULE_ID, "baseCost") ?? 0;
             this.cost.icon = this.journalEntry.getFlag(MODULE_ID, "costIcon") ?? "";
@@ -400,9 +452,10 @@ export class CraftPanelForge extends CraftPanel {
 
         this.cost.max = cost;
     }
-    //刷新调整面板
+    /**
+     * 刷新调整面板：检查各调整器的解锁条件、材料要求，计算点数消耗。
+     */
     async refreshModifiers() {
-        debug(`${this.APP_ID} refreshModifiers`);
         this.cost.value = this.cost.max;
         const slotMaterials = [];
         //将材料整理成类似元素的格式
@@ -508,13 +561,19 @@ export class CraftPanelForge extends CraftPanel {
         }
     }
 
-    //检查是否未选择结果
+    /**
+     * 检查是否未选择任何结果。
+     * @returns {boolean}
+     */
     checkNoResult() {
-        debug(`${this.APP_ID} checkNoResult`);
         return this.choosedResults.length == 0;
     }
+
+    /**
+     * 合成前校验：检查是否选择了结果、必需槽位是否填满。
+     * @returns {Promise<boolean>} 是否通过校验
+     */
     async checkCraft() {
-        debug(`${this.APP_ID} checkCraft`);
         if (this.checkNoResult()) {
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.notification.must-choose-at-least-one-result`));
             return false;
@@ -525,8 +584,12 @@ export class CraftPanelForge extends CraftPanel {
         };
         return true;
     }
+
+    /**
+     * 创建新调整器的默认数据，包含当前选中的分类。
+     * @returns {object} 默认调整器数据
+     */
     createModifierData() {
-        debug(`${this.APP_ID} createModifierData`);
         const DEFAULT_MODIFIER_DATA = {
             isLocked: false,
             ingredients: [],
@@ -547,7 +610,6 @@ export class CraftPanelForge extends CraftPanel {
      * 编辑调整
      */
     async editModifier(modifierJEUuid) {
-        debug(`${this.APP_ID} editModifier : modifierJEUuid`, modifierJEUuid);
         const modifierJE = await fromUuid(modifierJEUuid);
         const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelModifier));
         if (openWindow) openWindow.close();
@@ -561,7 +623,6 @@ export class CraftPanelForge extends CraftPanel {
      * 选择调整
      */
     async chooseModifier(modifierJEUuid) {
-        debug(`${this.APP_ID} chooseModifier : modifierJEUuid`, modifierJEUuid);
         const modifierJE = await fromUuid(modifierJEUuid);
         const modifier = this.modifiers.find(m => m.uuid === modifierJE.uuid);
         if (modifier.auto) return;
@@ -600,7 +661,6 @@ export class CraftPanelForge extends CraftPanel {
      * @param {Array} configOptions 
      */
     fillConfigOptions() {
-        debug(`${this.APP_ID} fillConfigOptions`);
         const configOptions = super.fillConfigOptions();
         configOptions.find(c => c.id == "general")?.options?.push(
             { ftype: "number", name: `flags.${MODULE_ID}.resultLimit`, label: game.i18n.localize(`${MODULE_ID}.craft-panel-forge.result-limit`), min: 0, max: Math.max(this.results.length, 1), hint: game.i18n.localize(`${MODULE_ID}.craft-panel-forge.result-limit-hint`), step: 1 },
@@ -620,8 +680,13 @@ export class CraftPanelForge extends CraftPanel {
 
         return configOptions;
     }
+
+    /**
+     * 合成前准备：收集已选择的调整器，返回面板状态数据。
+     * @param {Array} materials 材料列表
+     * @returns {Promise<object>} 合成前数据
+     */
     async preCraft(materials) {
-        debug(`${this.APP_ID} preCraft : materials`, materials);
         this.selectedModifiers = this.modifiersJE.filter(m => this.choosedModifiers.includes(m.uuid));
         return {
             data: this,
@@ -633,8 +698,14 @@ export class CraftPanelForge extends CraftPanel {
             canceled: this.canceled,
         }
     }
+
+    /**
+     * 获取合成结果：收集选中结果，处理随机表、自动数量/重量、描述生成、调整器应用。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表（会被填充）
+     * @returns {Promise<object|false>} 合成结果数据，失败返回 false
+     */
     async getCraftResult(materials, results) {
-        debug(`${this.APP_ID} getCraftResult : materials results`, materials, results);
         //获取合成结果
         for (let id of this.choosedResults) {
             const re = this.results.find(r => r.uuid == id);
@@ -718,22 +789,20 @@ export class CraftPanelForge extends CraftPanel {
             totalQuantity = 1;
         }
         results.forEach(r => {
-            if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined && r.quantity != undefined) {
-                let quantity = r.quantity;
+            if (r.foundry.utils.getProperty(item, this.quantityPath) != undefined && r.quantity != undefined) {
+                r.foundry.utils.getProperty(item, this.quantityPath) = r.quantity;
                 if (r.autoQuantity ?? false) {
-                    quantity = Math.floor(totalWeight / ((r.weight ?? 1) == 0 ? 1 : (r.weight ?? 1)));
-                    if (quantity < 1) {
-                        quantity = 1;
+                    r.foundry.utils.getProperty(item, this.quantityPath) = Math.floor(totalWeight / ((r.weight ?? 1) == 0 ? 1 : (r.weight ?? 1)));
+                    if (r.foundry.utils.getProperty(item, this.quantityPath) < 1) {
+                        r.foundry.utils.getProperty(item, this.quantityPath) = 1;
                     }
                 }
-                foundry.utils.setProperty(r.item, this.quantityPath, quantity);
             }
             if (foundry.utils.getProperty(r.item, this.weightPath) != undefined && r.weight != undefined && !r.originWeight) {
-                let weight = r.weight;
+                foundry.utils.setProperty(r.item, this.weightPath, r.weight);
                 if (r.autoWeight ?? false) {
-                    weight = totalWeight / totalQuantity;
+                    foundry.utils.setProperty(r.item, this.weightPath, totalWeight / totalQuantity);
                 }
-                foundry.utils.setProperty(r.item, this.weightPath, weight);
             }
             r.item.name = r.name;
             r.item.img = r.img;
@@ -777,14 +846,25 @@ export class CraftPanelForge extends CraftPanel {
             canceled: this.canceled,
         }
     }
+
+    /**
+     * 最终确定合成结果：将产物添加到产物列表。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表
+     * @returns {Promise<{updates: object, toDelete: Array, products: Array}>}
+     */
     async finalizeCraftResult(materials, results) {
-        debug(`${this.APP_ID} finalizeCraftResult : materials results`, materials, results);
         const { updates, toDelete, products } = await super.finalizeCraftResult(materials, results);
         products.push(...results.map(r => r.item));
         return { updates, toDelete, products };
     }
+
+    /**
+     * 合成后处理：重置调整器选择，根据配置恢复或清空选择状态。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表
+     */
     async postCraft(materials, results) {
-        debug(`${this.APP_ID} postCraft : canceled`, this.canceled);
         this.choosedModifiers = [];
         await super.postCraft(materials, results);
 
@@ -800,9 +880,13 @@ export class CraftPanelForge extends CraftPanel {
         }
     }
 
-    //应用调整
+    /**
+     * 应用调整器效果：执行调整脚本、触发 Hook、应用 ActiveEffect 或直接属性变更。
+     * @param {Array} selectedModifiers 已选择的调整器列表
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表
+     */
     async applyModifier(selectedModifiers, materials, results) {
-        debug(`${this.APP_ID} applyModifier : selectedModifiers results`, selectedModifiers, results);
         for (let modifier of selectedModifiers) {
             //执行调整的脚本
             let craftScript = modifier.getFlag(MODULE_ID, "craftScript");
@@ -830,7 +914,7 @@ export class CraftPanelForge extends CraftPanel {
                         if (ae) {
                             ae.changes = ae.changes.concat(changes);
                         } else {
-                            ae = buildActiveEffect(re.name, re.img, changes, 0, 3, undefined, "", undefined, aeType);
+                            ae = buildActiveEffect(re.name, re.img, changes, aeType, re.description);
                             re.item.effects ??= [];
                             re.item.effects.push(ae);
                         }
@@ -840,7 +924,7 @@ export class CraftPanelForge extends CraftPanel {
                     if (!aeName) {
                         aeName = modifier.name;
                     }
-                    let ae = buildActiveEffect(aeName, modifier.src, changes, 0, 3, undefined, modifier.text.content, undefined, aeType);
+                    let ae = buildActiveEffect(aeName, modifier.src, changes, aeType, modifier.text.content);
                     for (let re of results) {
                         re.item.effects ??= [];
                         re.item.effects.push(ae);
@@ -857,9 +941,12 @@ export class CraftPanelForge extends CraftPanel {
             }
         }
     }
-    //应用调整的效果
+    /**
+     * 应用单个属性变更到物品上，支持 ADD/MULTIPLY/OVERRIDE/UPGRADE/DOWNGRADE 模式。
+     * @param {object} item 目标物品数据
+     * @param {object} change 变更配置（key, mode, value）
+     */
     static applyChange(item, change) {
-        debug(`${this.APP_ID} applyChange`, item, change);
         const current = foundry.utils.getProperty(item, change.key) ?? null;
         let targetType = foundry.utils.getType(current);
         let updates = {};
@@ -899,8 +986,11 @@ export class CraftPanelForge extends CraftPanel {
         foundry.utils.mergeObject(item, updates);
     }
 
+    /**
+     * 创建新调整器页面并刷新面板。
+     * @param {Event} event 点击事件
+     */
     async newModifier(event) {
-        debug(`${this.APP_ID} newModifier`);
         event.preventDefault();
         await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
             {

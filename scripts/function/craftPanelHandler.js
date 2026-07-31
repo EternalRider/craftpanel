@@ -81,8 +81,6 @@ export class CraftPanelHandler extends HandlebarsApplication {
         this.actor = options.actor;
         this.activeActorId = options.activeActorId ?? this.actor?.id ?? game.user?.character?.id ?? null;
 
-        this.quantityPath = game.settings.get(MODULE_ID, 'quantityPath');
-
         this.handlerTemplatesJE = [];
         this.actorHandlers = new Map();
         this.needRefresh = true;
@@ -360,7 +358,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         const list = [{
             id: "all",
             name: game.i18n.localize(`${MODULE_ID}.all`),
-            icon: "modules/craftpanel/img/svgs/stack.svg",
+            icon: `modules/${MODULE_ID}/img/svgs/stack.svg`,
             choosed: this.category[type] === "all",
             readonly: true,
         }];
@@ -378,7 +376,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
             list.push({
                 id: "add",
                 name: game.i18n.localize(`${MODULE_ID}.craft-panel.new-category`),
-                icon: "modules/craftpanel/img/svgs/health-normal.svg",
+                icon: `modules/${MODULE_ID}/img/svgs/health-normal.svg`,
                 choosed: false,
                 isAdd: true,
             });
@@ -397,7 +395,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         const list = [{
             id: "all",
             name: game.i18n.localize(`${MODULE_ID}.all`),
-            icon: "modules/craftpanel/img/svgs/stack.svg",
+            icon: `modules/${MODULE_ID}/img/svgs/stack.svg`,
             choosed: this.category.handlers === "all",
             readonly: true,
         }];
@@ -760,7 +758,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         return await Promise.all(results.map(async (r, i) => {
             let name = r.name;
             let img = r.img;
-            const hasQuantity = r.hasQuantity ?? (foundry.utils.getProperty(r, this.quantityPath) !== undefined);
+            const hasQuantity = r.hasQuantity ?? (Object.prototype.hasOwnProperty.call(r, "quantity") || Object.prototype.hasOwnProperty.call(r?.system ?? {}, "quantity"));
             if (r.uuid) {
                 const item = await fromUuid(r.uuid);
                 name ??= item?.name;
@@ -770,7 +768,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
                 index: i,
                 name: name ?? game.i18n.localize(`${MODULE_ID}.craft-panel.unknown-result`),
                 img: img ?? "icons/svg/item-bag.svg",
-                quantity: foundry.utils.getProperty(r, this.quantityPath) ?? 1,
+                quantity: foundry.utils.getProperty(r, this.quantityPath) ?? r.quantity ?? 1,
                 hasQuantity,
             };
         }));
@@ -786,8 +784,8 @@ export class CraftPanelHandler extends HandlebarsApplication {
         const data = foundry.utils.deepClone(result?.toObject?.() ?? result ?? {});
         if (data._id) delete data._id;
         const source = item?.toObject?.() ?? item ?? null;
-        const hasQuantity = result?.hasQuantity ?? (foundry.utils.getProperty(data, this.quantityPath) !== undefined || foundry.utils.getProperty(source, this.quantityPath) !== undefined);
-        const quantity = Number(foundry.utils.getProperty(result, this.quantityPath) ?? foundry.utils.getProperty(data, this.quantityPath) ?? foundry.utils.getProperty(source, this.quantityPath) ?? 1);
+        const hasQuantity = result?.hasQuantity ?? (Object.prototype.hasOwnProperty.call(data, "quantity") || Object.prototype.hasOwnProperty.call(data?.system ?? {}, "quantity") || Object.prototype.hasOwnProperty.call(source?.system ?? {}, "quantity"));
+        const quantity = Number(result?.quantity ?? data?.quantity ?? foundry.utils.getProperty(data, this.quantityPath) ?? foundry.utils.getProperty(source, this.quantityPath) ?? 1);
 
         data.uuid = result?.uuid ?? source?.uuid ?? data.uuid ?? "";
         data.name = result?.name ?? data.name ?? source?.name ?? game.i18n.localize(`${MODULE_ID}.craft-panel.unknown-result`);
@@ -795,6 +793,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         data.hasQuantity = !!hasQuantity;
         if (data.hasQuantity) {
             data.quantity = Number.isFinite(quantity) ? quantity : 1;
+            data.system ??= {};
             foundry.utils.setProperty(data, this.quantityPath, data.quantity);
         } else {
             delete data.quantity;
@@ -1341,7 +1340,6 @@ export class CraftPanelHandler extends HandlebarsApplication {
             sortTarget = await fromUuid(targetUuid);
             // if (!sortTarget || sortTarget.id === page.id) return;
         }
-
         await page.sortRelative({
             sortKey: "sort",
             target: sortTarget,
@@ -1797,16 +1795,7 @@ export class CraftPanelHandler extends HandlebarsApplication {
         if ((handler.results.length === 1) && ((handler.img ?? this.#getDefaultHandlerIcon()) === this.#getDefaultHandlerIcon())) {
             handler.img = item.img || handler.img;
         }
-                const payload = foundry.utils.deepClone(handler.results ?? []).map((p) => {
-                    const itemData = foundry.utils.deepClone(p);
-                    delete itemData._id;
-                    delete itemData.hasQuantity;
-                    if (foundry.utils.getProperty(itemData, this.quantityPath) !== undefined && this.quantityPath !== undefined) {
-                        foundry.utils.setProperty(itemData, this.quantityPath, foundry.utils.getProperty(itemData, this.quantityPath));
-                    }
-                    delete itemData.quantity;
-                    return itemData;
-                });
+        await this.saveActorHandlers(activeActor.id, handlers);
         await this.render(true);
     }
 

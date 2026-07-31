@@ -3,16 +3,31 @@ import { CraftPanel } from "./craftPanel.js";
 import { CraftPanelRecipe } from "./craftPanelRecipe.js";
 import { CraftPanelUserRecipe } from "./craftPanelUserRecipe.js";
 
+/**
+ * 配方解锁权限等级。
+ * @type {{canShow: number, canUse: number, none: number}}
+ */
 const DEFAULT_OWNERSHIP = {
     "canShow": 2,
     "canUse": 1,
     "none": 0,
 }
 
+/**
+ * 合成面板。
+ * 继承自 CraftPanel，提供基于配方匹配的合成系统。
+ * 支持配方解锁、分类筛选、权重随机、结果隐藏等功能。
+ * @extends CraftPanel
+ */
 export class CraftPanelBlend extends CraftPanel {
+    /**
+     * 构造合成面板实例。
+     * @param {JournalEntry|string} journalEntry 对应的 JournalEntry 或其 UUID
+     * @param {"edit"|"craft"} mode 面板模式
+     * @param {object} options 额外初始化参数
+     */
     constructor(journalEntry, mode = "edit", options = {}) {
         super(journalEntry, mode, options);
-        debug(`${this.APP_ID} constructor : journalEntry mode options`, journalEntry, mode, options);
 
         this.results = [];
         this.recipes = [];
@@ -28,6 +43,10 @@ export class CraftPanelBlend extends CraftPanel {
         }
     }
 
+    /**
+     * 默认窗口配置。
+     * @returns {object}
+     */
     static get DEFAULT_OPTIONS() {
         return {
             classes: [this.APP_ID],
@@ -46,6 +65,10 @@ export class CraftPanelBlend extends CraftPanel {
         };
     }
 
+    /**
+     * 默认面板尺寸配置。
+     * @returns {object}
+     */
     get DEFAULT_PANEL_SIZES() {
         return {
             recipes: {
@@ -71,9 +94,12 @@ export class CraftPanelBlend extends CraftPanel {
         };
     }
 
-    //准备界面所需的各项数据
+    /**
+     * 组装渲染数据，附加配方列表到渲染上下文。
+     * @param {object} options 渲染选项
+     * @returns {Promise<object>} 渲染数据
+     */
     async getData(options) {
-        debug(`${this.APP_ID} getData`);
         const data = await super.getData(options);
         data.recipes = this.recipes; //左侧显示的配方
 
@@ -81,26 +107,33 @@ export class CraftPanelBlend extends CraftPanel {
     }
 
     /**
-     * 绑定各项元素的互动效果
-     * @returns {}
+     * 首次渲染时绑定配方面板的拖放、点击和右键事件。
+     * @param {object} context 渲染上下文
+     * @param {object} options 渲染选项
      */
     _onFirstRender(context, options) {
         super._onFirstRender(context, options);
-        debug(`${this.APP_ID} _onFirstRender : context options`, context, options);
         const html = $(this.element);
         html.on("drop", ".craft-content.edit .craft-recipes-panel", this._onDropRecipesPanel.bind(this));
         html.on("click", ".craft-content.edit .craft-recipe", this._onClickRecipe.bind(this));
         html.on("contextmenu", ".craft-content.edit .craft-recipe", this._onContextMenuRecipe.bind(this));
     }
 
+    /**
+     * 处理配方的点击事件，打开配方编辑面板。
+     * @param {Event} event 点击事件
+     */
     _onClickRecipe(event) {
-        debug(`${this.APP_ID} _onClickRecipe`);
         event.preventDefault();
         const recipeJEUuid = event.currentTarget.dataset.uuid;
         this.editRecipe(recipeJEUuid);
     }
+
+    /**
+     * 处理配方的右键事件，弹出删除确认对话框。
+     * @param {Event} event 右键事件
+     */
     async _onContextMenuRecipe(event) {
-        debug(`${this.APP_ID} _onContextMenuRecipe`);
         event.preventDefault();
         const recipeJEUuid = event.currentTarget.dataset.uuid;
         const recipeJE = await fromUuid(recipeJEUuid);
@@ -113,7 +146,6 @@ export class CraftPanelBlend extends CraftPanel {
      * @param {Event} event
      */
     async _onDropRecipesPanel(event) {
-        debug(`${this.APP_ID} _onDropRecipesPanel`);
         event.preventDefault();
         let data;
         try {
@@ -121,7 +153,6 @@ export class CraftPanelBlend extends CraftPanel {
         } catch (e) {
             return;
         }
-        debug(`${this.APP_ID} _onDropRecipesPanel : data`, data);
         if (data.type !== "Item" && data.type !== "RollTable") return;
         const item = await fromUuid(data.uuid);
         await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
@@ -145,11 +176,12 @@ export class CraftPanelBlend extends CraftPanel {
      * 刷新结果
      */
     async refreshResults() {
-        debug(`${this.APP_ID} refreshResults`);
         this.results = [];
+        // debug("CraftPanelBlend.refreshResults", this.elements.map(el => el.num), this.slotItems);
         const showResult = this.journalEntry.getFlag(MODULE_ID, "showResult");
         if ((showResult === "show" || showResult === "question mark" || showResult == "by unlock") && this.checkSlot()) {
             let recipes = await this.matchRecipe();
+            // debug("CraftPanelBlend.refreshResults", recipes);
             if (recipes.length > 0) {
                 if ((recipes.length > 1) || (showResult === "question mark") || (showResult === "by unlock" && (this.recipesCanShow.find(r => r.id == recipes[0].id) === undefined))) {
                     this.results.push({
@@ -181,10 +213,12 @@ export class CraftPanelBlend extends CraftPanel {
                 }
             }
         }
+        // debug("CraftPanelBlend.refreshResults", this.results[0]);
     }
-    //刷新材料面板
+    /**
+     * 刷新材料面板：重新获取配方列表，处理解锁权限、分类筛选和显示控制。
+     */
     async refreshPanel() {
-        debug(`${this.APP_ID} refreshPanel`);
         await super.refreshPanel();
         //刷新配方
         let unlockedRecipes = game.user.getFlag(MODULE_ID, "unlockedRecipes") ?? [];
@@ -277,8 +311,12 @@ export class CraftPanelBlend extends CraftPanel {
             };
         }));
     }
+
+    /**
+     * 创建新配方的默认数据，包含当前选中的分类。
+     * @returns {object} 默认配方数据
+     */
     createRecipeData() {
-        debug(`${this.APP_ID} createRecipeData`);
         const DEFAULT_RECIPE_DATA = {
             isLocked: false,
             ingredients: [],
@@ -296,7 +334,6 @@ export class CraftPanelBlend extends CraftPanel {
      * 编辑配方
      */
     async editRecipe(recipeJEUuid) {
-        debug(`${this.APP_ID} editRecipe : recipeJEUuid`, recipeJEUuid);
         const recipeJE = await fromUuid(recipeJEUuid);
         const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelRecipe));
         if (openWindow) openWindow.close();
@@ -307,9 +344,11 @@ export class CraftPanelBlend extends CraftPanel {
             newWindow.render(true);
         };
     }
-    //匹配配方
+    /**
+     * 匹配配方：根据当前槽位中的元素和材料，匹配所有符合条件的配方并按匹配度排序。
+     * @returns {Promise<JournalEntryPage[]>} 匹配到的配方列表
+     */
     async matchRecipe() {
-        debug(`${this.APP_ID} matchRecipe`);
         let recipes = [];
         const slotMaterials = [];
         //将材料整理成类似元素的格式
@@ -369,7 +408,6 @@ export class CraftPanelBlend extends CraftPanel {
      * @param {Array} configOptions 
      */
     fillConfigOptions() {
-        debug(`${this.APP_ID} fillConfigOptions`);
         const showResultOptions = {
             "none": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.not-show`),
             "show": game.i18n.localize(`${MODULE_ID}.${this.APP_ID}.show`),
@@ -384,8 +422,13 @@ export class CraftPanelBlend extends CraftPanel {
         );
         return configOptions;
     }
+
+    /**
+     * 合成前准备：重置选中配方，返回面板状态数据。
+     * @param {Array} materials 材料列表
+     * @returns {Promise<object>} 合成前数据
+     */
     async preCraft(materials) {
-        debug(`${this.APP_ID} preCraft : materials`, materials);
         this.selectedRecipe = undefined;
         return {
             data: this,
@@ -397,8 +440,14 @@ export class CraftPanelBlend extends CraftPanel {
             canceled: this.canceled,
         }
     }
+
+    /**
+     * 获取合成结果：匹配配方后收集结果，处理随机表、执行配方脚本并触发 Hook。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表（会被填充）
+     * @returns {Promise<object|false>} 合成结果数据，失败返回 false
+     */
     async getCraftResult(materials, results) {
-        debug(`${this.APP_ID} getCraftResult : materials results`, materials, results);
         //匹配配方
         const recipes = await this.matchRecipe();
         if (recipes.length > 0) {
@@ -505,8 +554,14 @@ export class CraftPanelBlend extends CraftPanel {
             canceled: this.canceled,
         }
     }
+
+    /**
+     * 最终确定合成结果：处理按名称合并逻辑，将产物添加到更新队列。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表
+     * @returns {Promise<{updates: object, toDelete: Array, products: Array}>}
+     */
     async finalizeCraftResult(materials, results) {
-        debug(`${this.APP_ID} finalizeCraftResult : materials results`, materials, results);
         this.mergeByName = this.journalEntry.getFlag(MODULE_ID, "mergeByName") ?? false;
         if (this.selectedRecipe && this.selectedRecipe.getFlag(MODULE_ID, "mergeByName") != undefined) {
             if (this.selectedRecipe.getFlag(MODULE_ID, "mergeByName") == "yes") {
@@ -520,7 +575,7 @@ export class CraftPanelBlend extends CraftPanel {
             results.forEach(r => {
                 let item = this.actor.items.find(i => i.name == r.item.name);
                 if (item) {
-                    if (foundry.utils.getProperty(item, this.quantityPath) != undefined) {
+                    if (foundry.utils.getProperty(item, this.quantityPath)) {
                         updates[this.actor.id] ??= { parent: this.actor, items: [] };
                         updates[this.actor.id].items.push({
                             _id: item.id,
@@ -528,24 +583,29 @@ export class CraftPanelBlend extends CraftPanel {
                         });
                     }
                 } else {
-                    if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
-                        foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
+                    if (r.foundry.utils.getProperty(item, this.quantityPath) != undefined) {
+                        r.foundry.utils.getProperty(item, this.quantityPath) = r.quantity;
                     }
                     products.push(r.item);
                 }
             });
         } else {
             results.forEach(r => {
-                if (foundry.utils.getProperty(r.item, this.quantityPath) != undefined) {
-                    foundry.utils.setProperty(r.item, this.quantityPath, r.quantity);
+                if (r.foundry.utils.getProperty(item, this.quantityPath) != undefined) {
+                    r.foundry.utils.getProperty(item, this.quantityPath) = r.quantity;
                 }
                 products.push(r.item);
             });
         }
         return { updates, toDelete, products };
     }
+
+    /**
+     * 合成后处理：如果启用了自动解锁，将合成成功的配方添加到用户的已解锁列表。
+     * @param {Array} materials 材料列表
+     * @param {Array} results 结果列表
+     */
     async postCraft(materials, results) {
-        debug(`${this.APP_ID} postCraft : canceled`, this.canceled);
         //解锁配方
         if (this.selectedRecipe && !this.canceled && !game.user.isGM && this.journalEntry.getFlag(MODULE_ID, "unlockRecipe")) {
             const unlockedRecipes = game.user.getFlag(MODULE_ID, "unlockedRecipes") ?? [];
@@ -557,8 +617,11 @@ export class CraftPanelBlend extends CraftPanel {
         await super.postCraft(materials, results);
     }
 
+    /**
+     * 创建新配方页面并刷新面板。
+     * @param {Event} event 点击事件
+     */
     async newRecipe(event) {
-        debug(`${this.APP_ID} newRecipe`);
         event.preventDefault();
         await this.journalEntry.createEmbeddedDocuments("JournalEntryPage", [
             {
@@ -577,8 +640,12 @@ export class CraftPanelBlend extends CraftPanel {
         this.needRefresh = true;
         await this.render(true);
     }
+
+    /**
+     * 打开或关闭用户配方解锁管理面板（GM 专用）。
+     * @param {Event} event 点击事件
+     */
     async configUserUnlocked(event) {
-        debug(`${this.APP_ID} configUserUnlocked`);
         event.preventDefault();
         //配置用户解锁的配方
         const openWindow = craftPanels?.find((w) => (w instanceof CraftPanelUserRecipe));
@@ -601,7 +668,6 @@ export class CraftPanelBlend extends CraftPanel {
      * @returns {number} 匹配程度
      */
     static checkCraftElementsMatch(elements, craftElements) {
-        debug(`${this.APP_ID} checkCraftElementsMatch`, elements, craftElements);
         let match = 0;
         for (let el of elements) {
             let el2 = craftElements.find((el3) => el3.id === el.id);
