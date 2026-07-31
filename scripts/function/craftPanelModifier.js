@@ -366,7 +366,7 @@ export class CraftPanelModifier extends HandlebarsApplication {
     }
 
     async configure() {
-        const modifier_categories = this.journalEntry.getFlag(MODULE_ID, "modifier-categories") ?? [];
+        const modifier_categories = this.journalEntry.getFlag(MODULE_ID, "modifiers-categories") ?? [];
         const categoryOptions = {};
         for (const category of modifier_categories) {
             categoryOptions[category.id] = category.name;

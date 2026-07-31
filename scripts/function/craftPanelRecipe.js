@@ -343,7 +343,7 @@ export class CraftPanelRecipe extends HandlebarsApplication {
     }
 
     async configure() {
-        const recipe_categories = this.journalEntry.getFlag(MODULE_ID, "recipe-categories") ?? [];
+        const recipe_categories = this.journalEntry.getFlag(MODULE_ID, "recipes-categories") ?? [];
         const categoryOptions = {};
         for (const category of recipe_categories) {
             categoryOptions[category.id] = category.name;

@@ -192,7 +192,7 @@ export async function chatMessage(content, options = {}, others = {}) {
     } else {
       chatData.rolls = [options.rolls];
     }
-    chatData.type = CONST.CHAT_MESSAGE_TYPES.ROLL;
+    // chatData.type = CONST.CHAT_MESSAGE_TYPES.ROLL;
   }
   if (options.user ?? false) {
     chatData.user = options.user;
