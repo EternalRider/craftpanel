@@ -1,1087 +1,917 @@
-/* 面板编辑界面 */
-.craft-panel-manager table {
-    margin-left: 0;
-    margin-right: 0;
-}
-.craft-panel-manager table tr td:first-of-type {
-    width: 50%;
-}
-.craft-panel-manager table button {
-    width: auto;
-    padding: 0.5rem;
-}
-.craft-panel-manager table button i {
-    margin: 0;
-}
-/* 基础 */
-.craft .window-content {
-    padding: 0;
-}
-.craft .standard-form {
-    gap: 10px;
-    padding: 10px;
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-    width: min-content;
-    height: min-content;
-}
-.craft .standard-form .form-footer button {
-    --button-size: 40px;
-}
+/*
+ * ============================================================================
+ * 合成面板统一样式文件 (craftpanel.css)
+ * ============================================================================
+ * 本文件包含 合成面板所有面板的样式定义：
+ *   ① 面板管理界面  ② 基础布局  ③ 标题栏  ④ 主面板/子面板
+ *   ⑤ 槽位(Slot)  ⑥ 元素(Element)  ⑦ 材料(Material)  ⑧ 类别(Category)
+ *   ⑨ 成本(Cost)  ⑩ 配方/调整(Recipe/Modifier)  ⑪ 结果(Results)
+ *   ⑫ 调整变化(Changes)  ⑬ 提示框(Tooltip)  ⑭ 元素面板滚动
+ *   ⑮ Craft Handler UI  ⑯ 特定面板类型样式
+ *   ⑰ 底部按钮  ⑱ 提示框增强  ⑲ 材料数量标签  ⑳ 锁定动画
+ *   ㉑ 元素点增强  ㉒ 附魔/锻造动画
+ * 文件路径: modules/craftpanel/styles/module.css
+ * ============================================================================
+ */
 
-.craft .craft-content {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
+/* ============================================================
+ * ① 面板管理界面 (.craft-panel-manager) - GM配置面板时的表格和按钮
+ * ============================================================ */
+.craft-panel-manager table { margin-left: 0; margin-right: 0; }
+.craft-panel-manager table tr td:first-of-type { width: 50%; }
+.craft-panel-manager table button { width: auto; padding: 8px; }
+.craft-panel-manager table button i { margin: 0; }
+
+/* ============================================================
+ * ② 基础布局 - 窗口内容区、标准表单、合成内容容器
+ * ============================================================ */
+/* 窗口内容区无内边距 */
+.craft .window-content { padding: 0; }
+/* 标准表单容器：自适应尺寸 + 背景图 */
+.craft .standard-form {
+    gap: 10px; padding: 10px;
+    background-size: cover; background-repeat: no-repeat; background-position: center;
+    width: min-content; height: min-content;
 }
-.craft .craft-content .craft-panel {
-    gap: 0px;
-    display: flex;
-    flex-direction: column;
-}
-/* 标题 */
+/* 表单底部按钮尺寸 */
+.craft .standard-form .form-footer button { --button-size: 40px; }
+/* 合成内容区：水平排列各子面板 */
+.craft .craft-content { display: flex; flex-direction: row; gap: 10px; }
+/* 子面板容器：垂直排列 */
+.craft .craft-content .craft-panel { gap: 0px; display: flex; flex-direction: column; }
+
+/* ============================================================
+ * ③ 标题栏 (.craft-panel-tittle) - 各子面板顶部标题区域
+ * ============================================================ */
+/* 标题栏容器：渐变底色 + 居中布局 + 底部发光线 */
 .craft .craft-content .craft-panel-tittle {
     width: 100%;
-    background-color: rgb(0, 0, 0, 25%);
-    display: flex;
-    justify-content: center;
-    position: relative;
+    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.15) 100%);
+    display: flex; justify-content: center; position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
+/* 标题栏底部装饰发光线 */
+.craft .craft-content .craft-panel-tittle::after {
+    content: ''; position: absolute; bottom: -1px; left: 20%; right: 20%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.5), transparent);
+}
+/* 标题文字：白色居中 + 文字发光 */
 .craft .craft-content .craft-panel-tittle > h2 {
-    text-align: center;
-    margin: 5px;
-    border-bottom: none;
-    height: 25px;
-    color: white;
+    text-align: center; margin: 5px; border-bottom: none; height: 25px; color: white;
+    text-shadow: 0 0 4px rgba(255,255,255,0.3), 0 1px 3px rgba(0,0,0,0.8);
+    letter-spacing: 1px;
 }
+/* 折叠/展开图标：定位在右侧 */
 .craft .craft-content .craft-panel-tittle > i {
-    margin: 5px;
-    color: white;
-    text-shadow: 0 0 5px black;
-    position: absolute;
-    right: 0px;
-    cursor: pointer;
+    margin: 5px; color: white; text-shadow: 0 0 5px black;
+    position: absolute; right: 0px; cursor: pointer;
+    transition: transform 0.3s, text-shadow 0.3s;
 }
+/* 图标悬停：发光 + 旋转 */
 .craft .craft-content .craft-panel-tittle > i:hover {
     text-shadow: 0 0 5px var(--color-shadow-primary), 0 0 10px var(--color-shadow-primary), 0 0 15px var(--color-shadow-primary);
+    transform: rotate(90deg);
 }
-/* 配方列表 */
+
+/* ============================================================
+ * ④ 主面板和子面板布局
+ * ============================================================ */
+/* 主面板：垂直排列子面板 */
+.craft .craft-content .craft-main-panel {
+    display: flex; flex-direction: column; gap: 10px;
+}
+/* 主面板的子面板容器：水平居中排列 + 内凹深度感 */
+.craft .craft-content .craft-main-panel .main-child-panel {
+    background-color: rgb(0,0,0,10%);
+    display: flex; flex-direction: row; align-content: center;
+    justify-content: center; flex-wrap: wrap; gap: 10px; height: 100px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.25), inset 0 -1px 4px rgba(255,255,255,0.03);
+    border-radius: 4px;
+}
+
+/* ============================================================
+ * ⑤ 槽位(Slot)样式 - 基础、空槽位、悬停、选中、锁定
+ * ============================================================ */
+/* ---- 5.1 槽位基础样式：相对定位 + 边框发光 + 过渡动画 ---- */
+.craft .craft-content .craft-main-panel .craft-slot {
+    position: relative; display: flex; pointer-events: all; text-align: center;
+    background-size: contain; background-repeat: no-repeat; background-position: center;
+    border: 3px ridge var(--item-color, #191005);
+    box-shadow: inset 0 0 10px var(--item-color, #191005);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, filter 0.25s ease;
+    cursor: pointer; align-self: center;
+}
+/* 圆形槽位 */
+.craft .craft-content .craft-main-panel .craft-slot.round { border-radius: 50%; }
+
+/* ---- 5.2 空槽位样式 + 缓慢呼吸动画 ---- */
+.craft .craft-content .craft-main-panel .craft-slot.empty {
+    filter: sepia(1) brightness(0.6) hue-rotate(180deg);
+    animation: slot-empty-breathe 3s ease-in-out infinite;
+}
+/* 空槽位呼吸动画：微弱透明度波动 */
+@keyframes slot-empty-breathe {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.5; }
+}
+/* 空槽位变体：不同混合模式和透明度 */
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod1 { mix-blend-mode: exclusion; opacity: 0.8; }
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod2 { opacity: 1; animation: none; }
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod3 { opacity: 0.5; animation: none; }
+.craft .craft-content .craft-main-panel .craft-slot.empty.mod4 { mix-blend-mode: plus-lighter; }
+
+/* ---- 5.3 槽位悬停效果：放大 + 外发光 + 边框高亮 ---- */
+.craft .craft-content .craft-main-panel .craft-slot:hover {
+    transform: scale(1.1);
+    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 8px var(--item-color, #191005), 0 0 16px var(--item-color, #191005);
+    border-color: var(--item-color, #c8a84b);
+    z-index: 2;
+}
+
+/* ---- 5.4 槽位选中状态(selected) - 槽位筛选功能 ---- */
+/* 选中槽位：金色高亮边框 + 放大 + 脉冲动画 */
+.craft .craft-content .craft-main-panel .craft-slot.selected {
+    transform: scale(1.1);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px #ffd700, 0 0 20px #ffd700;
+    border-color: #ffd700 !important; z-index: 1;
+    animation: slot-selected-pulse 2s ease-in-out infinite;
+}
+/* 选中槽位悬停：进一步放大 */
+.craft .craft-content .craft-main-panel .craft-slot.selected:hover {
+    transform: scale(1.2);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 12px #ffd700, 0 0 24px #ffd700;
+}
+/* 选中槽位脉冲动画关键帧 */
+@keyframes slot-selected-pulse {
+    0%, 100% { box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px #ffd700, 0 0 20px #ffd700; }
+    50% { box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 15px #ffd700, 0 0 30px #ffd700; }
+}
+
+/* ---- 5.5 锁定状态：锁定图标覆盖层（完整样式见 ⑳ 节） ---- */
+
+/* ---- 5.6 槽位面板附加组件 ---- */
+/* “保留材料”切换开关 */
+.craft .craft-slot-panel .craft-slot-keep-toggle {
+    position: absolute; top: 6px; right: 8px;
+    display: flex; align-items: center; gap: 4px; padding: 4px 6px;
+    background: rgba(0,0,0,0.45); border-radius: 6px;
+    color: #ffffff; font-size: 12px; z-index: 2;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.craft .craft-slot-panel .craft-slot-keep-toggle:hover {
+    background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.25);
+}
+.craft .craft-slot-panel .craft-slot-keep-toggle input { margin: 0; }
+
+/* ============================================================
+ * ⑥ 元素(Element)样式 - 元素槽位、颜色指示、数量标签
+ * ============================================================ */
+/* ---- 6.1 元素槽位 ---- */
+/* 基础样式（也用于提示框中的元素展示） */
+.craft-tooltip .tooltip-element,
+.craft .craft-content .element-slot {
+    pointer-events: all; position: relative;
+    width: var(--element-size, 60px); height: var(--element-size, 60px);
+    text-align: center; background-size: contain;
+    background-repeat: no-repeat; background-position: center;
+    border: 3px ridge var(--item-color, #191005);
+    box-shadow: inset 0 0 10px var(--item-color, #191005);
+}
+/* 交互效果：过渡动画 + 指针样式 */
+.craft .craft-content .element-slot {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    cursor: pointer; align-self: center;
+}
+/* 圆形元素槽位 */
+.craft .craft-content .element-slot.round { border-radius: 50%; }
+/* 悬停：放大 + 双层外发光 + 边框高亮 */
+.craft .craft-content .element-slot:hover {
+    transform: scale(1.12);
+    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 8px var(--item-color, #191005), 0 0 14px var(--item-color, #191005);
+    border-color: var(--item-color, #c8a84b);
+}
+
+/* ---- 6.2 元素颜色指示器（元素面板中的颜色圆圈） ---- */
+.craft .craft-content .craft-elementitems-panel .element-color-circle {
+    position: relative; top: 35px; left: 18px; font-size: 20px; color: #00000000;
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
+/* ---- 6.3 元素数量标签 ---- */
+.craft .craft-content .element-num,
+.craft-tooltip .tooltip-element-num {
+    position: absolute; opacity: 0.9; border: none; box-shadow: none; pointer-events: none;
+    text-align: center; vertical-align: middle; font-weight: bold; color: white;
+    text-shadow: -1px -1px 2px black, 1px 1px 2px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
+    width: 100%; bottom: 0; line-height: 18px; border-radius: 10px; font-size: 18px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+}
+/* 调整/配方列表中的小尺寸数量标签 */
+.craft .craft-content .craft-modifiers-panel .craft-modifier-ingredient .element-num,
+.craft .craft-content .craft-recipes-panel .craft-recipe-ingredient .element-num {
+    line-height: 13px; font-size: 13px;
+}
+
+/* ============================================================
+ * ⑦ 材料(Material)样式 - 材料面板、元素点容器、元素点
+ * ============================================================ */
+/* ---- 7.1 材料/元素物品面板：网格布局 + 深度感 ---- */
+.craft .craft-content .craft-materials-panel,
+.craft .craft-content .craft-elementitems-panel {
+    display: grid; background-color: rgb(0,0,0,10%); overflow-y: auto;
+    justify-content: center; align-content: start;
+    grid-template-columns: repeat(auto-fill, 60px); grid-gap: 5px; padding: 5px 10px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+}
+/* 材料/元素面板滚动条美化 */
+.craft .craft-content .craft-materials-panel::-webkit-scrollbar,
+.craft .craft-content .craft-elementitems-panel::-webkit-scrollbar {
+    width: 6px;
+}
+.craft .craft-content .craft-materials-panel::-webkit-scrollbar-track,
+.craft .craft-content .craft-elementitems-panel::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.2); border-radius: 3px;
+}
+.craft .craft-content .craft-materials-panel::-webkit-scrollbar-thumb,
+.craft .craft-content .craft-elementitems-panel::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2); border-radius: 3px;
+}
+.craft .craft-content .craft-materials-panel::-webkit-scrollbar-thumb:hover,
+.craft .craft-content .craft-elementitems-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.35);
+}
+/* ---- 7.2 材料数量标签（右下角）+ 视觉增强 ---- */
+.craft .craft-content .craft-materials-panel .craft-slot-quantity {
+    position: absolute; right: 3px; bottom: 3px; text-align: right; color: white; pointer-events: none;
+    font-size: 12px; font-weight: bold;
+    text-shadow: -1px -1px 2px black, 1px 1px 2px black, 0 0 4px black;
+    background: rgba(0,0,0,0.4); border-radius: 3px; padding: 0 3px;
+}
+/* ---- 7.3 槽位内元素点容器 ---- */
+/* 元素点列容器：纵向排列 */
+.craft .craft-content .craft-slot-elements {
+    display: flex; position: relative; flex-direction: column;
+    width: 100%; height: 100%; margin: 1px 0 0 1px;
+    padding: 0; align-content: start; overflow: hidden;
+}
+/* 元素点行容器：网格自动填充 */
+.craft .craft-content .craft-slot-elements .slot-element-circle-container {
+    width: 100%; height: min-content; margin: 0; padding: 0;
+    display: grid; align-content: start; justify-content: start; justify-items: start; align-items: start;
+    grid-template-columns: repeat(auto-fill, 9px);
+}
+/* ---- 7.4 元素点（材料上的小图标，增强样式见 ㉑ 节） ---- */
+
+/* ============================================================
+ * ⑧ 类别(Category)样式 - 分类筛选图标
+ * ============================================================ */
+/* 类别面板：水平居中排列 + 微妙背景 */
+.craft .craft-content .craft-category-panel {
+    display: flex; background-color: rgb(0,0,0,10%);
+    flex-direction: row; gap: 5px; justify-content: center;
+    align-content: center; height: 25px; flex-wrap: wrap;
+    padding: 4px 6px;
+}
+/* 类别图标基础样式 */
+.craft .craft-content .craft-category-icon {
+    width: 25px; height: 25px; border: 1px solid #d7d7d7; border-radius: 5px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    cursor: pointer;
+}
+/* 悬停：放大 + 发光阴影 */
+.craft .craft-content .craft-category-icon:hover {
+    transform: scale(1.15); box-shadow: 0 0 8px rgba(255,255,255,0.4), 0 0 14px rgba(255,215,0,0.3);
+    border-color: #ffd700;
+}
+/* 当前选中类别：绿色高亮 + 脉冲动画 */
+.craft .craft-content .craft-category-icon.selected {
+    border-color: #00ff00; box-shadow: 0 0 8px #00ff00, 0 0 14px rgba(0,255,0,0.4);
+    animation: category-selected-pulse 2s ease-in-out infinite;
+}
+/* 选中类别脉冲动画 */
+@keyframes category-selected-pulse {
+    0%, 100% { box-shadow: 0 0 8px #00ff00, 0 0 14px rgba(0,255,0,0.4); }
+    50% { box-shadow: 0 0 12px #00ff00, 0 0 20px rgba(0,255,0,0.6); }
+}
+
+/* ============================================================
+ * ⑨ 成本/点数(Cost)样式 - 成本面板和调整器成本标签
+ * ============================================================ */
+/* ---- 9.1 成本面板容器 ---- */
+.craft .craft-content .craft-cost-panel {
+    display: flex; justify-content: center; background-color: rgb(0,0,0,10%);
+    padding: 5px 0;
+}
+/* 成本数值输入框：圆形大字体 + 光环动画 */
+.craft .craft-content .craft-cost-panel input[type=number] {
+    font-size: var(--font-h1-size); width: 60px; height: 60px; flex: 0 0 auto;
+    text-align: center; border-radius: 50%;
+    background-position: center; background-size: cover; background-repeat: no-repeat;
+    text-shadow: 0 0 2px black, 0 0 2px black, 0 0 2px black, 0 0 2px black, 0 0 2px black,
+                 0 0 3px black, 0 0 4px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
+    color: white; border: 2px solid rgba(255,215,0,0.4); position: relative; right: -13px;
+    box-shadow: 0 0 10px rgba(255,215,0,0.2), inset 0 0 8px rgba(0,0,0,0.4);
+    animation: cost-glow-ring 3s ease-in-out infinite;
+}
+/* 成本圆形光环呼吸动画 */
+@keyframes cost-glow-ring {
+    0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.2), 0 0 15px rgba(255,215,0,0.15), inset 0 0 8px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 0 16px rgba(255,215,0,0.4), 0 0 24px rgba(255,215,0,0.15), inset 0 0 8px rgba(0,0,0,0.4); }
+}
+/* 成本面板中的元素图标标记 */
+.craft .craft-content .craft-cost-panel span {
+    background: rgba(0,0,0,0.1); border-radius: 50%; border: 3px solid;
+    width: 25px; height: 25px; text-align: center; pointer-events: none;
+    border-color: var(--color-cool-3); box-shadow: 0 0 3px black;
+    display: flex; justify-content: center; align-items: center;
+    transform: translate(25%, 25%);
+}
+/* ---- 9.2 调整器成本标签：右锚定，向左扩展 ---- */
+.craft .craft-content .craft-modifiers-panel .craft-modifier-cost {
+    height: 20px; vertical-align: middle; font-weight: bold; line-height: 20px;
+    text-shadow: -1px -1px 2px black, 1px 1px 2px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
+    background-size: 30px; background-repeat: no-repeat; background-position: center;
+    border-radius: 50%; box-shadow: 0 0 10px black;
+    position: absolute; right: 0; left: auto; top: 0;
+    white-space: nowrap; overflow: visible; text-align: right;
+    transform-origin: right top; box-sizing: border-box; min-width: 20px; width: auto;
+}
+/* 正向成本：绿色 */ .craft-modifiers-panel .craft-modifier-cost.plus-cost { color: #4fff4f; }
+/* 负向成本：红色 */ .craft-modifiers-panel .craft-modifier-cost.minus-cost { color: #ff4f4f; }
+
+/* ============================================================
+ * ⑩ 配方/调整(Recipe/Modifier)样式 - 列表、卡片、子组件
+ * ============================================================ */
+/* ---- 10.1 列表面板容器 + 滚动条美化 ---- */
 .craft .craft-content .craft-templates-panel,
 .craft .craft-content .craft-handlers-panel,
 .craft .craft-content .craft-players-panel,
 .craft .craft-content .craft-recipes-panel {
-    display: flex;
-    background-color: rgb(0, 0, 0, 10%);
-    flex-direction: column;
-    gap: 3px;
-    padding: 3px 10px 5px;
-    width: 300px;
-    overflow-y: auto;
+    display: flex; background-color: rgb(0,0,0,10%);
+    flex-direction: column; gap: 3px; padding: 3px 10px 5px;
+    width: 300px; overflow-y: auto;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
 }
-/* 主面板 */
-.craft .craft-content .craft-main-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    /* width: 600px; */
-}
-/* 材料面板和元素面板 */
-.craft .craft-content .craft-materials-panel,
-.craft .craft-content .craft-elementitems-panel {
-    display: grid;
-    background-color: rgb(0, 0, 0, 10%);
-    overflow-y: auto;
-    justify-content: center;
-    align-content: start;
-    grid-template-columns: repeat(auto-fill, 60px);
-    grid-gap: 5px;
-    padding: 5px 10px;
-}
-/* 类别面板 */
-.craft .craft-content .craft-category-panel {
-    display: flex;
-    background-color: rgb(0, 0, 0, 10%);
-    flex-direction: row;
-    gap: 5px;
-    justify-content: center;
-    align-content: center;
-    height: auto;
-    flex-wrap: wrap;
-}
-/* 调整列表 */
+/* 调整列表面板 */
 .craft .craft-content .craft-modifiers-panel {
-    display: flex;
-    background-color: rgb(0, 0, 0, 10%);
-    flex-direction: column;
-    gap: 3px;
-    padding: 5px 10px;
-    width: 300px;
-    overflow-y: auto;
+    display: flex; background-color: rgb(0,0,0,10%);
+    flex-direction: column; gap: 3px; padding: 5px 10px;
+    width: 300px; overflow-y: auto;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
 }
-/* 元素材料面板-420px-6格 */
-/* .craft-panel-element .craft-materials-panel,
-.craft-panel-element .craft-elementitems-panel {
-    grid-template-columns: repeat(6, 60px);
-    grid-gap: 5px;
-    padding: 5px;
-    width: 420px;
-    height: 420px;
-} */
-/* 调和材料面板-300px-4格 */
-/* .craft-panel-cook .craft-materials-panel,
-.craft-panel-blend .craft-materials-panel {
-    grid-template-columns: repeat(4, 60px);
-    grid-gap: 8px;
-    padding: 5px 10px;
-    width: 300px;
-    height: 540px;
-} */
-/* 配方元素面板-300px-4格 */
-/* .craft-panel-modifier .craft-elementitems-panel,
-.craft-panel-recipe .craft-elementitems-panel {
-    grid-template-columns: repeat(4, 60px);
-    grid-gap: 8px;
-    padding: 10px;
-    width: 300px;
-    height: 420px;
-} */
-/* 主面板-子面板 */
-.craft .craft-content .craft-main-panel .main-child-panel {
-    background-color: rgb(0, 0, 0, 10%);
-    display: flex;
-    flex-direction: row;
-    align-content: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    height: 100px;
+/* 配方/调整列表面板滚动条美化 */
+.craft .craft-content .craft-recipes-panel::-webkit-scrollbar,
+.craft .craft-content .craft-modifiers-panel::-webkit-scrollbar,
+.craft .craft-content .craft-templates-panel::-webkit-scrollbar,
+.craft .craft-content .craft-handlers-panel::-webkit-scrollbar,
+.craft .craft-content .craft-players-panel::-webkit-scrollbar {
+    width: 6px;
 }
-/* 主面板-调和插槽-保留材料切换 */
-.craft .craft-slot-panel .craft-slot-keep-toggle {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 6px;
-    color: #ffffff;
-    font-size: 12px;
-    z-index: 2;
+.craft .craft-content .craft-recipes-panel::-webkit-scrollbar-track,
+.craft .craft-content .craft-modifiers-panel::-webkit-scrollbar-track,
+.craft .craft-content .craft-templates-panel::-webkit-scrollbar-track,
+.craft .craft-content .craft-handlers-panel::-webkit-scrollbar-track,
+.craft .craft-content .craft-players-panel::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.2); border-radius: 3px;
 }
-.craft .craft-slot-panel .craft-slot-keep-toggle input {
-    margin: 0;
+.craft .craft-content .craft-recipes-panel::-webkit-scrollbar-thumb,
+.craft .craft-content .craft-modifiers-panel::-webkit-scrollbar-thumb,
+.craft .craft-content .craft-templates-panel::-webkit-scrollbar-thumb,
+.craft .craft-content .craft-handlers-panel::-webkit-scrollbar-thumb,
+.craft .craft-content .craft-players-panel::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2); border-radius: 3px;
 }
-/* 图块-调和插槽 */
-.craft .craft-content .craft-main-panel .craft-slot {
-    position: relative;
-    display: flex;
-    pointer-events: all;
-    /* width: 80px;
-    height: 80px; */
-    text-align: center;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    border: 3px ridge var(--item-color, #191005);
-    box-shadow: inset 0 0 10px var(--item-color, #191005);
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-    align-self: center;
+.craft .craft-content .craft-recipes-panel::-webkit-scrollbar-thumb:hover,
+.craft .craft-content .craft-modifiers-panel::-webkit-scrollbar-thumb:hover,
+.craft .craft-content .craft-templates-panel::-webkit-scrollbar-thumb:hover,
+.craft .craft-content .craft-handlers-panel::-webkit-scrollbar-thumb:hover,
+.craft .craft-content .craft-players-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.35);
 }
-.craft .craft-content .craft-main-panel .craft-slot.round {
-    border-radius: 50%;
-}
-.craft .craft-content .craft-main-panel .craft-slot.empty {
-    filter: sepia(1) brightness(0.6) hue-rotate(180deg);
-}
-.craft .craft-content .craft-main-panel .craft-slot.empty.mod1 {
-    mix-blend-mode: exclusion;
-    opacity: 0.8;
-}
-.craft .craft-content .craft-main-panel .craft-slot.empty.mod2 {
-    opacity: 1;
-}
-.craft .craft-content .craft-main-panel .craft-slot.empty.mod3 {
-    opacity: 0.5;
-}
-.craft .craft-content .craft-main-panel .craft-slot.empty.mod4 {
-    mix-blend-mode: plus-lighter;
-}
-.craft .craft-content .craft-main-panel .craft-slot:hover {
-    transform: scale(1.1);
-    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 10px var(--item-color, #191005);
-}
-.craft .craft-content .craft-main-panel .craft-slot .slot-locked {
-    opacity: 0.8;
-    padding: 0;
-    margin: 0;
-    border: none;
-    box-shadow: none;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    text-shadow: 0 0 5px #7d7d7d, 0 0 10px #7d7d7d, 0 0 15px #7d7d7d;
-}
-/* 图块-配方结果 */
-.craft-panel-blend .craft-main-panel .craft-results-panel .craft-slot,
-.craft-panel-recipe .craft-main-panel .craft-slot {
-    width: 60px;
-    height: 60px;
-}
-.craft-panel-enchant .craft-main-panel .craft-slot.choosed,
-.craft-panel-forge .craft-main-panel .craft-slot.choosed {
-    transform: scale(1.1);
-    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa);
-    border: 3px ridge var(--item-color, #aaaaaa);
-    margin: 0 20px;
-}
-.craft-panel-enchant .craft-main-panel .craft-slot.choosed:hover,
-.craft-panel-forge .craft-main-panel .craft-slot.choosed:hover {
-    transform: scale(1.2);
-    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa);
-}
-/* 元素面板：当内容超出时启用水平滚动，但始终隐藏滚动条 */
-.craft .craft-content .craft-elements-panel.main-child-panel {
-    display: flex;
-    /* 子项以 flex 排列 */
-    justify-content: center;
-    overflow-x: auto;
-    /* 允许水平滚动 */
-    overflow-y: hidden;
-    /* 禁用垂直滚动 */
-    flex-wrap: nowrap;
-    /* 防止换行 */
-    gap: 8px;
-    align-items: center;
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
-}
-/* 隐藏 WebKit 浏览器（Chrome/Safari/Edge Chromium）的滚动条 */
-.craft .craft-content .craft-elements-panel::-webkit-scrollbar {
-    height: 0px;
-    display: none;
-}
-/* 确保子项可以横向排列（在原有 .element-slot 基础上使用 inline-flex，保留现有样式） */
-.craft .craft-content .craft-elements-panel .element-slot {
-    display: inline-flex;
-    vertical-align: middle;
-    flex: 0 0 auto;
-    /* 固定尺寸，防止子项收缩或伸展 */
-}
-/* 溢出时左对齐 */
-.craft .craft-content .craft-elements-panel.main-child-panel.overflowing {
-    cursor: grab;
-    justify-content: flex-start;
-}
-/* 拖拽滚动时视觉反馈 */
-.craft .craft-content .craft-elements-panel.main-child-panel.overflowing.dragging {
-    cursor: grabbing;
-    user-select: none;
-}
-.craft-panel-element .craft-content .craft-main-panel .craft-elements-panel {
-    overflow-y: auto;
-    flex-wrap: wrap;
-}
-/* 图块-元素 */
-.craft-tooltip .tooltip-element,
-.craft .craft-content .element-slot {
-    pointer-events: all;
-    position: relative;
-    width: var(--element-size, 60px);
-    height: var(--element-size, 60px);
-    text-align: center;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    border: 3px ridge var(--item-color, #191005);
-    box-shadow: inset 0 0 10px var(--item-color, #191005);
-}
-.craft .craft-content .element-slot {
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-    align-self: center;
-}
-.craft .craft-content .element-slot.round {
-    border-radius: 50%;
-}
-.craft .craft-content .element-slot:hover {
-    transform: scale(1.1);
-    box-shadow: inset 0 0 10px var(--item-color, #191005), 0 0 10px var(--item-color, #191005);
-}
-/* 图块-元素-元素颜色 */
-.craft .craft-content .element-color-circle {
-    position: relative;
-    top: 35px;
-    left: 17.5px;
-    font-size: 20px;
-    color: #00000000;
-}
-/* .craft .craft-content .element-color-circle.circle {
-    border-radius: 50%;
-}
-.craft .craft-content .element-color-circle.square {
-    border-radius: 5%;
-}
-.craft .craft-content .element-color-circle.diamond {
-    border-radius: 0%;
-    transform: scale(0.7) rotate(45deg);
-} */
-/* 图块-材料-元素点列容器 */
-.craft .craft-content .craft-slot-elements {
-    display: flex;
-    position: relative;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    margin: 1px 0 0 1px;
-    padding: 0;
-    align-content: start;
-    overflow: hidden;
-}
-/* 图块-材料-元素点行容器 */
-.craft .craft-content .craft-slot-elements .slot-element-circle-container {
-    width: 100%;
-    height: min-content;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    align-content: start;
-    justify-content: start;
-    justify-items: start;
-    align-items: start;
-    grid-template-columns: repeat(auto-fill, 9px);
-}
-/* 图块-材料-元素点 */
-.craft .craft-content .slot-element-circle-container .slot-element-circle {
-    font-size: 8px;
-    position: relative;
-    color: #00000000;
-}
-/* .craft .craft-content .slot-element-circle-container .slot-element-circle.circle {
-    border-radius: 50%;
-}
-.craft .craft-content .slot-element-circle-container .slot-element-circle.square {
-    border-radius: 5%;
-    transform: scale(0.8);
-}
-.craft .craft-content .slot-element-circle-container .slot-element-circle.diamond {
-    border-radius: 0%;
-    transform: scale(0.7) rotate(45deg);
-} */
-/* 提示框-材料 */
-.craft-tooltip figure {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    position: relative;
-    margin: 0;
-}
-.craft-tooltip figure img {
-    width: var(--font-h2-size);
-    height: var(--font-h2-size);
-    object-fit: cover;
-    margin: 0;
-    position: absolute;
-    border-radius: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    filter: blur(5px);
-}
-.craft-tooltip figure h2 {
-    margin: 0;
-    border: none;
-    width: 100%;
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    filter: drop-shadow(0px 0px 3px black);
-    line-height: normal;
-    padding: 1rem 0rem;
-    text-align: center;
-}
-.craft-tooltip .description {
-    text-align: left;
-}
-/* 提示框-材料-元素容器 */
-.craft-tooltip .tooltip-elements {
-    display: flex;
-    padding: 10px;
-    gap: 5px;
-    flex-wrap: wrap;
-    /* grid-template-columns: repeat(2, 60px);
-    grid-gap: 5px; */
-}
-/* 元素数量显示 */
-.craft .craft-content .element-num,
-.craft-tooltip .tooltip-element-num {
-    position: absolute;
-    opacity: 0.8;
-    border: none;
-    box-shadow: none;
-    pointer-events: none;
-    text-align: center;
-    vertical-align: middle;
-    font-weight: bold;
-    color: white;
-    text-shadow: -1px -1px 2px black, 1px 1px 2px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
-    width: 100%;
-    bottom: 0;
-    line-height: 18px;
-    border-radius: 10px;
-    font-size: 18px;
-}
-.craft .craft-content .craft-modifiers-panel .craft-modifier-ingredient .element-num,
-.craft .craft-content .craft-recipes-panel .craft-recipe-ingredient .element-num {
-    line-height: 13px;
-    font-size: 13px;
-}
-.craft .craft-content .craft-modifiers-panel .craft-modifier-cost {
-    height: 20px;
-    vertical-align: middle;
-    font-weight: bold;
-    line-height: 20px;
-    text-shadow: -1px -1px 2px black, 1px 1px 2px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
-    background-size: 30px;
-    background-repeat: no-repeat;
-    background-position: center;
-    border-radius: 50%;
-    box-shadow: 0 0 10px black;
-
-    /* 关键定位/溢出控制：以右侧为锚点，让超长内容向左扩展 */
-    position: absolute;
-    right: 0;       /* 锚定右边缘 */
-    left: auto;       /* 明确禁止左锚定，保证以右边为固定点 */
-    top: 0;
-    /* 不换行，允许内容超出父元素（向左扩展）；并限制最大宽度避免跑出屏幕 */
-    white-space: nowrap;
-    overflow: visible;
-    text-align: right; /* 文本从右向左呈现，更符合右侧锚点 */
-    transform-origin: right top;
-    box-sizing: border-box;
-    min-width: 20px;
-    width: auto; /* 让宽度随内容增长（向左扩展） */
-}
-.craft .craft-content .craft-modifiers-panel .craft-modifier-cost.plus-cost {
-    color: #4fff4f;
-}
-.craft .craft-content .craft-modifiers-panel .craft-modifier-cost.minus-cost {
-    color: #ff4f4f;
-}
-/* 配方组件 */
+/* ---- 10.2 配方/调整卡片 + 渐变背景 ---- */
 .craft .craft-content .craft-modifiers-panel .craft-modifier,
 .craft .craft-content .craft-recipes-panel .craft-recipe {
-    width: 100%;
-    padding: 5px;
-    border: 1px solid white;
-    border-radius: 5px;
-    display: flex;
-    flex-direction: row;
-    background-color: rgb(0, 0, 0, 25%);
-    gap: 5px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    width: 100%; padding: 5px; border: 1px solid rgba(255,255,255,0.25); border-radius: 5px;
+    display: flex; flex-direction: row;
+    background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 100%);
+    gap: 5px; transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
+/* 玩家卡片 */
 .craft .craft-content .craft-players-panel .craft-player {
-    width: 100%;
-    padding: 5px;
-    border: 1px solid var(--player-color, white);
-    border-radius: 5px;
-    display: flex;
-    flex-direction: row;
-    background-color: rgb(0, 0, 0, 25%);
-    gap: 5px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    width: 100%; padding: 5px; border: 1px solid var(--player-color, white); border-radius: 5px;
+    display: flex; flex-direction: row;
+    background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 100%);
+    gap: 5px; transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
+/* 可点击卡片显示指针 */
 .craft .craft-content .craft-players-panel .craft-player,
 .craft .craft-content .craft-recipes-panel .craft-recipe,
-.craft .craft-content .craft-modifiers-panel .craft-modifier:not([locked]) {
-    cursor: pointer;
-}
-.craft .craft-content .craft-modifiers-panel .craft-modifier:hover:not([locked]) ,
+.craft .craft-content .craft-modifiers-panel .craft-modifier:not([locked]) { cursor: pointer; }
+/* 悬停效果：轻微放大 + 发光边框 */
+.craft .craft-content .craft-modifiers-panel .craft-modifier:hover:not([locked]),
 .craft .craft-content .craft-recipes-panel .craft-recipe:hover {
-    transform: scale(1.05);
+    transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.5);
 }
+/* 选中卡片：海蓝宝石边框 + 发光动画 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier.choosed,
 .craft .craft-content .craft-recipes-panel .craft-recipe.choosed {
-    border-color: aquamarine;
-    transform: scale(1.05);
+    border-color: aquamarine; transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(127,255,212,0.4), 0 0 14px rgba(127,255,212,0.2);
+    animation: card-choosed-glow 2s ease-in-out infinite;
 }
 .craft .craft-content .craft-players-panel .craft-player.choosed {
-    border-color: var(--player-color, aquamarine);
-    transform: scale(1.05);
+    border-color: var(--player-color, aquamarine); transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(127,255,212,0.4), 0 0 14px rgba(127,255,212,0.2);
 }
+/* 选中卡片发光脉冲动画 */
+@keyframes card-choosed-glow {
+    0%, 100% { box-shadow: 0 0 8px rgba(127,255,212,0.4), 0 0 14px rgba(127,255,212,0.2); }
+    50% { box-shadow: 0 0 12px rgba(127,255,212,0.6), 0 0 20px rgba(127,255,212,0.3); }
+}
+/* 锁定调整：降低亮度 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier.locked {
-    filter: brightness(0.6);
-    background-color: rgb(0, 0, 0, 15%);
+    filter: brightness(0.6); background-color: rgb(0,0,0,15%);
 }
-/* 配方图标 */
+/* ---- 10.3 卡片内部组件 ---- */
+/* 配方/调整图标 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier-img,
-.craft .craft-content .craft-recipes-panel .craft-recipe-img {
-    width: 45px;
-    height: 45px;
-}
-/* 配方右侧框 */
+.craft .craft-content .craft-recipes-panel .craft-recipe-img { width: 45px; height: 45px; }
+/* 描述区域 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier-desc,
 .craft .craft-content .craft-recipes-panel .craft-recipe-desc {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    position: relative;
+    display: flex; flex-direction: column; flex: 1; position: relative;
 }
-/* 配方名称 */
+/* 卡片名称 */
 .craft .craft-content .craft-players-panel .craft-player > h3,
 .craft .craft-content .craft-modifiers-panel .craft-modifier-desc > h3,
 .craft .craft-content .craft-recipes-panel .craft-recipe-desc > h3 {
-    margin: 0;
-    padding: 0;
-    font-size: 20px;
-    color: white;
-    border-bottom: none;
+    margin: 0; padding: 0; font-size: 20px; color: white; border-bottom: none;
 }
-/* 配方材料容器 */
+/* 材料需求容器 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier-desc .craft-modifier-ingredients,
 .craft .craft-content .craft-recipes-panel .craft-recipe-desc .craft-recipe-ingredients {
-    display: flex;
-    flex-direction: row;
-    gap: 1px;
-    flex: 1;
-    flex-wrap: wrap;
+    display: flex; flex-direction: row; gap: 1px; flex: 1; flex-wrap: wrap;
 }
-/* 配方材料 */
+/* 单个材料需求图标 */
 .craft .craft-content .craft-modifiers-panel .craft-modifier-desc .craft-modifier-ingredients .craft-modifier-ingredient,
 .craft .craft-content .craft-recipes-panel .craft-recipe-desc .craft-recipe-ingredients .craft-recipe-ingredient {
-    position: relative;
-    width: 25px;
-    height: 25px;
-    text-align: center;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-.craft .craft-content .craft-modifiers-panel .craft-modifier-desc .craft-modifier-ingredients .craft-modifier-ingredient:hover,
-.craft .craft-content .craft-recipes-panel .craft-recipe-desc .craft-recipe-ingredients .craft-recipe-ingredient:hover {
-    transform: scale(1.2);
-}
-/* 材料数量 */
-.craft .craft-content .craft-materials-panel .craft-slot-quantity {
-    position: absolute;
-    right: 3px;
-    bottom: 3px;
-    text-align: right;
-    color: white;
-    pointer-events: none;
-}
-/* 类别图标-基础样式*/
-.craft .craft-content .craft-category-icon {
-    width: 25px;
-    height: 25px;
-    border: 1px solid #d7d7d7;
-    border-radius: 5px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-}
-/* 类别图标-鼠标悬停效果 */
-.craft .craft-content .craft-category-icon:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
-/* 类别图标-当前选择的分类效果 */
-.craft .craft-content .craft-category-icon.selected {
-    border-color: #00ff00;
-    box-shadow: 0 0 10px #00ff00;
-}
-/* 点数显示 */
-.craft .craft-content .craft-cost-panel {
-    display: flex;
-    justify-content: center;
-    background-color: rgb(0, 0, 0, 10%);
-}
-.craft .craft-content .craft-cost-panel input[type=number] {
-    font-size: var(--font-h1-size);
-    width: 70px;
-    height: 70px;
-    flex: 0 0 auto;
-    text-align: center;
-    border-radius: 50%;
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    text-shadow: 0 0 2px black, 0 0 2px black, 0 0 2px black, 0 0 2px black, 0 0 2px black, 0 0 3px black, 0 0 4px black, 0 0 5px black, 0 0 10px black, 0 0 15px black;
-    color: white;
-    border: none;
-    position: relative;
-    right: -12.5px;
-}
-.craft .craft-content .craft-cost-panel span {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    border: 3px solid;
-    width: 25px;
-    height: 25px;
-    text-align: center;
-    pointer-events: none;
-    border-color: var(--color-cool-3);
-    box-shadow: 0 0 3px black;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transform: translate(25%, 25%);
-}
-/* 调整显示 */
-.craft .craft-content .main-child-panel.craft-changes-panel {
-    align-content: start;
-    gap: 0px;
-}
-.craft .craft-content .craft-changes-panel .effect-change .key {
-    flex: 2;
-}
-/* .craft .craft-content .craft-changes-panel .effects-header {
-    height: 28px;
-    background: rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--color-border-light-tertiary);
-    font-weight: bold;
-} */
-.craft .craft-content .craft-changes-panel .effect-change {
-    align-items: center;
-    padding: 3px 1px;
-    border-bottom: 1px solid var(--color-border-light-primary);
-    width: 100%;
-    margin: 0px;
+    position: relative; width: 25px; height: 25px; text-align: center;
+    background-size: contain; background-repeat: no-repeat; background-position: center;
 }
 
-/* ========================= */
-/* Craft Handler UI          */
-/* ========================= */
-.craft .craft-handler .craft-content {
-    align-items: flex-start;
+/* ============================================================
+ * ⑪ 结果(Results)面板 - 通过 .main-child-panel 继承基础布局
+ * 结果槽位的具体尺寸在 ⑯ 各面板类型特定样式中定义
+ * ============================================================ */
+
+/* ============================================================
+ * ⑫ 调整变化(Changes) - 显示合成操作的属性变化
+ * ============================================================ */
+/* 变化面板：顶部对齐，无间距 */
+.craft .craft-content .main-child-panel.craft-changes-panel { align-content: start; gap: 0px; }
+/* 变化条目的键名区域 */
+.craft .craft-content .craft-changes-panel .effect-change .key { flex: 2; }
+/* 变化条目行 */
+.craft .craft-content .craft-changes-panel .effect-change {
+    align-items: center; padding: 3px 1px;
+    border-bottom: 1px solid var(--color-border-light-primary);
+    width: 100%; margin: 0px;
 }
+
+/* ============================================================
+ * ⑬ 提示框(Tooltip) - 鼠标悬停时的物品信息
+ * ============================================================ */
+/* 图片容器 */
+.craft-tooltip figure {
+    display: flex; align-items: center; gap: 16px; position: relative; margin: 0;
+}
+/* 背景图：模糊处理 + 暗角 */
+.craft-tooltip figure img {
+    width: 100%; height: 100%; object-fit: cover; margin: 0;
+    position: absolute; border-radius: 0; z-index: -1; filter: blur(5px) brightness(0.7);
+}
+/* 标题：描边 + 投影 + 金色调 */
+.craft-tooltip figure h2 {
+    margin: 0; border: none; width: 100%;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+                 0 0 8px rgba(255,215,0,0.3);
+    filter: drop-shadow(0px 0px 3px black);
+    line-height: normal; padding: 16px 0px; text-align: center;
+    color: #ffe8a0;
+}
+/* 描述文本：左对齐 */
+.craft-tooltip .description { text-align: left; }
+/* 元素容器 */
+.craft-tooltip .tooltip-elements { display: flex; padding: 10px; gap: 5px; flex-wrap: wrap; }
+
+/* ============================================================
+ * ⑭ 元素面板滚动 - 水平滚动和拖拽交互
+ * ============================================================ */
+/* 元素面板：水平滚动容器 + 深度感 */
+.craft .craft-content .craft-elements-panel.main-child-panel {
+    display: flex; justify-content: center;
+    overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap;
+    gap: 8px; align-items: center;
+    -ms-overflow-style: none; scrollbar-width: none;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+}
+/* 隐藏 WebKit 浏览器滚动条 */
+.craft .craft-content .craft-elements-panel::-webkit-scrollbar { height: 0px; display: none; }
+/* 元素槽位：固定尺寸不收缩 */
+.craft .craft-content .craft-elements-panel .element-slot {
+    display: inline-flex; vertical-align: middle; flex: 0 0 auto;
+}
+/* 溢出时：左对齐 + 抓手光标 */
+.craft .craft-content .craft-elements-panel.main-child-panel.overflowing {
+    cursor: grab; justify-content: flex-start;
+}
+/* 拖拽滚动视觉反馈 */
+.craft .craft-content .craft-elements-panel.main-child-panel.overflowing.dragging {
+    cursor: grabbing; user-select: none;
+}
+
+/* ============================================================
+ * ⑮ Craft Handler UI - 合成处理器界面
+ * 包含：演员选择、步骤管理、结果展示、描述折叠等
+ * ============================================================ */
+/* ---- 15.1 基础布局 ---- */
+.craft .craft-handler .craft-content { align-items: flex-start; }
+
+/* ---- 15.2 演员选择卡片 ---- */
 .craft .craft-handler .craft-actor {
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+    border: 1px solid rgba(255,255,255,0.25);
+    background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
     transition: transform 0.2s, box-shadow 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px;
-    border-radius: 6px;
-    cursor: pointer;
+    display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: pointer;
 }
 .craft .craft-handler .craft-actor:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
 .craft .craft-handler .craft-actor.choosed {
-    border-color: aquamarine;
-    box-shadow: 0 0 8px rgba(127, 255, 212, 0.6);
+    border-color: aquamarine; box-shadow: 0 0 8px rgba(127,255,212,0.6);
 }
 .craft .craft-handler .craft-actor .actor-img {
-    width: 34px;
-    height: 34px;
-    border-radius: 6px;
-    object-fit: cover;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    width: 34px; height: 34px; border-radius: 6px; object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.3);
 }
-.craft .craft-handler .craft-actor .actor-name {
-    margin: 0;
-    font-size: 16px;
-    color: #ffffff;
-    border: 0;
+.craft .craft-handler .craft-actor .actor-name { margin: 0; font-size: 16px; color: #ffffff; border: 0; }
+/* 非拥有者：橙色边框提示 */
+.craft .craft-handler .craft-actor.not-owner {
+    border-color: rgba(255,189,122,0.45); box-shadow: inset 0 0 0 1px rgba(255,170,95,0.1);
 }
+.craft .craft-handler .craft-actor.not-owner.choosed {
+    border-color: #ffb97a; box-shadow: 0 0 10px rgba(255,185,122,0.58);
+}
+.craft .craft-handler .craft-actor.choosed:not(.not-owner) {
+    border-color: aquamarine; box-shadow: 0 0 10px rgba(127,255,212,0.6);
+}
+
+/* ---- 15.3 处理器/模板卡片 ---- */
 .craft .craft-handler .handler-template,
 .craft .craft-handler .handler-card {
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.18);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 8px;
+    background: rgba(0,0,0,0.18); display: flex; flex-direction: column; gap: 6px;
 }
 .craft .craft-handler .handler-template .template-header,
 .craft .craft-handler .handler-card .handler-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
-.craft .craft-handler .handler-actions {
-    display: flex;
-    flex-direction: row;
-    gap: 4px;
-}
+.craft .craft-handler .handler-actions { display: flex; flex-direction: row; gap: 4px; }
 .craft .craft-handler .template-name,
-.craft .craft-handler .handler-card h3 {
-    margin: 0;
-    color: #fff;
-    font-size: 16px;
-}
+.craft .craft-handler .handler-card h3 { margin: 0; color: #fff; font-size: 16px; }
+/* 各类按钮统一尺寸 */
 .craft .craft-handler .handler-actions button,
 .craft .craft-handler .template-footer button,
 .craft .craft-handler .handler-footer button,
 .craft .craft-handler .template-results button,
 .craft .craft-handler .step-controls button,
 .craft .craft-handler .craft-templates-panel button[data-action='create-handler'] {
-    min-width: 26px;
-    height: 26px;
+    min-width: 26px; height: 26px;
 }
 .craft .craft-handler .template-meta,
 .craft .craft-handler .handler-status {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    color: #dcdcdc;
-    font-size: 12px;
+    display: flex; gap: 8px; align-items: center; color: #dcdcdc; font-size: 12px;
 }
+
+/* ---- 15.4 结果展示区 ---- */
 .craft .craft-handler .template-results,
 .craft .craft-handler .handler-results {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px dashed rgba(255, 255, 255, 0.15);
-    padding: 6px;
-    border-radius: 6px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed rgba(255,255,255,0.15); padding: 6px; border-radius: 6px;
 }
+.craft .craft-handler .handler-results { position: relative; }
 .craft .craft-handler .template-result,
 .craft .craft-handler .handler-result {
-    position: relative;
-    width: 50px;
-    height: 50px;
-    border-radius: 6px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(0, 0, 0, 0.3);
+    position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.3);
 }
 .craft .craft-handler .template-result.editable,
-.craft .craft-handler .handler-result.editable {
-    cursor: pointer;
-}
+.craft .craft-handler .handler-result.editable { cursor: pointer; }
+/* 已完成卡片中的已领取结果 */
 .craft .craft-handler .handler-card.completed .handler-results .handler-result.result-faded {
-    opacity: 0.45;
-    filter: grayscale(0.45) saturate(0.8);
+    opacity: 0.45; filter: grayscale(0.45) saturate(0.8);
 }
-.craft .craft-handler .handler-card.completed .handler-results {
-    opacity: 0.85;
-}
+.craft .craft-handler .handler-card.completed .handler-results { opacity: 0.85; }
 .craft .craft-handler .template-result img,
-.craft .craft-handler .handler-result img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+.craft .craft-handler .handler-result img { width: 100%; height: 100%; object-fit: cover; }
+/* 结果数量标签 */
 .craft .craft-handler .template-result .qty,
 .craft .craft-handler .handler-result .qty {
-    position: absolute;
-    right: 4px;
-    bottom: 2px;
-    padding: 0 4px;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 10px;
-    font-weight: bold;
-    color: #fff;
-    font-size: 12px;
+    position: absolute; right: 4px; bottom: 2px; padding: 0 4px;
+    background: rgba(0,0,0,0.6); border-radius: 10px; font-weight: bold; color: #fff; font-size: 12px;
 }
+/* 结果占位提示 */
 .craft .craft-handler .template-result.hint {
-    border: 1px dashed rgba(255, 255, 255, 0.25);
-    color: rgba(255, 255, 255, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
+    border: 1px dashed rgba(255,255,255,0.25); color: rgba(255,255,255,0.7);
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
 }
-.craft .craft-handler .template-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+/* 结果删除按钮 */
+.craft .craft-handler .handler-result button {
+    position: absolute; top: 2px; right: 2px;
+    min-width: 20px; height: 20px; padding: 0; line-height: 20px;
 }
+
+/* ---- 15.5 步骤管理 ---- */
+.craft .craft-handler .template-steps { display: flex; flex-direction: column; gap: 4px; }
 .craft .craft-handler .template-step,
 .craft .craft-handler .handler-step {
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    padding: 6px;
-    background: rgba(0, 0, 0, 0.22);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 6px;
+    background: rgba(0,0,0,0.22);
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
+/* 步骤信息区网格布局 */
 .craft .craft-handler .template-step .step-main,
 .craft .craft-handler .handler-step .step-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-    gap: 6px;
-    align-items: center;
+    display: grid; grid-template-columns: auto auto auto auto auto;
+    gap: 4px 8px; align-items: center;
 }
 .craft .craft-handler .step-controls {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    flex-wrap: wrap;
+    display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
 }
+/* 步骤完成/失败状态 */
 .craft .craft-handler .handler-step.complete {
-    border-color: #4caf50;
-    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+    border-color: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.4);
 }
 .craft .craft-handler .handler-step.failed {
-    border-color: #f44336;
-    box-shadow: 0 0 6px rgba(244, 67, 54, 0.35);
+    border-color: #f44336; box-shadow: 0 0 6px rgba(244,67,54,0.35);
 }
-.craft .craft-handler .handler-step .step-state {
-    font-weight: 700;
-    text-transform: capitalize;
-}
+.craft .craft-handler .handler-step .step-state { font-weight: 700; text-transform: capitalize; }
+
+/* ---- 15.6 步骤状态徽章 ---- */
 .craft .craft-handler .handler-step .step-state-badge {
-    justify-self: start;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 12px;
-    font-weight: 700;
-    border: 1px solid transparent;
-    text-shadow: none;
+    justify-self: start; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700;
+    border: 1px solid transparent; text-shadow: none;
 }
+/* 待处理：金棕色 */
 .craft .craft-handler .handler-step .step-state-badge.step-state-pending {
     color: #ffe7b8;
-    background: linear-gradient(135deg, rgba(160, 110, 20, 0.78), rgba(95, 62, 10, 0.78));
-    border-color: rgba(255, 204, 112, 0.45);
-    box-shadow: inset 0 0 0 1px rgba(255, 220, 160, 0.08), 0 0 8px rgba(255, 180, 60, 0.2);
+    background: linear-gradient(135deg, rgba(160,110,20,0.78), rgba(95,62,10,0.78));
+    border-color: rgba(255,204,112,0.45);
+    box-shadow: inset 0 0 0 1px rgba(255,220,160,0.08), 0 0 8px rgba(255,180,60,0.2);
 }
+/* 已完成：翡翠绿 */
 .craft .craft-handler .handler-step .step-state-badge.step-state-complete {
     color: #d4ffea;
-    background: linear-gradient(135deg, rgba(20, 130, 85, 0.8), rgba(10, 80, 54, 0.8));
-    border-color: rgba(120, 255, 190, 0.42);
-    box-shadow: inset 0 0 0 1px rgba(180, 255, 220, 0.08), 0 0 10px rgba(80, 255, 180, 0.22);
+    background: linear-gradient(135deg, rgba(20,130,85,0.8), rgba(10,80,54,0.8));
+    border-color: rgba(120,255,190,0.42);
+    box-shadow: inset 0 0 0 1px rgba(180,255,220,0.08), 0 0 10px rgba(80,255,180,0.22);
 }
+/* 已失败：深红色 */
 .craft .craft-handler .handler-step .step-state-badge.step-state-failed {
     color: #ffd9d9;
-    background: linear-gradient(135deg, rgba(150, 32, 42, 0.8), rgba(94, 16, 24, 0.8));
-    border-color: rgba(255, 125, 125, 0.45);
-    box-shadow: inset 0 0 0 1px rgba(255, 190, 190, 0.08), 0 0 10px rgba(255, 90, 90, 0.22);
+    background: linear-gradient(135deg, rgba(150,32,42,0.8), rgba(94,16,24,0.8));
+    border-color: rgba(255,125,125,0.45);
+    box-shadow: inset 0 0 0 1px rgba(255,190,190,0.08), 0 0 10px rgba(255,90,90,0.22);
 }
+
+/* ---- 15.7 步骤信息标签 ---- */
 .craft .craft-handler .handler-step .step-last {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-size: 12px;
 }
-.craft .craft-handler .template-steps.compact,
-.craft .craft-handler .template-steps .template-chip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-.craft .craft-handler .template-chip {
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    font-size: 12px;
-}
-.craft .craft-handler .handler-footer {
-    display: flex;
-    justify-content: flex-end;
-}
-.craft .craft-handler .handler-footer button[disabled] {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-.craft .craft-handler .craft-templates-panel button[data-action='create-handler'] {
-    background: rgba(0, 128, 255, 0.15);
-    border-color: rgba(0, 128, 255, 0.35);
-}
-.craft .craft-handler .craft-templates-panel button[data-action='create-handler']:hover {
-    box-shadow: 0 0 8px rgba(0, 128, 255, 0.35);
-}
-/* Handler v2 refine */
-.craft .craft-handler .craft-empty-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 96px;
-    padding: 12px;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.78);
-    border: 1px dashed rgba(255, 255, 255, 0.22);
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.22);
-}
-.craft .craft-handler .craft-actor.not-owner {
-    border-color: rgba(255, 189, 122, 0.45);
-    box-shadow: inset 0 0 0 1px rgba(255, 170, 95, 0.1);
-}
-.craft .craft-handler .craft-actor.not-owner.choosed {
-    border-color: #ffb97a;
-    box-shadow: 0 0 10px rgba(255, 185, 122, 0.58);
-}
-.craft .craft-handler .craft-actor.choosed:not(.not-owner) {
-    border-color: aquamarine;
-    box-shadow: 0 0 10px rgba(127, 255, 212, 0.6);
-}
-.craft .craft-handler .handler-main.toggle-description:hover {
-    cursor: pointer;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
-    border-radius: 5px;
-}
-.craft .craft-handler .handler-main,
-.craft .craft-handler .template-main {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    flex: 1;
-}
-.craft .craft-handler .handler-main-text,
-.craft .craft-handler .template-main-text {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.craft .craft-handler .handler-title-line,
-.craft .craft-handler .template-name-line {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
-}
-.craft .craft-handler .handler-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    object-fit: cover;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    flex: 0 0 auto;
-}
-.craft .craft-handler .tag-chip {
-    padding: 1px 7px;
-    border-radius: 999px;
-    font-size: 11px;
-    color: #d8efff;
-    border: 1px solid rgba(120, 180, 230, 0.36);
-    background: rgba(50, 95, 132, 0.34);
-}
-.craft .craft-handler .template-step .step-main,
-.craft .craft-handler .handler-step .step-info {
-    grid-template-columns: auto auto auto auto auto;
-    gap: 4px 8px;
-}
-.craft .craft-handler .step-label {
-    font-weight: 700;
-    color: #ffffff;
-}
+.craft .craft-handler .step-label { font-weight: 700; color: #ffffff; }
 .craft .craft-handler .step-type-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 7px;
-    border-radius: 999px;
-    font-size: 11px;
-    color: #ffe8be;
-    border: 1px solid rgba(255, 208, 140, 0.35);
-    background: rgba(120, 85, 36, 0.5);
+    display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 999px;
+    font-size: 11px; color: #ffe8be;
+    border: 1px solid rgba(255,208,140,0.35); background: rgba(120,85,36,0.5);
 }
 .craft .craft-handler .step-progress,
 .craft .craft-handler .step-roll,
 .craft .craft-handler .step-last {
-    font-size: 12px;
-    color: #ddd;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 5px;
-    padding: 1px 6px;
+    font-size: 12px; color: #ddd;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 5px; padding: 1px 6px;
 }
-.craft .craft-handler .step-actions {
-    display: flex;
-    gap: 4px;
+.craft .craft-handler .step-actions { display: flex; gap: 4px; }
+
+/* ---- 15.8 紧凑模式与标签芯片 ---- */
+.craft .craft-handler .template-steps.compact,
+.craft .craft-handler .template-steps .template-chip { display: flex; flex-wrap: wrap; gap: 4px; }
+.craft .craft-handler .template-chip {
+    padding: 3px 8px; border-radius: 999px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); font-size: 12px;
 }
+
+/* ---- 15.9 描述文本折叠 ---- */
 .craft .craft-handler .handler-description-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    overflow: hidden;
-    max-height: 240px;
-    opacity: 1;
-    transition: max-height 250ms ease, opacity 250ms ease;
+    display: flex; flex-direction: column; gap: 4px; overflow: hidden;
+    max-height: 240px; opacity: 1; transition: max-height 250ms ease, opacity 250ms ease;
 }
 .craft .craft-handler .handler-description-wrap.collapsed {
-    max-height: 0;
-    opacity: 0;
-    transition: max-height 250ms ease, opacity 250ms ease;
+    max-height: 0; opacity: 0; transition: max-height 250ms ease, opacity 250ms ease;
 }
 .craft .craft-handler .handler-description-toggle {
-    width: fit-content;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 8px;
-    font-size: 12px;
+    width: fit-content; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; font-size: 12px;
 }
 .craft .craft-handler .handler-description {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 6px;
-    padding: 6px 8px;
-    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 6px 8px;
+    background: rgba(0,0,0,0.22);
 }
-.craft .craft-handler .handler-results {
-    position: relative;
-}
-.craft .craft-handler .handler-result button {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    min-width: 20px;
-    height: 20px;
-    padding: 0;
-    line-height: 20px;
+.craft .craft-handler .handler-main.toggle-description:hover {
+    cursor: pointer; box-shadow: 0 0 6px rgba(255,255,255,0.35); border-radius: 5px;
 }
 
-/* 选择图片组件 */
-.choose-image .choose-image-panel {
-    display: grid;
-    gap: 5px;
-    grid-template-columns: repeat(auto-fill, 60px);
-    justify-content: start;
-    align-content: start;
-    padding: 5px;
-    overflow-y: auto;
-    height: 200px;
+/* ---- 15.10 处理器主区域 ---- */
+.craft .craft-handler .handler-main,
+.craft .craft-handler .template-main {
+    display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;
 }
-.choose-image .choose-image-slot {
-    pointer-events: all;
-    position: relative;
-    width: 60px;
-    height: 60px;
-    text-align: center;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    border: 3px ridge var(--color, #191005);
-    box-shadow: inset 0 0 10px var(--color, #191005);
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
+.craft .craft-handler .handler-main-text,
+.craft .craft-handler .template-main-text {
+    min-width: 0; display: flex; flex-direction: column; gap: 2px;
 }
-.choose-image .choose-image-slot:hover {
+.craft .craft-handler .handler-title-line,
+.craft .craft-handler .template-name-line {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+}
+.craft .craft-handler .handler-icon {
+    width: 36px; height: 36px; border-radius: 6px; object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.25); flex: 0 0 auto;
+}
+.craft .craft-handler .tag-chip {
+    padding: 1px 7px; border-radius: 999px; font-size: 11px; color: #d8efff;
+    border: 1px solid rgba(120,180,230,0.36); background: rgba(50,95,132,0.34);
+}
+
+/* ---- 15.11 底部操作区 ---- */
+.craft .craft-handler .handler-footer { display: flex; justify-content: flex-end; }
+.craft .craft-handler .handler-footer button[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+/* ---- 15.12 其他 Handler 组件 ---- */
+/* 创建处理器按钮 */
+.craft .craft-handler .craft-templates-panel button[data-action='create-handler'] {
+    background: rgba(0,128,255,0.15); border-color: rgba(0,128,255,0.35);
+}
+.craft .craft-handler .craft-templates-panel button[data-action='create-handler']:hover {
+    box-shadow: 0 0 8px rgba(0,128,255,0.35);
+}
+/* 空状态提示 */
+.craft .craft-handler .craft-empty-state {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 96px; padding: 12px; text-align: center;
+    color: rgba(255,255,255,0.78);
+    border: 1px dashed rgba(255,255,255,0.22); border-radius: 8px;
+    background: rgba(0,0,0,0.22);
+}
+
+/* ============================================================
+ * ⑯ 特定面板类型样式 - 各类型合成面板的特殊布局
+ * ============================================================ */
+/* ---- 16.1 调和/配方结果槽位尺寸 ---- */
+.craft-panel-blend .craft-main-panel .craft-results-panel .craft-slot,
+.craft-panel-recipe .craft-main-panel .craft-slot {
+    width: 60px; height: 60px;
+}
+/* ---- 16.2 附魔/锻造选中槽位 ---- */
+.craft-panel-enchant .craft-main-panel .craft-slot.choosed,
+.craft-panel-forge .craft-main-panel .craft-slot.choosed {
     transform: scale(1.1);
-    box-shadow: inset 0 0 10px var(--color, #191005), 0 0 10px var(--color, #191005);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa);
+    border: 3px ridge var(--item-color, #aaaaaa); margin: 0 20px;
 }
-.choose-image .choose-image-slot.selected {
+.craft-panel-enchant .craft-main-panel .craft-slot.choosed:hover,
+.craft-panel-forge .craft-main-panel .craft-slot.choosed:hover {
+    transform: scale(1.2);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa);
+}
+/* ---- 16.3 元素面板特殊布局 ---- */
+.craft-panel-element .craft-content .craft-main-panel .craft-elements-panel {
+    overflow-y: auto; flex-wrap: wrap;
+}
+
+/* ============================================================
+ * ⑰ 底部按钮样式 - 合成/关闭按钮的视觉增强
+ * ============================================================ */
+/* 底部按钮容器 */
+.craft .form-footer {
+    display: flex; gap: 8px; justify-content: center;
+    background: linear-gradient(0deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+}
+/* 底部按钮基础样式 */
+.craft .form-footer button {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+}
+/* 底部按钮悬停：抬升 + 发光 */
+.craft .form-footer button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 8px rgba(255,215,0,0.2);
+}
+/* 合成按钮特殊高亮 */
+.craft .form-footer button[name="craft"] {
+    border-color: rgba(127,255,212,0.4);
+}
+.craft .form-footer button[name="craft"]:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 12px rgba(127,255,212,0.3);
+    border-color: rgba(127,255,212,0.7);
+    background: linear-gradient(135deg, rgba(127,255,212,0.1) 0%, rgba(0,0,0,0.1) 100%);
+}
+
+/* ============================================================
+ * ⑱ 提示框视觉增强 - 边框、背景、动画
+ * ============================================================ */
+/* 提示框整体：边框发光 + 背景深化 */
+.craft-tooltip {
+    border: 1px solid rgba(255,215,0,0.3) !important;
+    box-shadow: 0 0 12px rgba(0,0,0,0.5), 0 0 4px rgba(255,215,0,0.15) !important;
+    border-radius: 6px !important;
+}
+
+/* ============================================================
+ * ⑲ 材料数量标签视觉增强（已合并至 7.2 节）
+ * ============================================================ */
+
+/* ============================================================
+ * ⑳ 锁定状态视觉增强 - 锁定图标动画
+ * ============================================================ */
+.craft .craft-content .craft-main-panel .craft-slot .slot-locked {
+    opacity: 0.8; padding: 0; margin: 0; border: none; box-shadow: none;
+    position: absolute; width: 100%; height: 100%;
+    text-shadow: 0 0 5px #7d7d7d, 0 0 10px #7d7d7d, 0 0 15px #7d7d7d;
+    animation: locked-icon-pulse 2.5s ease-in-out infinite;
+}
+/* 锁定图标微弱脉冲 */
+@keyframes locked-icon-pulse {
+    0%, 100% { opacity: 0.8; text-shadow: 0 0 5px #7d7d7d, 0 0 10px #7d7d7d; }
+    50% { opacity: 0.6; text-shadow: 0 0 8px #9d9d9d, 0 0 14px #7d7d7d, 0 0 20px #5d5d5d; }
+}
+
+/* ============================================================
+ * ㉑ 元素点视觉增强 - 材料上的元素指示点
+ * ============================================================ */
+.craft .craft-content .slot-element-circle-container .slot-element-circle {
+    font-size: 8px; position: relative; color: #00000000;
+    filter: drop-shadow(0 0 2px currentColor);
+}
+
+/* ============================================================
+ * ㉒ 附魔/锻造选中槽位动画增强
+ * ============================================================ */
+.craft-panel-enchant .craft-main-panel .craft-slot.choosed,
+.craft-panel-forge .craft-main-panel .craft-slot.choosed {
+    animation: enchant-choosed-pulse 2s ease-in-out infinite;
+}
+@keyframes enchant-choosed-pulse {
+    0%, 100% { box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px var(--item-color, #aaaaaa), 0 0 15px var(--item-color, #aaaaaa); }
+    50% { box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 14px var(--item-color, #aaaaaa), 0 0 22px var(--item-color, #aaaaaa); }
+}
+
+/* ============================================================
+ * ㉓ 结果槽位选中筛选状态（青蓝色，区别于材料槽位的金色和choosed的物品色）
+ * ============================================================ */
+/* 结果槽位选中：青蓝边框 + 放大 + 脉冲动画 */
+.craft-panel-enchant .craft-results-panel .craft-slot.selected {
     transform: scale(1.1);
-    border-color: #00ff00;
-    box-shadow: inset 0 0 10px #00ff00, 0 0 10px #00ff00;
+    box-shadow: inset 0 0 8px rgba(0, 191, 255, 0.4), 0 0 10px #00bfff, 0 0 20px #00bfff;
+    border-color: #00bfff !important;
+    z-index: 1;
+    animation: result-selected-pulse 2s ease-in-out infinite;
 }
-
-.craft-message-title {
-    display: flex;
-    flex-direction: row;
-    gap: 0.5rem;
+/* 结果槽位选中悬停：进一步放大 */
+.craft-panel-enchant .craft-results-panel .craft-slot.selected:hover {
+    transform: scale(1.2);
+    box-shadow: inset 0 0 10px rgba(0, 191, 255, 0.5), 0 0 12px #00bfff, 0 0 24px #00bfff;
 }
-
-.craft-message-title h2 {
-    margin: 0;
-    line-height: 36px;
+/* 结果槽位选中 + 已填入物品（choosed与selected共存）：叠加两种效果 */
+.craft-panel-enchant .craft-results-panel .craft-slot.choosed.selected {
+    transform: scale(1.1);
+    border: 3px ridge var(--item-color, #aaaaaa);
+    box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px #00bfff, 0 0 20px #00bfff;
+    animation: result-selected-choosed-pulse 2s ease-in-out infinite;
+}
+/* 结果槽位选中脉冲动画关键帧 */
+@keyframes result-selected-pulse {
+    0%, 100% { box-shadow: inset 0 0 8px rgba(0, 191, 255, 0.4), 0 0 10px #00bfff, 0 0 20px #00bfff; }
+    50% { box-shadow: inset 0 0 12px rgba(0, 191, 255, 0.6), 0 0 15px #00bfff, 0 0 30px #00bfff; }
+}
+/* 结果槽位选中+已填入物品脉冲动画 */
+@keyframes result-selected-choosed-pulse {
+    0%, 100% { box-shadow: inset 0 0 10px var(--item-color, #aaaaaa), 0 0 10px #00bfff, 0 0 20px #00bfff; }
+    50% { box-shadow: inset 0 0 14px var(--item-color, #aaaaaa), 0 0 15px #00bfff, 0 0 28px #00bfff; }
 }
