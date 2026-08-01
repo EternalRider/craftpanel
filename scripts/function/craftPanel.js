@@ -536,7 +536,7 @@ export class CraftPanel extends HandlebarsApplication {
             this._elementsResizeObserver = ro;
             this._elementsPanelEl = elementsPanel;
         } catch (e) {
-            console.warn(`${MODULE_ID}: elements panel overflow setup failed', e);
+            console.warn(`${MODULE_ID}: elements panel overflow setup failed`, e);
         }
     }
     /**

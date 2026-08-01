@@ -544,7 +544,7 @@ export class CraftPanelEnchant extends CraftPanelForge {
             if (foundry.utils.getProperty(r.item, this.descriptionPath)) {
                 foundry.utils.setProperty(r.item, this.descriptionPath, r.description);
                 for (let je of this.selectedModifiers) {
-                    foundry.utils.setProperty(r.item, this.descriptionPath, (foundry.utils.getProperty(r.item, this.descriptionPath) ?? "") + `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`;
+                    foundry.utils.setProperty(r.item, this.descriptionPath, (foundry.utils.getProperty(r.item, this.descriptionPath) ?? "") + `<h2>${je.name}</h2><div class="description">${je.text.content ?? ""}</div>`);
                 }
             }
             //保存调整信息

@@ -208,7 +208,8 @@
             "new-modifier": "新调整",
             "new-result": "新产物插槽",
             "edit-result": "编辑产物",
-            "edit-image": "编辑图片"
+            "edit-image": "编辑图片",
+            "remove-result": "移除物品"
         },
         "craft-panel-forge": {
             "title": "锻造面板",

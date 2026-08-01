@@ -63,7 +63,10 @@ Hooks.on("renderItemDirectory", (app, html) => {
     let buttonContainer;
     if (game.version.startsWith("12")) {
         buttonContainer = html[0].querySelector(".header-actions.action-buttons");
-    } else if (game.version.startsWith("13")) {
+    } else if (game.version.startsWith("13") || game.version.startsWith("14")) {
+        buttonContainer = html.querySelector(".header-actions.action-buttons");
+    } else {
+        console.log("Craftpanel | renderItemDirectory : game.version", game.version);
         buttonContainer = html.querySelector(".header-actions.action-buttons");
     }
     console.log("Craftpanel | renderItemDirectory : app html buttonContainer game.version", app, html, buttonContainer, game.version);
